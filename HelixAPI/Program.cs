@@ -1,4 +1,8 @@
+using Helix.Service;
 var builder = WebApplication.CreateBuilder(args);
+
+// Add Services 
+builder.Services.AddServiceDependancies(builder.Configuration, builder.Environment);
 
 // Add services to the container.
 
