@@ -5,8 +5,11 @@ using System.Text;
 
 namespace Helix.Data.Entities
 {
-    public class Patient : AppUser
+    public class Patient : BaseEntity
     {
+        // Relation With AppUser
+        public string? UserId { get; set; }
+        public virtual AppUser AppUser { get; set; }
         public  EnPatientCategories PatientCategory { get; set; }
     }
 }

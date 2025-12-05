@@ -14,7 +14,7 @@ namespace Helix.Infrastructure.Context
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options): base(options)
         {            
         }
-
+        public DbSet<AppUser> AppUsers { get; set; }
         public DbSet<Doctor> Doctors { get; set; }
         public DbSet<Patient> Patients { get; set; }
     }
