@@ -8,7 +8,7 @@ namespace Helix.Service.Settings
 {
     public class JwtSettings
     {
-        const string SectionName = "JwtSettings";
+        public const string SectionName = "JwtSettings";
         public string Issuer { get; set; } = default!;
         public string Audience { get; set; } = default!;
         public string Secret { get; set; } = default!;

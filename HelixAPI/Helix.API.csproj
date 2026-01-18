@@ -18,4 +18,8 @@
     <ProjectReference Include="..\Helix.Core\Helix.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Uploads\" />
+  </ItemGroup>
+
 </Project>
