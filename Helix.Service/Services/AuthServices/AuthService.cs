@@ -1,15 +1,17 @@
 using AutoMapper;
 using Helix.Data.Entities;
 using Helix.Data.Enums;
+using Helix.Infrastructure.Context;
 using Helix.Service.DTOs.AuthDTOs;
 using Helix.Service.DTOs.FileDto;
 using Helix.Service.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Helix.Service.Services.AuthServices
 {
-    public class AuthService(UserManager<AppUser> userManager, ITokenProvider tokenProvider, IFileService fileService, IMapper mapper, IHttpContextAccessor httpContextAccessor, IEmailService emailService) : IAuthService
+    public class AuthService(UserManager<AppUser> userManager, ITokenProvider tokenProvider, IFileService fileService, IMapper mapper, IHttpContextAccessor httpContextAccessor, IEmailService emailService,ApplicationDbContext dbContext) : IAuthService
     {
         public async Task<AuthDto> LoginAsync(LoginDto dto)
         {
@@ -29,11 +31,70 @@ namespace Helix.Service.Services.AuthServices
             {
                 throw new InvalidOperationException("Email not confirmed. Please confirm your email before logging in.");
             }
+            var token = await tokenProvider.GenerateAccessTokenAsync(user);
+            return new AuthDto { AccessToken = token };
+        }
+        public async Task<AuthDto> RegisterStep1Async(RegisterStep1Dto dto)
+        {
+            // Validate the input DTO
+            if (dto == null)
+            {
+                throw new ArgumentNullException(nameof(dto));
+            }
+            // Validate email uniqueness
+            var existingUser = await userManager.FindByEmailAsync(dto.Email);
+            if (existingUser != null)
+            {
+                throw new InvalidOperationException("Email address is already registered.");
+            }
+
+            // Validate username uniqueness
+            existingUser = await userManager.FindByNameAsync(dto.Username);
+            if (existingUser != null)
+            {
+                throw new InvalidOperationException("Username is already taken.");
+            }
+
+            // Map RegisterStep1Dto to AppUser using AutoMapper
+            var user = mapper.Map<AppUser>(dto);
+
+            if (user.Address== null)
+            {
+                user.Address = "Mansoura, Egypt";
+                user.FirstName ="Defualt1";
+                user.LastName ="Defualt2";
+                user.MiddleName = "Defualt3";
+                user.Gender = EnGenders.None.ToString();
+            }
+
+            var result = await userManager.CreateAsync(user, dto.Password);
+
+            // For demonstration, let's assume registration is successful and return a new AuthDto
+            var authDto = new AuthDto
+            {
+                AccessToken = "sample_access_token", // Replace with actual token generation logic
+                                                     // Populate other properties as needed
+            };
+
+            if (!result.Succeeded)
+            {
+                // Log errors for debugging
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                throw new InvalidOperationException($"User creation failed: {errors}");
+            }
+
+            await userManager.AddToRoleAsync(user, EnRoles.Patient.ToString());
+            var patient = new Patient
+            {
+                AppUser = user,
+                PatientCategory = EnPatientCategories.Outpatient
+            };
+            dbContext.Patients.Add(patient);
+            dbContext.SaveChanges();
 
             var token = await tokenProvider.GenerateAccessTokenAsync(user);
             return new AuthDto { AccessToken = token };
         }
-
         public async Task<AuthDto> RegisterAsync(RegisterDto dto)
         {
             if (dto == null)

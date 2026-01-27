@@ -7,6 +7,7 @@ namespace Helix.Service.Interfaces
     public interface IAuthService
     {
         Task<AuthDto> RegisterAsync(RegisterDto dto);
+        Task<AuthDto> RegisterStep1Async(RegisterStep1Dto dto);
         Task<AuthDto> LoginAsync(LoginDto dto);
         Task<string> ConfirmEmailAsync(Guid userId, string token);
         Task<string> GenerateConfirmLink(AppUser user);

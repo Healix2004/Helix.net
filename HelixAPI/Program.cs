@@ -15,12 +15,12 @@ builder.Services.AddEndpointsApiExplorer();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment()||true)
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "ICEENG API V1");
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Helix API V1");
         c.RoutePrefix = "swagger"; // Swagger UI will be available at /swagger
         c.DisplayRequestDuration();
     });
@@ -37,10 +37,10 @@ else
     }
     else
     {
-        app.UseCors("AllowAll"); // Fallback to AllowAll if not configured
+        app.UseCors("AllowAll"); // Fallback to AllowAll if not configured  
     }
 }
-
+ 
 // Only use HTTPS redirection if not behind a reverse proxy (IIS handles this)
 // Comment out if causing issues on monsterasp.net
 // app.UseHttpsRedirection();
@@ -65,7 +65,7 @@ app.MapControllers();
 
 #region Update and Initialize Database
 // Applies pending migrations also if there are no roles, create the default
-// admin user with email = admin@ICEENG.com and password = Admin#123 you can also use username = admin
+// admin user with email = admin@Helix.com and password = Admin#123 you can also use username = admin
 // This helper function creates a scope to resolve services and run the database initializer.
 static async Task SeedDatabaseAsync(IHost app)
 {

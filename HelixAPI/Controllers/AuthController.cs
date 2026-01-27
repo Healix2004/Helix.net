@@ -1,3 +1,4 @@
+using Azure.Core;
 using Helix.Api.Base;
 using Helix.Core.Bases;
 using Helix.Core.Features.Auth.Commands.Models;
@@ -35,6 +36,20 @@ namespace Helix.API.Controllers
 
             return StatusCode((int)(result.StatusCode), result);
         }
+        [HttpPost("register_step1")]
+        [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> RegisterStep1([FromForm] RegisterStep1Dto dto)
+        {
+            var command = new RegisterStep1Command(dto);
+            var result = await mediator.Send(command);
+            if(!result.Succeeded)
+            {
+                return StatusCode((int)(result.StatusCode), result);
+            }
+            return StatusCode((int)(result.StatusCode), result);
+        }
+
 
         /// <summary>
         /// Login with email and password
