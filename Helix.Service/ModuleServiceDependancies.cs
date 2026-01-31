@@ -4,6 +4,7 @@ using Helix.Infrastructure.Context.DbInitializer;
 using Helix.Service.Interfaces;
 using Helix.Service.Services;
 using Helix.Service.Services.AuthServices;
+using Helix.Service.Services.DrugDataService;
 using Helix.Service.Services.FileServices;
 using Helix.Service.Services.TokenProvider;
 using Helix.Service.Settings;
@@ -32,6 +33,7 @@ namespace Helix.Service
             services.AddAuth();
             services.AddFileService();
             services.AddEmailService();
+            services.AddDrugService();
             services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
 
             return services;
@@ -129,6 +131,11 @@ namespace Helix.Service
         private static IServiceCollection AddEmailService(this IServiceCollection services)
         {
             services.AddScoped<IEmailService, EmailServices>();
+            return services;
+        }
+        private static IServiceCollection AddDrugService(this IServiceCollection services)
+        {
+            services.AddSingleton<IDrugDataService, DrugDataService>();
             return services;
         }
     }

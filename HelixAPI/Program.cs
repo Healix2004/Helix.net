@@ -7,7 +7,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add Services 
 builder.Services.AddServiceDependancies(builder.Configuration, builder.Environment)
-                .AddApiDenpendancies(builder.Configuration);
+                .AddApiDenpendancies(builder.Configuration)
+                .AddHttpClient();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
