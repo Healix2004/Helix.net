@@ -8,6 +8,7 @@ using Helix.Service.Services.DrugDataService;
 using Helix.Service.Services.FileServices;
 using Helix.Service.Services.TokenProvider;
 using Helix.Service.Settings;
+using Hl7.Fhir.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -138,5 +139,16 @@ namespace Helix.Service
             services.AddSingleton<IDrugDataService, DrugDataService>();
             return services;
         }
+        //private static IServiceCollection AddFhirSerialization(this IServiceCollection services)
+        //{
+        //    // FHIR Serialization settings can be configured here if needed
+        //    // Create a reusable serializer
+        //    services.AddSingleton<FhirJsonSerializer>(new FhirJsonSerializer(new SerializerSettings()
+        //    {
+        //        Pretty = true,
+        //        AppendFormToTargets = false
+        //    }));
+        //    return services;
+        //}
     }
 }
