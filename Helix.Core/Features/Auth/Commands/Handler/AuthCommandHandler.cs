@@ -67,6 +67,36 @@ namespace Helix.Core.Features.Auth.Commands.Handler
             }
         }
     }
+    public class RegisterDoctorCommandHandler : IRequestHandler<RegisterDoctorCommand, Response<AuthDto>>
+    {
+        private readonly IAuthService _authService;
+        private readonly ResponseHandler _responseHandler;
+
+        public RegisterDoctorCommandHandler(IAuthService authService, ResponseHandler responseHandler)
+        {
+            _authService = authService;
+            _responseHandler = responseHandler;
+        }
+
+        public async Task<Response<AuthDto>> Handle(RegisterDoctorCommand request, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var result = await _authService.RegisterDoctorAsync(request.RegisterDoctorDto);
+                
+                if (result == null || string.IsNullOrEmpty(result.AccessToken))
+                {
+                    return _responseHandler.BadRequest<AuthDto>("Registration failed. Please check your information and try again.");
+                }
+
+                return _responseHandler.Created(result);
+            }
+            catch (Exception ex)
+            {
+                return _responseHandler.BadRequest<AuthDto>($"An error occurred during registration: {ex.Message}");
+            }
+        }
+    }
 
     public class LoginCommandHandler : IRequestHandler<LoginCommand, Response<AuthDto>>
     {

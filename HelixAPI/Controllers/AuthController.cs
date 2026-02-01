@@ -49,7 +49,19 @@ namespace Helix.API.Controllers
             }
             return StatusCode((int)(result.StatusCode), result);
         }
-
+        [HttpPost("registerDoctor")]
+        [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> RegisterDoctor([FromForm] RegisterDoctorDto dto)
+        {
+            var command = new RegisterDoctorCommand(dto);
+            var result = await mediator.Send(command);
+            if(!result.Succeeded)
+            {
+                return StatusCode((int)(result.StatusCode), result);
+            }
+            return StatusCode((int)(result.StatusCode), result);
+        }
 
         /// <summary>
         /// Login with email and password
