@@ -9,6 +9,8 @@ namespace Helix.Data.Entities
         // Relation With AppUser
         public virtual AppUser AppUser { get; set; }
         public string Specialization { get; set; } = default!;
+
+        public List<Encounter> Encounters { get; set; }
          
     }
 }
