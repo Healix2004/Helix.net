@@ -36,7 +36,7 @@ namespace Helix.Infrastructure.Context.DbInitializer
             // 2. Create Admin User (if he doesn't exist)
             string adminEmail = "admin@Helix.com";
             string adminRoleName = EnRoles.SuperAdmin.ToString();
-            AppUser user = await _userManager.FindByEmailAsync(adminEmail);
+            var user = await _userManager.FindByEmailAsync(adminEmail);
 
             if (user == null)
             {

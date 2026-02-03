@@ -1,11 +1,13 @@
 ﻿using Helix.Data.Entities;
 using Helix.Infrastructure.Context;
 using Helix.Infrastructure.Context.DbInitializer;
+using Helix.Infrastructure.ExternalServices;
 using Helix.Service.Interfaces;
 using Helix.Service.Services;
 using Helix.Service.Services.AuthServices;
 using Helix.Service.Services.DrugDataService;
 using Helix.Service.Services.FileServices;
+using Helix.Service.Services.TerminologyServices;
 using Helix.Service.Services.TokenProvider;
 using Helix.Service.Settings;
 using Hl7.Fhir.Serialization;
@@ -36,6 +38,8 @@ namespace Helix.Service
             services.AddEmailService();
             services.AddDrugService();
             services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
+
+            services.AddScoped<ITerminologyService, RemoteFhirTerminologyService>();
 
             return services;
         }

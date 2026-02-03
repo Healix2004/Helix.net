@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Helix.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260201203039_FHIR Tables")]
-    partial class FHIRTables
+    [Migration("20260203161129_Add FHIR Tables")]
+    partial class AddFHIRTables
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -53,7 +53,7 @@ namespace Helix.Infrastructure.Migrations
 
                     b.HasIndex("PatientId");
 
-                    b.ToTable("Allergy");
+                    b.ToTable("Allergies");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.AppUser", b =>
@@ -193,7 +193,87 @@ namespace Helix.Infrastructure.Migrations
 
                     b.HasIndex("PatientId");
 
-                    b.ToTable("Encounter");
+                    b.ToTable("Encounters");
+                });
+
+            modelBuilder.Entity("Helix.Data.Entities.LabImages", b =>
+                {
+                    b.Property<Guid>("LabTestResultId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("LabTestResultId", "ImageUrl");
+
+                    b.ToTable("LabImages");
+                });
+
+            modelBuilder.Entity("Helix.Data.Entities.LabTestResult", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("EncounterId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("value")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EncounterId");
+
+                    b.ToTable("LabTestResult");
+                });
+
+            modelBuilder.Entity("Helix.Data.Entities.MedicalConcept", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Display")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PropertiesJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SystemUri")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Version")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Display");
+
+                    b.HasIndex("SystemUri", "Code");
+
+                    b.ToTable("MedicalConcepts");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.Observation", b =>
@@ -265,7 +345,7 @@ namespace Helix.Infrastructure.Migrations
 
                     b.HasIndex("EncounterId");
 
-                    b.ToTable("condition");
+                    b.ToTable("Condition");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -428,18 +508,40 @@ namespace Helix.Infrastructure.Migrations
                     b.HasOne("Helix.Data.Entities.Doctor", "Doctor")
                         .WithMany("Encounters")
                         .HasForeignKey("DoctorId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Helix.Data.Entities.Patient", "patient")
                         .WithMany("Encounters")
                         .HasForeignKey("PatientId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Doctor");
 
                     b.Navigation("patient");
+                });
+
+            modelBuilder.Entity("Helix.Data.Entities.LabImages", b =>
+                {
+                    b.HasOne("Helix.Data.Entities.LabTestResult", "LabTestResult")
+                        .WithMany()
+                        .HasForeignKey("LabTestResultId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LabTestResult");
+                });
+
+            modelBuilder.Entity("Helix.Data.Entities.LabTestResult", b =>
+                {
+                    b.HasOne("Helix.Data.Entities.Encounter", "Encounter")
+                        .WithMany()
+                        .HasForeignKey("EncounterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Encounter");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.Observation", b =>
