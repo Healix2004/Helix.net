@@ -27,10 +27,10 @@ namespace Helix.Service.Services.AuthServices
                 // Don't throw exception to avoid revealing if user exists
                 return new AuthDto { AccessToken = null };
             }
-            if(user.EmailConfirmed == false)
-            {
-                throw new InvalidOperationException("Email not confirmed. Please confirm your email before logging in.");
-            }
+            //if(user.EmailConfirmed == false)
+            //{
+            //    throw new InvalidOperationException("Email not confirmed. Please confirm your email before logging in.");
+            //}
             var token = await tokenProvider.GenerateAccessTokenAsync(user);
             return new AuthDto { AccessToken = token };
         }

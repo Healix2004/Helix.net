@@ -1,12 +1,15 @@
 using Helix.Api.Base;
+using Helix.Data.Enums;
 using Helix.Service.DTOs.Terminology;
 using Helix.Service.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Helix.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = nameof(EnRoles.Doctor))]
     public class TerminologyController(ITerminologyService terminologyService) : AppControllerBase
     {
         private const string DefaultSystem = "http://snomed.info/sct";

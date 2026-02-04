@@ -1,0 +1,6 @@
+services:
+  helix.api:
+    image: ${DOCKER_REGISTRY-}helixapi
+    build:
+      context: .
+      dockerfile: HelixAPI/Dockerfile
