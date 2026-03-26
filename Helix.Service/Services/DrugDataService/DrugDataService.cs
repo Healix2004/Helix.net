@@ -18,7 +18,7 @@ namespace Helix.Service.Services.DrugDataService
         private readonly IHttpClientFactory _httpClientFactory;
 
         // Default IP to localhost if not set, preventing crashes
-        private string _serverIP = "localhost";
+        private string _serverIP = "helix.ai.ddi";
 
         public DrugDataService(IWebHostEnvironment env, IHttpClientFactory httpClientFactory)
         {

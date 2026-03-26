@@ -10,10 +10,10 @@ namespace Helix.Service.Interfaces
         Task<AuthDto> RegisterStep1Async(RegisterStep1Dto dto);
         Task<AuthDto> RegisterDoctorAsync(RegisterDoctorDto dto);
         Task<AuthDto> LoginAsync(LoginDto dto);
-        Task<string> ConfirmEmailAsync(Guid userId, string token);
-        Task<string> GenerateConfirmLink(AppUser user);
+        Task<string> ConfirmEmailAsync(string Email, string code);
         Task<string> ForgetPasswordAsync(string email);
         Task<string> ResetPasswordAsync(ResetPasswordDto dto);
         Task<string> ChangePasswordAsync(string userId, string currentPassword, string newPassword);
+        Task<string> ResendConfirmationEmailAsync(AppUser user);
     }
 }

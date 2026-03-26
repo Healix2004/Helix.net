@@ -192,27 +192,5 @@ namespace Helix.API.Controllers
 
             return StatusCode((int)(result.StatusCode), result);
         }
-
-        /// <summary>
-        /// Confirm email address using query parameters (for email links)
-        /// </summary>
-        /// <param name="userid">User ID</param>
-        /// <param name="token">Confirmation token</param>
-        /// <returns>Success message</returns>
-        [HttpGet("confirmemail")]
-        [ProducesResponseType(typeof(Response<string>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(Response<string>), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> ConfirmEmailGet([FromQuery] Guid userid, [FromQuery] string token)
-        {
-            var dto = new ConfirmEmailDto
-            {
-                UserId = userid,
-                Token = token
-            };
-            var command = new ConfirmEmailCommand(dto);
-            var result = await mediator.Send(command);
-
-            return StatusCode((int)(result.StatusCode), result);
-        }
     }
 }

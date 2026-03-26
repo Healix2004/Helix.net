@@ -247,8 +247,8 @@ namespace Helix.Core.Features.Auth.Commands.Handler
             try
             {
                 var result = await _authService.ConfirmEmailAsync(
-                    request.ConfirmEmailDto.UserId,
-                    request.ConfirmEmailDto.Token);
+                    request.ConfirmEmailDto.UserEmail,
+                    request.ConfirmEmailDto.code);
                 return _responseHandler.Success(result);
             }
             catch (ArgumentException ex)

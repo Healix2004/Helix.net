@@ -11,6 +11,7 @@ using Helix.Service.Services.TerminologyServices;
 using Helix.Service.Services.TokenProvider;
 using Helix.Service.Settings;
 using Hl7.Fhir.Serialization;
+using Hl7.FhirPath.Sprache;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -19,6 +20,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -81,7 +83,10 @@ namespace Helix.Service
                 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
                 option.User.RequireUniqueEmail = true;
                 option.SignIn.RequireConfirmedEmail = false;
-
+                // This tells Identity to use the 6-digit provider for email confirmation
+                option.Tokens.EmailConfirmationTokenProvider = TokenOptions.DefaultEmailProvider;
+                // Tell Identity to use the 6-digit email token provider for password resets
+                option.Tokens.PasswordResetTokenProvider = TokenOptions.DefaultEmailProvider;
             })
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();

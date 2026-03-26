@@ -13,13 +13,13 @@ namespace Helix.Core.Features.Auth.Commands.Validation
 
             When(x => x.ConfirmEmailDto != null, () =>
             {
-                RuleFor(x => x.ConfirmEmailDto.UserId)
+                RuleFor(x => x.ConfirmEmailDto.UserEmail)
                     .NotEmpty()
-                    .WithMessage("User ID is required");
+                    .WithMessage("User Email is required");
 
-                RuleFor(x => x.ConfirmEmailDto.Token)
+                RuleFor(x => x.ConfirmEmailDto.code)
                     .NotEmpty()
-                    .WithMessage("Token is required");
+                    .WithMessage("Code  is required");
             });
         }
     }
