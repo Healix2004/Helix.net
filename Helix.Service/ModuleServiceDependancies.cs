@@ -7,6 +7,7 @@ using Helix.Service.Services;
 using Helix.Service.Services.AuthServices;
 using Helix.Service.Services.DrugDataService;
 using Helix.Service.Services.FileServices;
+using Helix.Service.Services.RxNavTerminology;
 using Helix.Service.Services.TerminologyServices;
 using Helix.Service.Services.TokenProvider;
 using Helix.Service.Settings;
@@ -42,6 +43,13 @@ namespace Helix.Service
             services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
 
             services.AddScoped<ITerminologyService, RemoteFhirTerminologyService>();
+            services.AddScoped<IRxNavTerminologyService, RxNavTerminologyService>();
+            services.AddHttpClient<RxNavTerminologyService>(client =>
+            {
+                // Set the base address for the RxNav API
+                client.BaseAddress = new Uri("https://rxnav.nlm.nih.gov/REST/");
+                client.DefaultRequestHeaders.Add("Accept", "application/json");
+            });
 
             return services;
         }

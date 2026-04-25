@@ -13,6 +13,11 @@
   <ItemGroup>
     <Folder Include="Features\Emails\Quieres\Handler\" />
     <Folder Include="Features\Emails\Quieres\Models\" />
+    <Folder Include="Features\RxNavTerminology\Commands\Handler\" />
+    <Folder Include="Features\RxNavTerminology\Commands\Models\" />
+    <Folder Include="Features\RxNavTerminology\Commands\Validation\" />
+    <Folder Include="Features\RxNavTerminology\Quieres\Handler\" />
+    <Folder Include="Features\RxNavTerminology\Quieres\Models\" />
   </ItemGroup>
 
   <ItemGroup>
