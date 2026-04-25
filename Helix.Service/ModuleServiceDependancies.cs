@@ -7,6 +7,7 @@ using Helix.Service.Services;
 using Helix.Service.Services.AuthServices;
 using Helix.Service.Services.DrugDataService;
 using Helix.Service.Services.FileServices;
+using Helix.Service.Services.LoincTerminology;
 using Helix.Service.Services.RxNavTerminology;
 using Helix.Service.Services.TerminologyServices;
 using Helix.Service.Services.TokenProvider;
@@ -40,10 +41,10 @@ namespace Helix.Service
             services.AddFileService();
             services.AddEmailService();
             services.AddDrugService();
+            services.AddLoincService(configuration);
             services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
 
             services.AddScoped<ITerminologyService, RemoteFhirTerminologyService>();
-            services.AddScoped<IRxNavTerminologyService, RxNavTerminologyService>();
             services.AddHttpClient<RxNavTerminologyService>(client =>
             {
                 // Set the base address for the RxNav API
@@ -154,6 +155,31 @@ namespace Helix.Service
         private static IServiceCollection AddDrugService(this IServiceCollection services)
         {
             services.AddSingleton<IDrugDataService, DrugDataService>();
+            return services;
+        }
+
+        private static IServiceCollection AddLoincService(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddHttpClient<ILoincTerminologyService, LoincTerminologyService>(client =>
+            {
+                client.BaseAddress = new Uri("https://fhir.loinc.org/");
+
+                // Retrieve LOINC API credentials from configuration
+                var username = configuration["LoincApi:Username"];
+                var password = configuration["LoincApi:Password"];
+
+                // Only add Basic Auth if credentials are provided
+                if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
+                {
+                    var byteArray = Encoding.ASCII.GetBytes($"{username}:{password}");
+                    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+                        "Basic", Convert.ToBase64String(byteArray));
+                }
+
+                // Add default headers
+                client.DefaultRequestHeaders.Add("Accept", "application/fhir+json");
+            });
+
             return services;
         }
         //private static IServiceCollection AddFhirSerialization(this IServiceCollection services)
