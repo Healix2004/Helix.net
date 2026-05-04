@@ -9,20 +9,16 @@ using Helix.Service.Services.DrugDataService;
 using Helix.Service.Services.FileServices;
 using Helix.Service.Services.LoincTerminology;
 using Helix.Service.Services.RxNavTerminology;
-using Helix.Service.Services.TerminologyServices;
+using Helix.Service.Services.SnowstormTerminology;
 using Helix.Service.Services.TokenProvider;
 using Helix.Service.Settings;
-using Hl7.Fhir.Serialization;
-using Hl7.FhirPath.Sprache;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -43,14 +39,20 @@ namespace Helix.Service
             services.AddDrugService();
             services.AddLoincService(configuration);
             services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
+            services.AddMemoryCache();
 
             services.AddScoped<ITerminologyService, RemoteFhirTerminologyService>();
-            services.AddHttpClient<RxNavTerminologyService>(client =>
+            services.AddHttpClient<IRxNavTerminologyService, RxNavTerminologyService>(client =>
             {
                 // Set the base address for the RxNav API
                 client.BaseAddress = new Uri("https://rxnav.nlm.nih.gov/REST/");
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
             });
+            services.AddHttpClient<ISnowstormTerminologyService, SnowstormTerminologyService>(client =>
+            {
+                client.BaseAddress = new Uri("https://snowstorm.snomedtools.org/fhir/");
+            });
+
 
             return services;
         }
