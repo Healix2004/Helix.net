@@ -10,9 +10,10 @@ namespace Helix.Data.Entities
         // Relation With AppUser
         public virtual AppUser AppUser { get; set; }
         public  EnPatientCategories PatientCategory { get; set; }
-
+        public EnBloodTypes? BloodType { get; set; }
         public List<Allergy> Allergies { get; set; }
         public List<Encounter> Encounters { get; set; }
-
-    }
+        public List<Diagnose> Diagnose { get; set; }
+        public List<LabTestResult> LabTestResult { get; set; }
+    }   
 }

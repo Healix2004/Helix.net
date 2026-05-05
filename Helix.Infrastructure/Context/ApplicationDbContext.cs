@@ -21,6 +21,11 @@ namespace Helix.Infrastructure.Context
         {
             base.OnModelCreating(builder);
 
+            builder.Entity<Doctor>().Property(Doctor => Doctor.Bio).HasMaxLength(500);
+
+            // facilities doctor relationship 
+            builder.Entity<Doctor>().HasMany(Doctor => Doctor.Facilities).WithMany(Facilitie => Facilitie.Doctors);
+
             // patient allergy relationship 
             builder.Entity<Patient>()
                 .HasMany(p => p.Allergies)
@@ -59,17 +64,23 @@ namespace Helix.Infrastructure.Context
                 .HasPrincipalKey(e => e.Id)
                 .HasForeignKey(o => o.EncounterId);
 
-            //LabTestResult images 
-            builder.Entity<LabImages>()
-                .HasKey(l => new { l.LabTestResultId, l.ImageUrl });
+            builder.Entity<LabTestResult>().Property(lab => lab.Unit).HasMaxLength(50);
+            builder.Entity<LabTestResult>().HasMany(lab => lab.images).WithOne(o => o.LabTestResult).OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<LabTestResult>().HasOne(lab => lab.Patient).WithMany(p => p.LabTestResult).OnDelete(DeleteBehavior.Restrict);
 
+            builder.Entity<TerminologyCodeLookup>().Property(term=>term.Display).HasMaxLength(100);
+            builder.Entity<TerminologyCodeLookup>().Property(term=>term.SystemUrl).HasMaxLength(50);
+            builder.Entity<TerminologyCodeLookup>().Property(term=>term.Code).HasMaxLength(25);
+            builder.Entity<TerminologyCodeLookup>().HasIndex(term => term.Display);
             // Composite Index is CRITICAL for performance on ValidateCodeAsync
-            builder.Entity<MedicalConcept>()
-                .HasIndex(x => new { x.SystemUri, x.Code });
+            builder.Entity<TerminologyCodeLookup>().HasIndex(term => new { term.Display, term.SystemUrl});
 
-            // Index for faster text search
-            builder.Entity<MedicalConcept>()
-                .HasIndex(x => x.Display);
+            builder.Entity<Facilitie>().Property(f=>f.Name).HasMaxLength(50);
+            builder.Entity<Facilitie>().Property(f=>f.SubscriptionPlan).HasMaxLength(50);
+            builder.Entity<Facilitie>().Property(f=>f.Address).HasMaxLength(250);
+
+            builder.Entity<Diagnose>().Property(d=>d.Notes).HasMaxLength(500);
+            builder.Entity<Diagnose>().HasOne(d => d.Patient).WithMany(p => p.Diagnose).OnDelete(DeleteBehavior.Restrict);
         }
         public DbSet<AppUser> AppUsers { get; set; }
         public DbSet<Doctor> Doctors { get; set; }
@@ -77,6 +88,7 @@ namespace Helix.Infrastructure.Context
         public DbSet<Allergy> Allergies { get; set; }
         public DbSet<Encounter> Encounters { get; set; }
         public DbSet<condition> Condition { get; set; }
-        public DbSet<MedicalConcept> MedicalConcepts { get; set; }
+        public DbSet<Facilitie> Facilities { get; set; }
+        public DbSet<TerminologyCodeLookup> TerminologyCodes { get; set; }
     }
 }

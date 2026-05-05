@@ -1,3 +1,4 @@
+using Helix.Data.Entities;
 using Helix.Infrastructure.Context;
 using Helix.Service.DTOs.Terminology;
 using Helix.Service.Interfaces;
@@ -13,25 +14,26 @@ namespace Helix.Service.Services.TerminologyServices
             if (string.IsNullOrWhiteSpace(systemUri) || string.IsNullOrWhiteSpace(code))
                 return null;
 
-            // We use AsNoTracking for read-only operations to boost performance
-            var result = await dbContext.MedicalConcepts
-                .AsNoTracking()
-                .Where(x => x.SystemUri == systemUri && x.Code == code && x.IsActive)
-                .Select(x => x.Display)
-                .FirstOrDefaultAsync();
+            //// We use AsNoTracking for read-only operations to boost performance
+            //var result = await dbContext.TerminologyCodes
+            //    .AsNoTracking()
+            //    .Where(x => x.SystemUri == systemUri && x.Code == code && x.IsActive)
+            //    .Select(x => x.Display)
+            //    .FirstOrDefaultAsync();
 
-            return result ?? "Unknown Code";
+            return "Unknown Code";
         }
 
         // 2. Search/Autocomplete functionality
         public async Task<List<CodingDto>> LookupCodesAsync(string filterText, string systemUri)
         {
-            var query = dbContext.MedicalConcepts.AsNoTracking().AsQueryable();
+            //var query = dbContext.TerminologyCodes.AsNoTracking().AsQueryable();
+            var query = dbContext.Set<TerminologyCodeLookup>().AsNoTracking().AsQueryable();
 
             // Filter by System if provided (e.g., only search SNOMED codes)
             if (!string.IsNullOrEmpty(systemUri))
             {
-                query = query.Where(x => x.SystemUri == systemUri);
+                query = query.Where(x => x.SystemUrl == systemUri);
             }
 
             // Filter by Text (Search inside the Code itself OR the Display text)
@@ -46,12 +48,11 @@ namespace Helix.Service.Services.TerminologyServices
 
             // Project to CodingDto and take top 20 to prevent huge data loads
             return await query
-                .Where(x => x.IsActive)
                 .OrderBy(x => x.Display) // Optional: Sort alphabetically
                 .Take(20)
                 .Select(x => new CodingDto
                 {
-                    System = x.SystemUri,
+                    System = x.SystemUrl,
                     Code = x.Code,
                     Display = x.Display
                 })
@@ -64,9 +65,9 @@ namespace Helix.Service.Services.TerminologyServices
             if (string.IsNullOrWhiteSpace(systemUri) || string.IsNullOrWhiteSpace(code))
                 return false;
 
-            return await dbContext.MedicalConcepts
+            return await dbContext.Set<TerminologyCodeLookup>()
                 .AsNoTracking()
-                .AnyAsync(x => x.SystemUri == systemUri && x.Code == code && x.IsActive);
+                .AnyAsync(x => x.SystemUrl == systemUri && x.Code == code );
         }
     }
     

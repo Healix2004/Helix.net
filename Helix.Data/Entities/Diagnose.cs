@@ -4,13 +4,13 @@ using System.Text;
 
 namespace Helix.Data.Entities
 {
-    public class Medication:BaseEntity
+    public class Diagnose : BaseEntity
     {
         public TerminologyCodeLookup TerminologyCode{ get; set; }
         public Patient Patient { get; set; }
-        public string Dosage {  get; set; }
-        public String Frequency { get; set; }
-        public DateOnly StartDate { get; set; }
-        public DateTime EndDate { get; set; }
+        public Doctor doctor { get; set; }
+        public DateOnly dateOnly { get; set; }
+        public string Notes { get; set; }
+        public EnStatus status { get; set; }
     }
 }

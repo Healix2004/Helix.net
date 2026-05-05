@@ -61,7 +61,7 @@ namespace Helix.Service.Services.AuthServices
             var doctor = new Doctor
             {
                 AppUser = user,
-                Specialization = dto.Specialization
+                Specialty = dto.Specialization
             };
             dbContext.Doctors.Add(doctor);
             dbContext.SaveChanges();

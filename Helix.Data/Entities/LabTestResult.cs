@@ -6,12 +6,13 @@ namespace Helix.Data.Entities
 {
     public  class LabTestResult : BaseEntity
     {
-        public string status { get; set; }
-        public string name { get; set; }
+        public TerminologyCodeLookup TerminologyCode{ get; set; }
+        public Patient Patient { get; set; }
+        public Doctor Doctor { get; set; }// who doctor request
+        public EnStatus status { get; set; }
         public decimal value { get; set; }
-
-        //encounter relationship  
-        public Guid EncounterId { get; set; }
+        public string Unit { get; set; }
+        public List<LabImages> images { get; set; }
         public Encounter Encounter { get; set; }
     }
 }
