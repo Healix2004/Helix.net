@@ -14,5 +14,8 @@ namespace Helix.Data.Entities
         public string SyndicateNumber { get; set; }
         public List<Encounter> Encounters { get; set; }
         public List<Facilitie> Facilities { get; set; }
+
+        //one to many with consent
+        public List<Consent> Consents { get; set; }= new List<Consent>();
     }
 }

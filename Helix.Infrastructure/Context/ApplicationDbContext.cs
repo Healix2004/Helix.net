@@ -81,6 +81,9 @@ namespace Helix.Infrastructure.Context
 
             builder.Entity<Diagnose>().Property(d=>d.Notes).HasMaxLength(500);
             builder.Entity<Diagnose>().HasOne(d => d.Patient).WithMany(p => p.Diagnose).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Consent>().HasOne(c => c.Patient).WithMany(p => p.Consents).HasPrincipalKey(p => p.Id).OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<Consent>().HasOne(c => c.Doctor).WithMany(d => d.Consents).HasPrincipalKey(d => d.Id).OnDelete(DeleteBehavior.Restrict);
         }
         public DbSet<AppUser> AppUsers { get; set; }
         public DbSet<Doctor> Doctors { get; set; }
@@ -90,5 +93,6 @@ namespace Helix.Infrastructure.Context
         public DbSet<condition> Condition { get; set; }
         public DbSet<Facilitie> Facilities { get; set; }
         public DbSet<TerminologyCodeLookup> TerminologyCodes { get; set; }
+        public DbSet<Consent> Consents { get; set; }
     }
 }
