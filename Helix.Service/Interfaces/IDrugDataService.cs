@@ -12,7 +12,6 @@ namespace Helix.Service.Interfaces
         Task<bool> IsValidDrug(int drugId);
         Task<string> GetServerIP();
         Task<string> GetDrugName(int drugId);
-
         Task SetServerIP(string ip);
     }
 }
