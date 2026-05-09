@@ -75,6 +75,31 @@ namespace Helix.Service.Mappings
 
             CreateMap<Helix.Service.DTOs.PatientDTOs.CreatePatientDto, Patient>();
             CreateMap<Helix.Service.DTOs.PatientDTOs.UpdatePatientDto, Patient>();
+
+            // Doctor Mappings
+            CreateMap<Doctor, Helix.Service.DTOs.DoctorDTOs.DoctorDto>()
+                .ForMember(dest => dest.AppUserId, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.Id : null))
+                .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.FirstName : null))
+                .ForMember(dest => dest.MiddleName, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.MiddleName : null))
+                .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.LastName : null))
+                .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.Email : null))
+                .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.PhoneNumber : null))
+                .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.Gender : null))
+                .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.Address : null))
+                .ForMember(dest => dest.DataOfBrith, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.DataOfBrith : default));
+
+            CreateMap<Helix.Service.DTOs.DoctorDTOs.CreateDoctorDto, Doctor>();
+            CreateMap<Helix.Service.DTOs.DoctorDTOs.UpdateDoctorDto, Doctor>();
+
+            // Consent Mappings
+            CreateMap<Consent, Helix.Service.DTOs.ConsentDTOs.ConsentDto>()
+                .ForMember(dest => dest.PatientId, opt => opt.MapFrom(src => src.Patient != null ? src.Patient.Id : default(System.Guid)))
+                .ForMember(dest => dest.DoctorId, opt => opt.MapFrom(src => src.Doctor != null ? src.Doctor.Id : default(System.Guid)));
+
+            CreateMap<Helix.Service.DTOs.ConsentDTOs.CreateConsentDto, Consent>()
+                .ForMember(dest => dest.Patient, opt => opt.Ignore())
+                .ForMember(dest => dest.Doctor, opt => opt.Ignore());
+            CreateMap<Helix.Service.DTOs.ConsentDTOs.UpdateConsentDto, Consent>();
         }
     }
 }

@@ -38,6 +38,8 @@ namespace Helix.Service
             services.AddEmailService();
             services.AddDrugService();
             services.AddPatientService();
+            services.AddDoctorService();
+            services.AddConsentService();
             services.AddLoincService(configuration);
             services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
             services.AddMemoryCache();
@@ -164,6 +166,18 @@ namespace Helix.Service
         private static IServiceCollection AddPatientService(this IServiceCollection services)
         {
             services.AddScoped<IPatientService, Helix.Service.Services.PatientService.PatientService>();
+            return services;
+        }
+
+        private static IServiceCollection AddDoctorService(this IServiceCollection services)
+        {
+            services.AddScoped<IDoctorService, Helix.Service.Services.DoctorService.DoctorService>();
+            return services;
+        }
+
+        private static IServiceCollection AddConsentService(this IServiceCollection services)
+        {
+            services.AddScoped<IConsentService, Helix.Service.Services.ConsentService.ConsentService>();
             return services;
         }
 
