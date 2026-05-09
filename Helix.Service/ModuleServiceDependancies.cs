@@ -3,6 +3,7 @@ using Helix.Infrastructure.Context;
 using Helix.Infrastructure.Context.DbInitializer;
 using Helix.Infrastructure.ExternalServices;
 using Helix.Service.Interfaces;
+using Helix.Service.Repositories;
 using Helix.Service.Services;
 using Helix.Service.Services.AuthServices;
 using Helix.Service.Services.DrugDataService;
@@ -48,6 +49,7 @@ namespace Helix.Service
             services.AddMedicationService();
             services.AddObservationService();
             services.AddTerminologyCodeLookupService();
+            services.AddUnitOfWork();
             services.AddLoincService(configuration);
             services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
             services.AddMemoryCache();
@@ -154,7 +156,11 @@ namespace Helix.Service
             services.AddTransient<IAuthService, AuthService>();
             return services;
         }
-
+        private static IServiceCollection AddUnitOfWork(this IServiceCollection services)
+        {
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
+            return services;
+        }
         private static IServiceCollection AddFileService(this IServiceCollection services)
         {
             services.AddTransient<IFileService, FileService>();
@@ -261,16 +267,5 @@ namespace Helix.Service
 
             return services;
         }
-        //private static IServiceCollection AddFhirSerialization(this IServiceCollection services)
-        //{
-        //    // FHIR Serialization settings can be configured here if needed
-        //    // Create a reusable serializer
-        //    services.AddSingleton<FhirJsonSerializer>(new FhirJsonSerializer(new SerializerSettings()
-        //    {
-        //        Pretty = true,
-        //        AppendFormToTargets = false
-        //    }));
-        //    return services;
-        //}
     }
 }
