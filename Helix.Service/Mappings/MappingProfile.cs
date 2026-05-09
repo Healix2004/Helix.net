@@ -100,6 +100,72 @@ namespace Helix.Service.Mappings
                 .ForMember(dest => dest.Patient, opt => opt.Ignore())
                 .ForMember(dest => dest.Doctor, opt => opt.Ignore());
             CreateMap<Helix.Service.DTOs.ConsentDTOs.UpdateConsentDto, Consent>();
+
+            // Allergy Mappings
+            CreateMap<Allergy, Helix.Service.DTOs.AllergyDTOs.AllergyDto>()
+                .ForMember(dest => dest.PatientId, opt => opt.MapFrom(src => src.Patient != null ? src.Patient.Id : default(System.Guid)));
+            CreateMap<Helix.Service.DTOs.AllergyDTOs.CreateAllergyDto, Allergy>()
+                .ForMember(dest => dest.Patient, opt => opt.Ignore());
+            CreateMap<Helix.Service.DTOs.AllergyDTOs.UpdateAllergyDto, Allergy>();
+
+            // Diagnose Mappings
+            CreateMap<Diagnose, Helix.Service.DTOs.DiagnoseDTOs.DiagnoseDto>()
+                .ForMember(dest => dest.TerminologyCodeId, opt => opt.MapFrom(src => src.TerminologyCode != null ? src.TerminologyCode.Id : default(System.Guid)))
+                .ForMember(dest => dest.PatientId, opt => opt.MapFrom(src => src.Patient != null ? src.Patient.Id : default(System.Guid)))
+                .ForMember(dest => dest.DoctorId, opt => opt.MapFrom(src => src.doctor != null ? src.doctor.Id : default(System.Guid)));
+            CreateMap<Helix.Service.DTOs.DiagnoseDTOs.CreateDiagnoseDto, Diagnose>()
+                .ForMember(dest => dest.TerminologyCode, opt => opt.Ignore())
+                .ForMember(dest => dest.Patient, opt => opt.Ignore())
+                .ForMember(dest => dest.doctor, opt => opt.Ignore());
+            CreateMap<Helix.Service.DTOs.DiagnoseDTOs.UpdateDiagnoseDto, Diagnose>();
+
+            // Encounter Mappings
+            CreateMap<Encounter, Helix.Service.DTOs.EncounterDTOs.EncounterDto>()
+                .ForMember(dest => dest.PatientId, opt => opt.MapFrom(src => src.patient != null ? src.patient.Id : default(System.Guid)))
+                .ForMember(dest => dest.DoctorId, opt => opt.MapFrom(src => src.Doctor != null ? src.Doctor.Id : default(System.Guid)));
+            CreateMap<Helix.Service.DTOs.EncounterDTOs.CreateEncounterDto, Encounter>()
+                .ForMember(dest => dest.patient, opt => opt.Ignore())
+                .ForMember(dest => dest.Doctor, opt => opt.Ignore());
+            CreateMap<Helix.Service.DTOs.EncounterDTOs.UpdateEncounterDto, Encounter>();
+
+            // Facilitie Mappings
+            CreateMap<Facilitie, Helix.Service.DTOs.FacilitieDTOs.FacilitieDto>();
+            CreateMap<Helix.Service.DTOs.FacilitieDTOs.CreateFacilitieDto, Facilitie>();
+            CreateMap<Helix.Service.DTOs.FacilitieDTOs.UpdateFacilitieDto, Facilitie>();
+
+            // LabTestResult Mappings
+            CreateMap<LabTestResult, Helix.Service.DTOs.LabTestResultDTOs.LabTestResultDto>()
+                .ForMember(dest => dest.TerminologyCodeId, opt => opt.MapFrom(src => src.TerminologyCode != null ? src.TerminologyCode.Id : default(System.Guid)))
+                .ForMember(dest => dest.PatientId, opt => opt.MapFrom(src => src.Patient != null ? src.Patient.Id : default(System.Guid)))
+                .ForMember(dest => dest.DoctorId, opt => opt.MapFrom(src => src.Doctor != null ? src.Doctor.Id : default(System.Guid)))
+                .ForMember(dest => dest.EncounterId, opt => opt.MapFrom(src => src.Encounter != null ? src.Encounter.Id : default(System.Guid)));
+            CreateMap<Helix.Service.DTOs.LabTestResultDTOs.CreateLabTestResultDto, LabTestResult>()
+                .ForMember(dest => dest.TerminologyCode, opt => opt.Ignore())
+                .ForMember(dest => dest.Patient, opt => opt.Ignore())
+                .ForMember(dest => dest.Doctor, opt => opt.Ignore())
+                .ForMember(dest => dest.Encounter, opt => opt.Ignore());
+            CreateMap<Helix.Service.DTOs.LabTestResultDTOs.UpdateLabTestResultDto, LabTestResult>();
+
+            // Medication Mappings
+            CreateMap<Medication, Helix.Service.DTOs.MedicationDTOs.MedicationDto>()
+                .ForMember(dest => dest.TerminologyCodeId, opt => opt.MapFrom(src => src.TerminologyCode != null ? src.TerminologyCode.Id : default(System.Guid)))
+                .ForMember(dest => dest.PatientId, opt => opt.MapFrom(src => src.Patient != null ? src.Patient.Id : default(System.Guid)));
+            CreateMap<Helix.Service.DTOs.MedicationDTOs.CreateMedicationDto, Medication>()
+                .ForMember(dest => dest.TerminologyCode, opt => opt.Ignore())
+                .ForMember(dest => dest.Patient, opt => opt.Ignore());
+            CreateMap<Helix.Service.DTOs.MedicationDTOs.UpdateMedicationDto, Medication>();
+
+            // Observation Mappings
+            CreateMap<Observation, Helix.Service.DTOs.ObservationDTOs.ObservationDto>()
+                .ForMember(dest => dest.EncounterId, opt => opt.MapFrom(src => src.Encounter != null ? src.Encounter.Id : default(System.Guid)));
+            CreateMap<Helix.Service.DTOs.ObservationDTOs.CreateObservationDto, Observation>()
+                .ForMember(dest => dest.Encounter, opt => opt.Ignore());
+            CreateMap<Helix.Service.DTOs.ObservationDTOs.UpdateObservationDto, Observation>();
+
+            // TerminologyCodeLookup Mappings
+            CreateMap<TerminologyCodeLookup, Helix.Service.DTOs.TerminologyCodeLookupDTOs.TerminologyCodeLookupDto>();
+            CreateMap<Helix.Service.DTOs.TerminologyCodeLookupDTOs.CreateTerminologyCodeLookupDto, TerminologyCodeLookup>();
+            CreateMap<Helix.Service.DTOs.TerminologyCodeLookupDTOs.UpdateTerminologyCodeLookupDto, TerminologyCodeLookup>();
         }
     }
 }

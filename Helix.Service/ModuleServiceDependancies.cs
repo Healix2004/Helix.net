@@ -40,6 +40,14 @@ namespace Helix.Service
             services.AddPatientService();
             services.AddDoctorService();
             services.AddConsentService();
+            services.AddAllergyService();
+            services.AddDiagnoseService();
+            services.AddEncounterService();
+            services.AddFacilitieService();
+            services.AddLabTestResultService();
+            services.AddMedicationService();
+            services.AddObservationService();
+            services.AddTerminologyCodeLookupService();
             services.AddLoincService(configuration);
             services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
             services.AddMemoryCache();
@@ -178,6 +186,54 @@ namespace Helix.Service
         private static IServiceCollection AddConsentService(this IServiceCollection services)
         {
             services.AddScoped<IConsentService, Helix.Service.Services.ConsentService.ConsentService>();
+            return services;
+        }
+
+        private static IServiceCollection AddAllergyService(this IServiceCollection services)
+        {
+            services.AddScoped<IAllergyService, Helix.Service.Services.AllergyService.AllergyService>();
+            return services;
+        }
+
+        private static IServiceCollection AddDiagnoseService(this IServiceCollection services)
+        {
+            services.AddScoped<IDiagnoseService, Helix.Service.Services.DiagnoseService.DiagnoseService>();
+            return services;
+        }
+
+        private static IServiceCollection AddEncounterService(this IServiceCollection services)
+        {
+            services.AddScoped<IEncounterService, Helix.Service.Services.EncounterService.EncounterService>();
+            return services;
+        }
+
+        private static IServiceCollection AddFacilitieService(this IServiceCollection services)
+        {
+            services.AddScoped<IFacilitieService, Helix.Service.Services.FacilitieService.FacilitieService>();
+            return services;
+        }
+
+        private static IServiceCollection AddLabTestResultService(this IServiceCollection services)
+        {
+            services.AddScoped<ILabTestResultService, Helix.Service.Services.LabTestResultService.LabTestResultService>();
+            return services;
+        }
+
+        private static IServiceCollection AddMedicationService(this IServiceCollection services)
+        {
+            services.AddScoped<IMedicationService, Helix.Service.Services.MedicationService.MedicationService>();
+            return services;
+        }
+
+        private static IServiceCollection AddObservationService(this IServiceCollection services)
+        {
+            services.AddScoped<IObservationService, Helix.Service.Services.ObservationService.ObservationService>();
+            return services;
+        }
+
+        private static IServiceCollection AddTerminologyCodeLookupService(this IServiceCollection services)
+        {
+            services.AddScoped<ITerminologyCodeLookupService, Helix.Service.Services.TerminologyCodeLookupService.TerminologyCodeLookupService>();
             return services;
         }
 
