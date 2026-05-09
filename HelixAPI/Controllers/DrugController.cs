@@ -1,70 +1,101 @@
-﻿using Helix.Api.Base;
-using Helix.Data.Enums;
+using Helix.Api.Base;
+using Helix.Core.Features.Drugs.Commands.Models;
+using Helix.Core.Features.Drugs.Queries.Models;
 using Helix.Service.DTOs.DrugDTOs;
-using Helix.Service.Interfaces;
-using Microsoft.AspNetCore.Authorization;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Helix.API.Controllers
 {
-    
+    /// <summary>
+    /// Provides access to drug data in the Helix healthcare system.
+    /// Drug data is sourced from an external drug data service.
+    /// Standard CRUD mutations (POST/PUT/DELETE) are not supported by the external data source.
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = nameof(EnRoles.Doctor))]
-    public class DrugController(IDrugDataService drugService) : AppControllerBase
+    public class DrugController(IMediator mediator) : AppControllerBase
     {
         /// <summary>
-        /// Check for drug interactions between the provided drugs
+        /// Retrieves all available drugs from the external drug data service.
         /// </summary>
-        [HttpPost("check-interaction")]
-        [ProducesResponseType(typeof(InteractionResponseDTO), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> CheckInteraction([FromBody] InteractionRequestDTO request)
+        /// <returns>A list of all available drugs.</returns>
+        /// <response code="200">Returns the list of drugs.</response>
+        [HttpGet]
+        [ProducesResponseType(typeof(IEnumerable<DrugDTO>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAll()
         {
-            var response = await drugService.CheckDrugInteractionAsync(request);
-            if (response == null)
-            {
-                return BadRequest();
-            }
-            return Ok(response);
+            var query = new GetDrugListQuery();
+            var response = await mediator.Send(query);
+            return NewResult(response);
         }
 
         /// <summary>
-        /// Get the list of available drugs
+        /// Retrieves a specific drug by its ID from the external drug data service.
         /// </summary>
-        [HttpGet("drugs")]
-        [ProducesResponseType(typeof(List<DrugDTO>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetDrugs()
+        /// <param name="id">The unique drug identifier.</param>
+        /// <returns>The drug matching the given ID.</returns>
+        /// <response code="200">Returns the drug.</response>
+        /// <response code="404">Drug not found in the external drug data service.</response>
+        [HttpGet("{id}")]
+        [ProducesResponseType(typeof(DrugDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetById(int id)
         {
-            var drugs = await drugService.ImportDrugDataAsync();
-            return Ok(drugs);
+            var query = new GetDrugByIdQuery(id);
+            var response = await mediator.Send(query);
+            return NewResult(response);
         }
 
         /// <summary>
-        /// Set the drug interaction server IP address
+        /// Not supported. Drug creation is managed by the external drug data service.
         /// </summary>
-        [HttpPost("set-server-ip")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
+        /// <param name="dto">Drug creation data (stub — not processed by the external service).</param>
+        /// <returns>400 Bad Request.</returns>
+        /// <response code="400">Drug creation is not supported via this endpoint.</response>
+        [HttpPost]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> SetServerIP([FromBody] ServerIpRequest request)
+        public async Task<IActionResult> Create([FromBody] CreateDrugDto dto)
         {
-            if (string.IsNullOrWhiteSpace(request?.Ip))
-            {
-                return BadRequest("IP address is required.");
-            }
-            await drugService.SetServerIP(request.Ip);
-            var res = new { res = " IP Address Setted Correctly" };
-            return Ok(res);
+            var command = new CreateDrugCommand(dto);
+            var response = await mediator.Send(command);
+            return NewResult(response);
         }
-        [HttpGet("get-server-ip")]
-        [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetServerIP()
+
+        /// <summary>
+        /// Not supported. Drug updates are managed by the external drug data service.
+        /// </summary>
+        /// <param name="id">The drug ID (stub — not processed by the external service).</param>
+        /// <param name="dto">Drug update data (stub).</param>
+        /// <returns>400 Bad Request.</returns>
+        /// <response code="400">Drug update is not supported via this endpoint.</response>
+        [HttpPut("{id}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Update(int id, [FromBody] UpdateDrugDto dto)
         {
-            var ip = await drugService.GetServerIP();
-            var res = new { Ip = ip };
-            return StatusCode((int)StatusCodes.Status200OK, res);
+            var command = new UpdateDrugCommand(id, dto);
+            var response = await mediator.Send(command);
+            return NewResult(response);
+        }
+
+        /// <summary>
+        /// Not supported. Drug deletion is managed by the external drug data service.
+        /// </summary>
+        /// <param name="id">The drug ID (stub — not processed by the external service).</param>
+        /// <returns>400 Bad Request.</returns>
+        /// <response code="400">Drug deletion is not supported via this endpoint.</response>
+        [HttpDelete("{id}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var command = new DeleteDrugCommand(id);
+            var response = await mediator.Send(command);
+            return NewResult(response);
         }
     }
 
+    /// <summary>
+    /// Request body for setting the external drug data server IP address.
+    /// </summary>
     public record ServerIpRequest(string Ip);
 }
