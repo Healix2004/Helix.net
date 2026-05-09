@@ -60,6 +60,21 @@ namespace Helix.Service.Mappings
                 .ForMember(dest => dest.LockoutEnd, opt => opt.Ignore())
                 .ForMember(dest => dest.LockoutEnabled, opt => opt.Ignore())
                 .ForMember(dest => dest.AccessFailedCount, opt => opt.Ignore());
+
+            // Patient Mappings
+            CreateMap<Patient, Helix.Service.DTOs.PatientDTOs.PatientDto>()
+                .ForMember(dest => dest.AppUserId, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.Id : null))
+                .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.FirstName : null))
+                .ForMember(dest => dest.MiddleName, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.MiddleName : null))
+                .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.LastName : null))
+                .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.Email : null))
+                .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.PhoneNumber : null))
+                .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.Gender : null))
+                .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.Address : null))
+                .ForMember(dest => dest.DataOfBrith, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.DataOfBrith : default));
+
+            CreateMap<Helix.Service.DTOs.PatientDTOs.CreatePatientDto, Patient>();
+            CreateMap<Helix.Service.DTOs.PatientDTOs.UpdatePatientDto, Patient>();
         }
     }
 }

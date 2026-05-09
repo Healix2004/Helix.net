@@ -1,4 +1,4 @@
-﻿using Helix.Data.Entities;
+using Helix.Data.Entities;
 using Helix.Infrastructure.Context;
 using Helix.Infrastructure.Context.DbInitializer;
 using Helix.Infrastructure.ExternalServices;
@@ -37,6 +37,7 @@ namespace Helix.Service
             services.AddFileService();
             services.AddEmailService();
             services.AddDrugService();
+            services.AddPatientService();
             services.AddLoincService(configuration);
             services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
             services.AddMemoryCache();
@@ -157,6 +158,12 @@ namespace Helix.Service
         private static IServiceCollection AddDrugService(this IServiceCollection services)
         {
             services.AddSingleton<IDrugDataService, DrugDataService>();
+            return services;
+        }
+
+        private static IServiceCollection AddPatientService(this IServiceCollection services)
+        {
+            services.AddScoped<IPatientService, Helix.Service.Services.PatientService.PatientService>();
             return services;
         }
 
