@@ -8,6 +8,7 @@ namespace Helix.Data.Entities
     public class Patient : BaseEntity
     {
         // Relation With AppUser
+        public string AppUserId { get; set; }
         public virtual AppUser AppUser { get; set; }
         public  EnPatientCategories PatientCategory { get; set; }
         public EnBloodTypes? BloodType { get; set; }
@@ -17,5 +18,6 @@ namespace Helix.Data.Entities
         public List<LabTestResult> LabTestResult { get; set; } = new List<LabTestResult>();
         //one to many with consent
         public List<Consent> Consents { get; set; }=new List<Consent>();
+        public List<LabOrder> LabOrders { get; set; }= new List<LabOrder>();
     }
 }

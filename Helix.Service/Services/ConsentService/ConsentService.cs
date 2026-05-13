@@ -22,10 +22,10 @@ namespace Helix.Service.Services.ConsentService
 
         public Task<ConsentDto> CreateConsentAsync(CreateConsentDto createConsentDto)
         {
-            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == createConsentDto.PatientId).FirstOrDefault();
+            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == createConsentDto.PatientId).Result.FirstOrDefault();
             if (patient == null) throw new Exception("Patient not found");
 
-            var doctor = _unitOfWork.Repository<Doctor>().Find(d => d.Id == createConsentDto.DoctorId).FirstOrDefault();
+            var doctor = _unitOfWork.Repository<Doctor>().Find(d => d.Id == createConsentDto.DoctorId).Result.FirstOrDefault();
             if (doctor == null) throw new Exception("Doctor not found");
 
             var consent = _mapper.Map<Consent>(createConsentDto);
@@ -45,7 +45,7 @@ namespace Helix.Service.Services.ConsentService
 
         public Task<bool> DeleteConsentAsync(Guid id)
         {
-            var consent = _unitOfWork.Repository<Consent>().Find(c => c.Id == id).FirstOrDefault();
+            var consent = _unitOfWork.Repository<Consent>().Find(c => c.Id == id).Result.FirstOrDefault();
             if (consent == null)
             {
                 return Task.FromResult(false);
@@ -66,7 +66,7 @@ namespace Helix.Service.Services.ConsentService
 
         public Task<ConsentDto> GetConsentByIdAsync(Guid id)
         {
-            var consent = _unitOfWork.Repository<Consent>().Find(c => c.Id == id).FirstOrDefault();
+            var consent = _unitOfWork.Repository<Consent>().Find(c => c.Id == id).Result.FirstOrDefault();
             if (consent == null)
             {
                 return Task.FromResult<ConsentDto>(null);
@@ -78,7 +78,7 @@ namespace Helix.Service.Services.ConsentService
 
         public Task<ConsentDto> UpdateConsentAsync(Guid id, UpdateConsentDto updateConsentDto)
         {
-            var consent = _unitOfWork.Repository<Consent>().Find(c => c.Id == id).FirstOrDefault();
+            var consent = _unitOfWork.Repository<Consent>().Find(c => c.Id == id).Result.FirstOrDefault();
             if (consent == null)
             {
                 throw new Exception("Consent not found");

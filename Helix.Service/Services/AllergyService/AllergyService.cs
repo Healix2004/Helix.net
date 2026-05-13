@@ -22,7 +22,7 @@ namespace Helix.Service.Services.AllergyService
 
         public Task<AllergyDto> CreateAllergyAsync(CreateAllergyDto createAllergyDto)
         {
-            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == createAllergyDto.PatientId).FirstOrDefault();
+            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == createAllergyDto.PatientId).Result.FirstOrDefault();
             if (patient == null) throw new Exception("Patient not found");
 
             var allergy = _mapper.Map<Allergy>(createAllergyDto);
@@ -38,7 +38,7 @@ namespace Helix.Service.Services.AllergyService
 
         public Task<bool> DeleteAllergyAsync(Guid id)
         {
-            var allergy = _unitOfWork.Repository<Allergy>().Find(a => a.Id == id).FirstOrDefault();
+            var allergy = _unitOfWork.Repository<Allergy>().Find(a => a.Id == id).Result.FirstOrDefault();
             if (allergy == null) return Task.FromResult(false);
 
             _unitOfWork.Repository<Allergy>().Delete(allergy);
@@ -48,19 +48,19 @@ namespace Helix.Service.Services.AllergyService
 
         public Task<IEnumerable<AllergyDto>> GetAllAllergiesAsync()
         {
-            var allergies = _unitOfWork.Repository<Allergy>().GetALL();
+            var allergies = _unitOfWork.Repository<Allergy>().GetALL().Result;
             return Task.FromResult(_mapper.Map<IEnumerable<AllergyDto>>(allergies));
         }
 
         public Task<AllergyDto> GetAllergyByIdAsync(Guid id)
         {
-            var allergy = _unitOfWork.Repository<Allergy>().Find(a => a.Id == id).FirstOrDefault();
+            var allergy = _unitOfWork.Repository<Allergy>().Find(a => a.Id == id).Result.FirstOrDefault();
             return Task.FromResult(_mapper.Map<AllergyDto>(allergy));
         }
 
         public Task<AllergyDto> UpdateAllergyAsync(Guid id, UpdateAllergyDto updateAllergyDto)
         {
-            var allergy = _unitOfWork.Repository<Allergy>().Find(a => a.Id == id).FirstOrDefault();
+            var allergy = _unitOfWork.Repository<Allergy>().Find(a => a.Id == id).Result.FirstOrDefault();
             if (allergy == null) throw new Exception("Allergy not found");
 
             _mapper.Map(updateAllergyDto, allergy);

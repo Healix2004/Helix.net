@@ -1,6 +1,7 @@
+using Helix.Service.DTOs.TerminologyCodeLookupDTOs;
+using Helix.Service.Interfaces;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Serialization;
-using Helix.Service.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,15 +14,14 @@ namespace Helix.Service.Services.LoincTerminology
     public class LoincTerminologyService : ILoincTerminologyService
     {
         private readonly HttpClient _httpClient;
+        private readonly ITerminologyCodeLookupService _terminologyCode;
 
-        public LoincTerminologyService(HttpClient httpClient)
+        public LoincTerminologyService(HttpClient httpClient,ITerminologyCodeLookupService terminologyCode)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+            _terminologyCode = terminologyCode ?? throw new ArgumentNullException(nameof(terminologyCode));
         }
 
-        /// <summary>
-        /// Look up a specific LOINC code using the FHIR CodeSystem $lookup endpoint
-        /// </summary>
         public async Task<CodeableConcept> LookupLoincCodeAsync(string loincCode)
         {
             if (string.IsNullOrWhiteSpace(loincCode))
@@ -72,18 +72,31 @@ namespace Helix.Service.Services.LoincTerminology
                 throw new InvalidOperationException($"Failed to lookup LOINC code {loincCode}: {ex.Message}", ex);
             }
         }
-
-        /// <summary>
-        /// Search for LOINC codes using ValueSet $expand operation
-        /// </summary>
         public async Task<IEnumerable<CodeableConcept>> SearchLoincCodesAsync(string searchTerm)
         {
             if (string.IsNullOrWhiteSpace(searchTerm))
                 return Enumerable.Empty<CodeableConcept>();
-
+            // 1. Try to find in the Database first
+            var cachedEntry= await _terminologyCode.GetOrFetchLoincCodeAsync(searchTerm);
+            if (cachedEntry.Count > 0)
+            {
+                var concepts = cachedEntry.Select(entry => new CodeableConcept
+                {
+                    Coding = new List<Coding>
+                    {
+                        new Coding
+                        {
+                            System = entry.SystemUrl,
+                            Code = entry.Code,
+                            Display = entry.Display
+                        }
+                    },
+                    Text = entry.Display
+                });
+                return concepts;
+            }
             try
             {
-                // Correct FHIR expansion operation for searching concepts inside a terminology
                 var requestUri = $"ValueSet/$expand?url=http://loinc.org/vs&filter={Uri.EscapeDataString(searchTerm)}&count=50";
 
                 _httpClient.DefaultRequestHeaders.Accept.Clear();
@@ -97,17 +110,26 @@ namespace Helix.Service.Services.LoincTerminology
                 }
 
                 var content = await response.Content.ReadAsStringAsync();
-                return ParseSearchResults(content);
+                var res = ParseSearchResults(content);
+                foreach (var result in res)
+                {
+                    // Ensure non-nullable DTO properties receive non-null values to avoid CS8601
+                    var first = result.Coding?.FirstOrDefault();
+                    _ = _terminologyCode.CreateTerminologyCodeLookupAsync(new CreateTerminologyCodeLookupDto
+                    {
+                        Code = first?.Code ?? string.Empty,
+                        Display = first?.Display ?? string.Empty,
+                        SystemUrl = first?.System ?? "http://loinc.org",
+                        TerminologyType = Data.Enums.EnTerminologyType.LabTest
+                    });
+                }
+                return res;
             }
             catch (HttpRequestException ex)
             {
                 throw new InvalidOperationException($"Failed to search LOINC codes for '{searchTerm}': {ex.Message}", ex);
             }
         }
-
-        /// <summary>
-        /// Create a FHIR Observation resource from LOINC code details
-        /// </summary>
         public Observation CreateFhirObservation(string loincCode, string display)
         {
             if (string.IsNullOrWhiteSpace(loincCode))
@@ -153,27 +175,19 @@ namespace Helix.Service.Services.LoincTerminology
         }
 
         #region Private Helpers
-
-        /// <summary>
-        /// Parse FHIR Parameters resource response from lookup operation
-        /// </summary>
-        private Parameters ParseParametersResponse(string jsonContent)
+        private Parameters? ParseParametersResponse(string jsonContent)
         {
             try
             {
-                var parser = new FhirJsonParser();
-                return parser.Parse<Parameters>(jsonContent);
+                var parser = new FhirJsonDeserializer();
+                return parser.Deserialize<Parameters>(jsonContent);
             }
             catch
             {
                 return null;
             }
         }
-
-        /// <summary>
-        /// Extract a parameter value from a FHIR Parameters resource
-        /// </summary>
-        private string ExtractParameterValue(Parameters parameters, string name)
+        private string? ExtractParameterValue(Parameters? parameters, string name)
         {
             var param = parameters?.Parameter?.FirstOrDefault(p => p.Name == name);
             if (param == null)
@@ -187,16 +201,12 @@ namespace Helix.Service.Services.LoincTerminology
 
             return param.Value?.ToString();
         }
-
-        /// <summary>
-        /// Parse search results natively using the HL7 FHIR ValueSet Expansion
-        /// </summary>
         private IEnumerable<CodeableConcept> ParseSearchResults(string jsonContent)
         {
             try
             {
-                var parser = new FhirJsonParser();
-                var valueSet = parser.Parse<ValueSet>(jsonContent);
+                var parser = new FhirJsonDeserializer();
+                var valueSet = parser.Deserialize<ValueSet>(jsonContent);
 
                 if (valueSet?.Expansion?.Contains == null)
                     return Enumerable.Empty<CodeableConcept>();

@@ -220,7 +220,7 @@ namespace Helix.Infrastructure.Migrations
 
                     b.HasIndex("doctorId");
 
-                    b.ToTable("Diagnose");
+                    b.ToTable("Diagnoses");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.Doctor", b =>
@@ -336,6 +336,49 @@ namespace Helix.Infrastructure.Migrations
                     b.ToTable("LabImages");
                 });
 
+            modelBuilder.Entity("Helix.Data.Entities.LabOrder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("DoctorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("LabResultId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("QrToken")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TerminologyCodeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DoctorId");
+
+                    b.HasIndex("LabResultId")
+                        .IsUnique()
+                        .HasFilter("[LabResultId] IS NOT NULL");
+
+                    b.HasIndex("PatientId");
+
+                    b.HasIndex("TerminologyCodeId");
+
+                    b.ToTable("LabOrders");
+                });
+
             modelBuilder.Entity("Helix.Data.Entities.LabTestResult", b =>
                 {
                     b.Property<Guid>("Id")
@@ -348,21 +391,26 @@ namespace Helix.Infrastructure.Migrations
                     b.Property<Guid>("EncounterId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("PatientId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ResultDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid>("TerminologyCodeId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Unit")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<int>("status")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("value")
+                    b.Property<decimal?>("value")
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
@@ -375,7 +423,7 @@ namespace Helix.Infrastructure.Migrations
 
                     b.HasIndex("TerminologyCodeId");
 
-                    b.ToTable("LabTestResult");
+                    b.ToTable("LabTestResults");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.Observation", b =>
@@ -439,8 +487,8 @@ namespace Helix.Infrastructure.Migrations
 
                     b.Property<string>("Display")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasMaxLength(850)
+                        .HasColumnType("nvarchar(850)");
 
                     b.Property<string>("SystemUrl")
                         .IsRequired()
@@ -735,6 +783,40 @@ namespace Helix.Infrastructure.Migrations
                     b.Navigation("LabTestResult");
                 });
 
+            modelBuilder.Entity("Helix.Data.Entities.LabOrder", b =>
+                {
+                    b.HasOne("Helix.Data.Entities.Doctor", "Doctor")
+                        .WithMany("LabOrders")
+                        .HasForeignKey("DoctorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Helix.Data.Entities.LabTestResult", "Result")
+                        .WithOne("LabOrder")
+                        .HasForeignKey("Helix.Data.Entities.LabOrder", "LabResultId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Helix.Data.Entities.Patient", "Patient")
+                        .WithMany("LabOrders")
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Helix.Data.Entities.TerminologyCodeLookup", "TerminologyCode")
+                        .WithMany()
+                        .HasForeignKey("TerminologyCodeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Doctor");
+
+                    b.Navigation("Patient");
+
+                    b.Navigation("Result");
+
+                    b.Navigation("TerminologyCode");
+                });
+
             modelBuilder.Entity("Helix.Data.Entities.LabTestResult", b =>
                 {
                     b.HasOne("Helix.Data.Entities.Doctor", "Doctor")
@@ -859,6 +941,8 @@ namespace Helix.Infrastructure.Migrations
                     b.Navigation("Consents");
 
                     b.Navigation("Encounters");
+
+                    b.Navigation("LabOrders");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.Encounter", b =>
@@ -870,6 +954,9 @@ namespace Helix.Infrastructure.Migrations
 
             modelBuilder.Entity("Helix.Data.Entities.LabTestResult", b =>
                 {
+                    b.Navigation("LabOrder")
+                        .IsRequired();
+
                     b.Navigation("images");
                 });
 
@@ -882,6 +969,8 @@ namespace Helix.Infrastructure.Migrations
                     b.Navigation("Diagnose");
 
                     b.Navigation("Encounters");
+
+                    b.Navigation("LabOrders");
 
                     b.Navigation("LabTestResult");
                 });

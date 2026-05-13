@@ -12,5 +12,8 @@ namespace Helix.Service.Interfaces
         Task<TerminologyCodeLookupDto> CreateTerminologyCodeLookupAsync(CreateTerminologyCodeLookupDto createDto);
         Task<TerminologyCodeLookupDto> UpdateTerminologyCodeLookupAsync(Guid id, UpdateTerminologyCodeLookupDto updateDto);
         Task<bool> DeleteTerminologyCodeLookupAsync(Guid id);
+
+        // Add this method to handle the LOINC search/cache logic
+        Task<List<TerminologyCodeLookupDto>> GetOrFetchLoincCodeAsync(string searchTerm);
     }
 }

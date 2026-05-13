@@ -22,10 +22,10 @@ namespace Helix.Service.Services.MedicationService
 
         public Task<MedicationDto> CreateMedicationAsync(CreateMedicationDto createMedicationDto)
         {
-            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == createMedicationDto.PatientId).FirstOrDefault();
+            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == createMedicationDto.PatientId).Result.FirstOrDefault();
             if (patient == null) throw new Exception("Patient not found");
 
-            var terminology = _unitOfWork.Repository<TerminologyCodeLookup>().Find(t => t.Id == createMedicationDto.TerminologyCodeId).FirstOrDefault();
+            var terminology = _unitOfWork.Repository<TerminologyCodeLookup>().Find(t => t.Id == createMedicationDto.TerminologyCodeId).Result.FirstOrDefault();
             if (terminology == null) throw new Exception("Terminology Code not found");
 
             var medication = _mapper.Map<Medication>(createMedicationDto);
@@ -43,7 +43,7 @@ namespace Helix.Service.Services.MedicationService
 
         public Task<bool> DeleteMedicationAsync(Guid id)
         {
-            var medication = _unitOfWork.Repository<Medication>().Find(m => m.Id == id).FirstOrDefault();
+            var medication = _unitOfWork.Repository<Medication>().Find(m => m.Id == id).Result.FirstOrDefault();
             if (medication == null) return Task.FromResult(false);
 
             _unitOfWork.Repository<Medication>().Delete(medication);
@@ -59,13 +59,13 @@ namespace Helix.Service.Services.MedicationService
 
         public Task<MedicationDto> GetMedicationByIdAsync(Guid id)
         {
-            var medication = _unitOfWork.Repository<Medication>().Find(m => m.Id == id).FirstOrDefault();
+            var medication = _unitOfWork.Repository<Medication>().Find(m => m.Id == id).Result.FirstOrDefault();
             return Task.FromResult(_mapper.Map<MedicationDto>(medication));
         }
 
         public Task<MedicationDto> UpdateMedicationAsync(Guid id, UpdateMedicationDto updateMedicationDto)
         {
-            var medication = _unitOfWork.Repository<Medication>().Find(m => m.Id == id).FirstOrDefault();
+            var medication = _unitOfWork.Repository<Medication>().Find(m => m.Id == id).Result.FirstOrDefault();
             if (medication == null) throw new Exception("Medication not found");
 
             _mapper.Map(updateMedicationDto, medication);

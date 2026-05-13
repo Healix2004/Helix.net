@@ -8,6 +8,8 @@ namespace Helix.Data.Enums
     {
         Diagnosis,
         Medication,
-        LabTest
+        LabTest,
+        Radiology,
+        Clinical
     }
 }

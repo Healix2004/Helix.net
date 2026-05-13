@@ -1,8 +1,10 @@
-﻿using Helix.Core.Features.Emails.Commands.Models;
+﻿using Helix.Api.Base;
+using Helix.Core.Features.Emails.Commands.Models;
+using Helix.Data.Enums;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Helix.Api.Base;
 namespace Helix.API.Controllers
 {
     [Route("api/[controller]")]
@@ -10,6 +12,8 @@ namespace Helix.API.Controllers
     public class EmailsController : AppControllerBase
     {
         [HttpPost("send")]
+        [Authorize(Roles = nameof(EnRoles.Admin))]
+
         public async Task<IActionResult> SendEmail([FromBody] SendEmailCommand request)
         {
             var response = await mediator.Send(request);

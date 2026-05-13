@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Helix.Service.Repositories
@@ -20,37 +19,43 @@ namespace Helix.Service.Repositories
         {
             this.context = context;
         }
-        public void Add(T entity)
+
+        public Task Add(T entity)
         {
             context.Set<T>().Add(entity);
-          
+            return Task.CompletedTask;
         }
 
-        public void Delete(T entity)
+        public Task Delete(T entity)
         {
             context.Set<T>().Remove(entity);
-            
+            return Task.CompletedTask;
         }
-        public void Update(T entity)
+
+        public Task Update(T entity)
         {
             context.Set<T>().Update(entity);
-           
+            return Task.CompletedTask;
         }
 
-        public T Get(int Id) => context.Set<T>().Find(Id);
-        public T Get(string Id) => context.Set<T>().Find(Id);
+        public Task<T> Get(Guid Id) => Task.FromResult(context.Set<T>().Find(Id));
+        public Task<T> Get(string Id) => Task.FromResult(context.Set<T>().Find(Id));
 
-        public IEnumerable<T> GetALL() => context.Set<T>().AsNoTracking().ToList();
-
-        public IQueryable<T> Find(Expression<Func<T, bool>> filter)
+         public Task<IEnumerable<T>> GetALL()
         {
-           return context.Set<T>().Where(filter);
+            // ensure the returned Task<T> generic matches IEnumerable<T>
+            return Task.FromResult<IEnumerable<T>>(context.Set<T>().AsNoTracking().ToList());
         }
 
-        public T GetEntityWithSpec(ISpecification<T> spec) => ApplySpec(spec).FirstOrDefault();
-        public IEnumerable<T> GetALLWithSpec(ISpecification<T> spec) => ApplySpec(spec).AsNoTracking().ToList();
+        public Task<IQueryable<T>> Find(Expression<Func<T, bool>> filter)
+        {
+            return Task.FromResult(context.Set<T>().Where(filter));
+        }
+
+        public Task<T> GetEntityWithSpec(ISpecification<T> spec) => Task.FromResult(ApplySpec(spec).FirstOrDefault());
+        public Task<IEnumerable<T>> GetALLWithSpec(ISpecification<T> spec) => Task.FromResult<IEnumerable<T>>(ApplySpec(spec).AsNoTracking().ToList());
 
         //helper
-        private IQueryable<T> ApplySpec(ISpecification<T> spec) => SpecificationEvaluator<T>.GetQuery(context.Set<T>(), spec);       
+        private IQueryable<T> ApplySpec(ISpecification<T> spec) => SpecificationEvaluator<T>.GetQuery(context.Set<T>(), spec);
     }
 }

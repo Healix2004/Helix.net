@@ -1,5 +1,6 @@
 using Helix.Api.Base;
 using Helix.Core.Bases;
+using Helix.Data.Enums;
 using Helix.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,6 +13,8 @@ namespace Helix.API.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
+    [Authorize(Roles = nameof(EnRoles.Doctor))]
+
     public class LoincController : AppControllerBase
     {
         private readonly ILoincTerminologyService _loincService;
@@ -21,11 +24,6 @@ namespace Helix.API.Controllers
             _loincService = loincService ?? throw new ArgumentNullException(nameof(loincService));
         }
 
-        /// <summary>
-        /// Look up a specific LOINC code and retrieve its details
-        /// </summary>
-        /// <param name="code">The LOINC code to lookup (e.g., 2345-7)</param>
-        /// <returns>CodeableConcept containing the LOINC code information</returns>
         [HttpGet("lookup/{code}")]
         [ProducesResponseType(typeof(Response<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(Response<string>), StatusCodes.Status404NotFound)]
@@ -83,11 +81,6 @@ namespace Helix.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Search for LOINC codes based on a search term
-        /// </summary>
-        /// <param name="searchTerm">Search term (e.g., glucose, hemoglobin)</param>
-        /// <returns>Collection of CodeableConcepts matching the search term</returns>
         [HttpGet("search")]
         [ProducesResponseType(typeof(Response<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(Response<string>), StatusCodes.Status400BadRequest)]
@@ -135,12 +128,6 @@ namespace Helix.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Get a FHIR Observation template for a specific LOINC code
-        /// </summary>
-        /// <param name="code">The LOINC code (e.g., 2345-7)</param>
-        /// <param name="display">Display name for the code</param>
-        /// <returns>FHIR Observation resource in JSON format</returns>
         [HttpGet("observation")]
         [ProducesResponseType(typeof(Response<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(Response<string>), StatusCodes.Status400BadRequest)]

@@ -1,8 +1,10 @@
 using Helix.Api.Base;
 using Helix.Core.Features.Medications.Commands.Models;
 using Helix.Core.Features.Medications.Queries.Models;
+using Helix.Data.Enums;
 using Helix.Service.DTOs.MedicationDTOs;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Helix.API.Controllers
@@ -14,11 +16,7 @@ namespace Helix.API.Controllers
     [ApiController]
     public class MedicationController(IMediator mediator) : AppControllerBase
     {
-        /// <summary>
-        /// Retrieves all medication records.
-        /// </summary>
-        /// <returns>A list of all medication records.</returns>
-        /// <response code="200">Returns the list of medications.</response>
+        [Authorize(Roles = nameof(EnRoles.Doctor))]
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<MedicationDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll()
@@ -28,13 +26,6 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        /// <summary>
-        /// Retrieves a specific medication record by ID.
-        /// </summary>
-        /// <param name="id">The unique identifier of the medication record.</param>
-        /// <returns>The medication record matching the given ID.</returns>
-        /// <response code="200">Returns the medication record.</response>
-        /// <response code="404">Medication not found.</response>
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(MedicationDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -45,13 +36,7 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        /// <summary>
-        /// Creates a new medication record.
-        /// </summary>
-        /// <param name="dto">The medication data to create.</param>
-        /// <returns>The newly created medication record.</returns>
-        /// <response code="201">Medication created successfully.</response>
-        /// <response code="400">Invalid input data.</response>
+        [Authorize(Roles = nameof(EnRoles.Doctor))]
         [HttpPost]
         [ProducesResponseType(typeof(MedicationDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -62,14 +47,7 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        /// <summary>
-        /// Updates an existing medication record.
-        /// </summary>
-        /// <param name="id">The unique identifier of the medication to update.</param>
-        /// <param name="dto">The updated medication data.</param>
-        /// <returns>The updated medication record.</returns>
-        /// <response code="200">Medication updated successfully.</response>
-        /// <response code="404">Medication not found.</response>
+        [Authorize(Roles = nameof(EnRoles.Doctor))]
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(MedicationDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -80,13 +58,7 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        /// <summary>
-        /// Deletes a medication record.
-        /// </summary>
-        /// <param name="id">The unique identifier of the medication to delete.</param>
-        /// <returns>Confirmation of deletion.</returns>
-        /// <response code="200">Medication deleted successfully.</response>
-        /// <response code="404">Medication not found.</response>
+        [Authorize(Roles = nameof(EnRoles.Doctor))]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

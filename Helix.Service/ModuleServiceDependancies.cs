@@ -1,3 +1,4 @@
+using AutoMapper;
 using Helix.Data.Entities;
 using Helix.Infrastructure.Context;
 using Helix.Infrastructure.Context.DbInitializer;
@@ -21,6 +22,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
+using System.Reflection;
 using System.Text;
 
 namespace Helix.Service
@@ -33,8 +35,9 @@ namespace Helix.Service
             services.AddDbInitializer();
             services.AddIdentity();
             services.AddJWT(configuration, env);
-            services.AddAutoMapper(typeof(ModuleServiceDependancies));
+            services.AddAutoMapper(cfg => { }, AppDomain.CurrentDomain.GetAssemblies());
             services.AddAuth();
+            // add application services
             services.AddFileService();
             services.AddEmailService();
             services.AddDrugService();
@@ -48,6 +51,7 @@ namespace Helix.Service
             services.AddLabTestResultService();
             services.AddMedicationService();
             services.AddObservationService();
+            services.AddLabOrderService();
             services.AddTerminologyCodeLookupService();
             services.AddUnitOfWork();
             services.AddLoincService(configuration);
@@ -242,7 +246,11 @@ namespace Helix.Service
             services.AddScoped<ITerminologyCodeLookupService, Helix.Service.Services.TerminologyCodeLookupService.TerminologyCodeLookupService>();
             return services;
         }
-
+        private static IServiceCollection AddLabOrderService (this IServiceCollection services)
+        {
+            services.AddScoped<ILabOrderService, Helix.Service.Services.LabOrderService.LabOrderService>();
+            return services;
+        }
         private static IServiceCollection AddLoincService(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddHttpClient<ILoincTerminologyService, LoincTerminologyService>(client =>

@@ -8,6 +8,7 @@ namespace Helix.Service.Interfaces
     public interface IDoctorService
     {
         Task<DoctorDto> GetDoctorByIdAsync(Guid id);
+        Task<DoctorDto> GetDoctorByUserIdAsync(string userId);
         Task<IEnumerable<DoctorDto>> GetAllDoctorsAsync();
         Task<DoctorDto> CreateDoctorAsync(CreateDoctorDto createDoctorDto);
         Task<DoctorDto> UpdateDoctorAsync(Guid id, UpdateDoctorDto updateDoctorDto);

@@ -22,13 +22,13 @@ namespace Helix.Service.Services.DiagnoseService
 
         public Task<DiagnoseDto> CreateDiagnoseAsync(CreateDiagnoseDto createDiagnoseDto)
         {
-            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == createDiagnoseDto.PatientId).FirstOrDefault();
+            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == createDiagnoseDto.PatientId).Result.FirstOrDefault();
             if (patient == null) throw new Exception("Patient not found");
 
-            var doctor = _unitOfWork.Repository<Doctor>().Find(d => d.Id == createDiagnoseDto.DoctorId).FirstOrDefault();
+            var doctor = _unitOfWork.Repository<Doctor>().Find(d => d.Id == createDiagnoseDto.DoctorId).Result.FirstOrDefault();
             if (doctor == null) throw new Exception("Doctor not found");
 
-            var terminology = _unitOfWork.Repository<TerminologyCodeLookup>().Find(t => t.Id == createDiagnoseDto.TerminologyCodeId).FirstOrDefault();
+            var terminology = _unitOfWork.Repository<TerminologyCodeLookup>().Find(t => t.Id == createDiagnoseDto.TerminologyCodeId).Result.FirstOrDefault();
             if (terminology == null) throw new Exception("Terminology Code not found");
 
             var diagnose = _mapper.Map<Diagnose>(createDiagnoseDto);
@@ -48,7 +48,7 @@ namespace Helix.Service.Services.DiagnoseService
 
         public Task<bool> DeleteDiagnoseAsync(Guid id)
         {
-            var diagnose = _unitOfWork.Repository<Diagnose>().Find(d => d.Id == id).FirstOrDefault();
+            var diagnose = _unitOfWork.Repository<Diagnose>().Find(d => d.Id == id).Result.FirstOrDefault();
             if (diagnose == null) return Task.FromResult(false);
 
             _unitOfWork.Repository<Diagnose>().Delete(diagnose);
@@ -58,19 +58,19 @@ namespace Helix.Service.Services.DiagnoseService
 
         public Task<IEnumerable<DiagnoseDto>> GetAllDiagnosesAsync()
         {
-            var diagnoses = _unitOfWork.Repository<Diagnose>().GetALL();
+            var diagnoses = _unitOfWork.Repository<Diagnose>().GetALL().Result;
             return Task.FromResult(_mapper.Map<IEnumerable<DiagnoseDto>>(diagnoses));
         }
 
         public Task<DiagnoseDto> GetDiagnoseByIdAsync(Guid id)
         {
-            var diagnose = _unitOfWork.Repository<Diagnose>().Find(d => d.Id == id).FirstOrDefault();
+            var diagnose = _unitOfWork.Repository<Diagnose>().Find(d => d.Id == id).Result.FirstOrDefault();
             return Task.FromResult(_mapper.Map<DiagnoseDto>(diagnose));
         }
 
         public Task<DiagnoseDto> UpdateDiagnoseAsync(Guid id, UpdateDiagnoseDto updateDiagnoseDto)
         {
-            var diagnose = _unitOfWork.Repository<Diagnose>().Find(d => d.Id == id).FirstOrDefault();
+            var diagnose = _unitOfWork.Repository<Diagnose>().Find(d => d.Id == id).Result.FirstOrDefault();
             if (diagnose == null) throw new Exception("Diagnose not found");
 
             _mapper.Map(updateDiagnoseDto, diagnose);

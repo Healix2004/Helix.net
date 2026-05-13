@@ -7,6 +7,7 @@ namespace Helix.Data.Entities
     public class Doctor : BaseEntity
     {
         // Relation With AppUser
+        public string AppUserId { get; set; }
         public virtual AppUser AppUser { get; set; }
         public string Specialty { get; set; } = default!;
         public decimal ConsultationFee { get; set; } = 0;
@@ -16,6 +17,7 @@ namespace Helix.Data.Entities
         public List<Facilitie> Facilities { get; set; }
 
         //one to many with consent
+        public List<LabOrder> LabOrders { get; set; }= new List<LabOrder>();
         public List<Consent> Consents { get; set; }= new List<Consent>();
     }
 }

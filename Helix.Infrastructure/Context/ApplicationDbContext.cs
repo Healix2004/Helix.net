@@ -68,7 +68,7 @@ namespace Helix.Infrastructure.Context
             builder.Entity<LabTestResult>().HasMany(lab => lab.images).WithOne(o => o.LabTestResult).OnDelete(DeleteBehavior.Cascade);
             builder.Entity<LabTestResult>().HasOne(lab => lab.Patient).WithMany(p => p.LabTestResult).OnDelete(DeleteBehavior.Restrict);
 
-            builder.Entity<TerminologyCodeLookup>().Property(term=>term.Display).HasMaxLength(100);
+            builder.Entity<TerminologyCodeLookup>().Property(term=>term.Display).HasMaxLength(850);
             builder.Entity<TerminologyCodeLookup>().Property(term=>term.SystemUrl).HasMaxLength(50);
             builder.Entity<TerminologyCodeLookup>().Property(term=>term.Code).HasMaxLength(25);
             builder.Entity<TerminologyCodeLookup>().HasIndex(term => term.Display);
@@ -84,6 +84,9 @@ namespace Helix.Infrastructure.Context
 
             builder.Entity<Consent>().HasOne(c => c.Patient).WithMany(p => p.Consents).HasPrincipalKey(p => p.Id).OnDelete(DeleteBehavior.Restrict);
             builder.Entity<Consent>().HasOne(c => c.Doctor).WithMany(d => d.Consents).HasPrincipalKey(d => d.Id).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<LabOrder>().HasOne(l => l.Result).WithOne(p => p.LabOrder).HasForeignKey<LabOrder>(l => l.LabResultId).OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<LabOrder>().HasOne(l=> l.Patient).WithMany(p=>p.LabOrders).OnDelete(DeleteBehavior.Restrict);
         }
         public DbSet<AppUser> AppUsers { get; set; }
         public DbSet<Doctor> Doctors { get; set; }
@@ -94,5 +97,8 @@ namespace Helix.Infrastructure.Context
         public DbSet<Facilitie> Facilities { get; set; }
         public DbSet<TerminologyCodeLookup> TerminologyCodes { get; set; }
         public DbSet<Consent> Consents { get; set; }
+        public DbSet<LabOrder> LabOrders { get; set; }
+        public DbSet<LabTestResult> LabTestResults { get; set; }
+        public DbSet<Diagnose> Diagnoses { get; set; }
     }
 }

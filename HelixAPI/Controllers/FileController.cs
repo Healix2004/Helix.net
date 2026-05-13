@@ -13,12 +13,6 @@ namespace Helix.API.Controllers
     [ApiController]
     public class FileController : AppControllerBase
     {
-
-        /// <summary>
-        /// Upload a single file
-        /// </summary>
-        /// <param name="file">File to upload</param>
-        /// <returns>File path if upload successful</returns>
         [HttpPost("upload")]
         [DisableRequestSizeLimit]
         [ProducesResponseType(typeof(Response<FileUploadResult>), StatusCodes.Status201Created)]
@@ -31,11 +25,6 @@ namespace Helix.API.Controllers
             return StatusCode((int)(result.StatusCode), result);
         }
 
-        /// <summary>
-        /// Upload multiple files
-        /// </summary>
-        /// <param name="files">Files to upload</param>
-        /// <returns>File paths if upload successful</returns>
         [HttpPost("upload-multiple")]
         [DisableRequestSizeLimit]
         [ProducesResponseType(typeof(Response<MultipleFileUploadResult>), StatusCodes.Status201Created)]
@@ -48,11 +37,6 @@ namespace Helix.API.Controllers
             return StatusCode((int)(result.StatusCode), result);
         }
 
-        /// <summary>
-        /// Download a file by file path
-        /// </summary>
-        /// <param name="filePath">Path to the file</param>
-        /// <returns>File stream</returns>
         [HttpGet("download/{*filePath}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(Response<FileDownloadResult>), StatusCodes.Status404NotFound)]
@@ -70,11 +54,6 @@ namespace Helix.API.Controllers
             return File(result.Data.FileStream, result.Data.ContentType, result.Data.FileName);
         }
 
-        /// <summary>
-        /// Delete a file by file path
-        /// </summary>
-        /// <param name="filePath">Path to the file</param>
-        /// <returns>Success status</returns>
         [HttpDelete("{*filePath}")]
         [Authorize]
         [ProducesResponseType(typeof(Response<bool>), StatusCodes.Status200OK)]
@@ -88,11 +67,6 @@ namespace Helix.API.Controllers
             return StatusCode((int)(result.StatusCode), result);
         }
 
-        /// <summary>
-        /// Check if a file exists
-        /// </summary>
-        /// <param name="filePath">Path to the file</param>
-        /// <returns>File existence status</returns>
         [HttpGet("exists/{*filePath}")]
         [ProducesResponseType(typeof(Response<bool>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(Response<bool>), StatusCodes.Status400BadRequest)]

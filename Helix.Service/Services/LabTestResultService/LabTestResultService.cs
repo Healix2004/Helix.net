@@ -22,16 +22,16 @@ namespace Helix.Service.Services.LabTestResultService
 
         public Task<LabTestResultDto> CreateLabTestResultAsync(CreateLabTestResultDto createLabTestResultDto)
         {
-            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == createLabTestResultDto.PatientId).FirstOrDefault();
+            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == createLabTestResultDto.PatientId).Result.FirstOrDefault();
             if (patient == null) throw new Exception("Patient not found");
 
-            var doctor = _unitOfWork.Repository<Doctor>().Find(d => d.Id == createLabTestResultDto.DoctorId).FirstOrDefault();
+            var doctor = _unitOfWork.Repository<Doctor>().Find(d => d.Id == createLabTestResultDto.DoctorId).Result.FirstOrDefault();
             if (doctor == null) throw new Exception("Doctor not found");
 
-            var terminology = _unitOfWork.Repository<TerminologyCodeLookup>().Find(t => t.Id == createLabTestResultDto.TerminologyCodeId).FirstOrDefault();
+            var terminology = _unitOfWork.Repository<TerminologyCodeLookup>().Find(t => t.Id == createLabTestResultDto.TerminologyCodeId).Result.FirstOrDefault();
             if (terminology == null) throw new Exception("Terminology Code not found");
 
-            var encounter = _unitOfWork.Repository<Encounter>().Find(e => e.Id == createLabTestResultDto.EncounterId).FirstOrDefault();
+            var encounter = _unitOfWork.Repository<Encounter>().Find(e => e.Id == createLabTestResultDto.EncounterId).Result.FirstOrDefault();
             if (encounter == null) throw new Exception("Encounter not found");
 
             var labTestResult = _mapper.Map<LabTestResult>(createLabTestResultDto);
@@ -53,7 +53,7 @@ namespace Helix.Service.Services.LabTestResultService
 
         public Task<bool> DeleteLabTestResultAsync(Guid id)
         {
-            var labTestResult = _unitOfWork.Repository<LabTestResult>().Find(l => l.Id == id).FirstOrDefault();
+            var labTestResult = _unitOfWork.Repository<LabTestResult>().Find(l => l.Id == id).Result.FirstOrDefault();
             if (labTestResult == null) return Task.FromResult(false);
 
             _unitOfWork.Repository<LabTestResult>().Delete(labTestResult);
@@ -63,19 +63,19 @@ namespace Helix.Service.Services.LabTestResultService
 
         public Task<IEnumerable<LabTestResultDto>> GetAllLabTestResultsAsync()
         {
-            var labTestResults = _unitOfWork.Repository<LabTestResult>().GetALL();
+            var labTestResults = _unitOfWork.Repository<LabTestResult>().GetALL().Result;
             return Task.FromResult(_mapper.Map<IEnumerable<LabTestResultDto>>(labTestResults));
         }
 
         public Task<LabTestResultDto> GetLabTestResultByIdAsync(Guid id)
         {
-            var labTestResult = _unitOfWork.Repository<LabTestResult>().Find(l => l.Id == id).FirstOrDefault();
+            var labTestResult = _unitOfWork.Repository<LabTestResult>().Find(l => l.Id == id).Result.FirstOrDefault();
             return Task.FromResult(_mapper.Map<LabTestResultDto>(labTestResult));
         }
 
         public Task<LabTestResultDto> UpdateLabTestResultAsync(Guid id, UpdateLabTestResultDto updateLabTestResultDto)
         {
-            var labTestResult = _unitOfWork.Repository<LabTestResult>().Find(l => l.Id == id).FirstOrDefault();
+            var labTestResult = _unitOfWork.Repository<LabTestResult>().Find(l => l.Id == id).Result.FirstOrDefault();
             if (labTestResult == null) throw new Exception("LabTestResult not found");
 
             _mapper.Map(updateLabTestResultDto, labTestResult);

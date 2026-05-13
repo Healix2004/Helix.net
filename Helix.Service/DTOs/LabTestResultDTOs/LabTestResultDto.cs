@@ -6,6 +6,7 @@ namespace Helix.Service.DTOs.LabTestResultDTOs
     public class LabTestResultDto
     {
         public Guid Id { get; set; }
+        public Guid OrderId { get; set; }
         public Guid TerminologyCodeId { get; set; }
         public Guid PatientId { get; set; }
         public Guid DoctorId { get; set; }

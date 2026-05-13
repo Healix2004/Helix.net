@@ -28,13 +28,6 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        /// <summary>
-        /// Retrieves a specific lab test result by ID.
-        /// </summary>
-        /// <param name="id">The unique identifier of the lab test result.</param>
-        /// <returns>The lab test result matching the given ID.</returns>
-        /// <response code="200">Returns the lab test result.</response>
-        /// <response code="404">Lab test result not found.</response>
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(LabTestResultDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -45,13 +38,6 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        /// <summary>
-        /// Creates a new lab test result record.
-        /// </summary>
-        /// <param name="dto">The lab test result data to create.</param>
-        /// <returns>The newly created lab test result record.</returns>
-        /// <response code="201">Lab test result created successfully.</response>
-        /// <response code="400">Invalid input data.</response>
         [HttpPost]
         [ProducesResponseType(typeof(LabTestResultDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -62,14 +48,6 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        /// <summary>
-        /// Updates an existing lab test result record.
-        /// </summary>
-        /// <param name="id">The unique identifier of the lab test result to update.</param>
-        /// <param name="dto">The updated lab test result data.</param>
-        /// <returns>The updated lab test result record.</returns>
-        /// <response code="200">Lab test result updated successfully.</response>
-        /// <response code="404">Lab test result not found.</response>
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(LabTestResultDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -80,13 +58,6 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        /// <summary>
-        /// Deletes a lab test result record.
-        /// </summary>
-        /// <param name="id">The unique identifier of the lab test result to delete.</param>
-        /// <returns>Confirmation of deletion.</returns>
-        /// <response code="200">Lab test result deleted successfully.</response>
-        /// <response code="404">Lab test result not found.</response>
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

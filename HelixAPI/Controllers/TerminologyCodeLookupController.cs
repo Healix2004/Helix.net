@@ -1,8 +1,10 @@
 using Helix.Api.Base;
 using Helix.Core.Features.TerminologyCodeLookups.Commands.Models;
 using Helix.Core.Features.TerminologyCodeLookups.Queries.Models;
+using Helix.Data.Enums;
 using Helix.Service.DTOs.TerminologyCodeLookupDTOs;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Helix.API.Controllers
@@ -13,6 +15,8 @@ namespace Helix.API.Controllers
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = nameof(EnRoles.Doctor))]
+
     public class TerminologyCodeLookupController(IMediator mediator) : AppControllerBase
     {
         /// <summary>

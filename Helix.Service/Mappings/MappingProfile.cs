@@ -77,7 +77,7 @@ namespace Helix.Service.Mappings
             CreateMap<Helix.Service.DTOs.PatientDTOs.UpdatePatientDto, Patient>();
 
             // Doctor Mappings
-            CreateMap<Doctor, Helix.Service.DTOs.DoctorDTOs.DoctorDto>()
+            CreateMap<Doctor, DTOs.DoctorDTOs.DoctorDto>()
                 .ForMember(dest => dest.AppUserId, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.Id : null))
                 .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.FirstName : null))
                 .ForMember(dest => dest.MiddleName, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.MiddleName : null))
@@ -86,10 +86,10 @@ namespace Helix.Service.Mappings
                 .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.PhoneNumber : null))
                 .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.Gender : null))
                 .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.Address : null))
+                .ForMember(dest => dest.Bio , opt => opt.MapFrom(src => src.Bio))
                 .ForMember(dest => dest.DataOfBrith, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.DataOfBrith : default));
 
-            CreateMap<Helix.Service.DTOs.DoctorDTOs.CreateDoctorDto, Doctor>();
-            CreateMap<Helix.Service.DTOs.DoctorDTOs.UpdateDoctorDto, Doctor>();
+            CreateMap<DTOs.DoctorDTOs.UpdateDoctorDto, Doctor>().ReverseMap();
 
             // Consent Mappings
             CreateMap<Consent, Helix.Service.DTOs.ConsentDTOs.ConsentDto>()
@@ -163,8 +163,18 @@ namespace Helix.Service.Mappings
             CreateMap<Helix.Service.DTOs.ObservationDTOs.UpdateObservationDto, Observation>();
 
             // TerminologyCodeLookup Mappings
-            CreateMap<TerminologyCodeLookup, Helix.Service.DTOs.TerminologyCodeLookupDTOs.TerminologyCodeLookupDto>();
-            CreateMap<Helix.Service.DTOs.TerminologyCodeLookupDTOs.CreateTerminologyCodeLookupDto, TerminologyCodeLookup>();
+            CreateMap<TerminologyCodeLookup, Helix.Service.DTOs.TerminologyCodeLookupDTOs.TerminologyCodeLookupDto>()
+                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+                .ForMember(dest => dest.Display, opt => opt.MapFrom(src => src.Display))
+                .ForMember(dest => dest.SystemUrl, opt => opt.MapFrom(src => src.SystemUrl))
+                .ForMember(dest => dest.Code, opt => opt.MapFrom(src => src.Code)).ReverseMap();
+
+            CreateMap<Helix.Service.DTOs.TerminologyCodeLookupDTOs.CreateTerminologyCodeLookupDto, TerminologyCodeLookup>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.Display, opt => opt.MapFrom(src => src.Display))
+                .ForMember(dest => dest.SystemUrl, opt => opt.MapFrom(src => src.SystemUrl))
+                .ForMember(dest => dest.Code, opt => opt.MapFrom(src => src.Code))
+                .ForMember(dest => dest.TerminologyType, opt => opt.MapFrom(src => src.TerminologyType));
             CreateMap<Helix.Service.DTOs.TerminologyCodeLookupDTOs.UpdateTerminologyCodeLookupDto, TerminologyCodeLookup>();
         }
     }

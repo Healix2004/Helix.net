@@ -16,11 +16,6 @@ namespace Helix.API.Controllers
     public class AuthController : AppControllerBase
     {
 
-        /// <summary>
-        /// Register a new user
-        /// </summary>
-        /// <param name="dto">User registration data</param>
-        /// <returns>Authentication token if registration successful</returns>
         [HttpPost("register")]
         [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status400BadRequest)]
@@ -63,11 +58,6 @@ namespace Helix.API.Controllers
             return StatusCode((int)(result.StatusCode), result);
         }
 
-        /// <summary>
-        /// Login with email and password
-        /// </summary>
-        /// <param name="dto">Login credentials</param>
-        /// <returns>Authentication token if login successful</returns>
         [HttpPost("login")]
         [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status401Unauthorized)]
@@ -80,11 +70,6 @@ namespace Helix.API.Controllers
             return StatusCode((int)(result.StatusCode), result);
         }
 
-        /// <summary>
-        /// Get user profile by user ID
-        /// </summary>
-        /// <param name="userId">User ID</param>
-        /// <returns>User profile information</returns>
         [HttpGet("profile/{userId}")]
         [Authorize]
         [ProducesResponseType(typeof(Response<UserDto>), StatusCodes.Status200OK)]
@@ -97,11 +82,6 @@ namespace Helix.API.Controllers
             return StatusCode((int)(result.StatusCode), result);
         }
 
-        /// <summary>
-        /// Get user by email address
-        /// </summary>
-        /// <param name="email">Email address</param>
-        /// <returns>User information</returns>
         [HttpGet("user/{email}")]
         [Authorize]
         [ProducesResponseType(typeof(Response<UserDto>), StatusCodes.Status200OK)]
@@ -114,11 +94,6 @@ namespace Helix.API.Controllers
             return StatusCode((int)(result.StatusCode), result);
         }
 
-        /// <summary>
-        /// Request password reset for a user
-        /// </summary>
-        /// <param name="dto">Forget password request data</param>
-        /// <returns>Success message</returns>
         [HttpPost("forgot-password")]
         [ProducesResponseType(typeof(Response<string>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(Response<string>), StatusCodes.Status400BadRequest)]
@@ -130,11 +105,6 @@ namespace Helix.API.Controllers
             return StatusCode((int)(result.StatusCode), result);
         }
 
-        /// <summary>
-        /// Reset password using token from email
-        /// </summary>
-        /// <param name="dto">Reset password data</param>
-        /// <returns>Success message</returns>
         [HttpPost("reset-password")]
         [ProducesResponseType(typeof(Response<string>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(Response<string>), StatusCodes.Status400BadRequest)]
@@ -146,11 +116,6 @@ namespace Helix.API.Controllers
             return StatusCode((int)(result.StatusCode), result);
         }
 
-        /// <summary>
-        /// Change password for authenticated user
-        /// </summary>
-        /// <param name="dto">Change password data</param>
-        /// <returns>Success message</returns>
         [HttpPost("change-password")]
         [Authorize]
         [ProducesResponseType(typeof(Response<string>), StatusCodes.Status200OK)]
@@ -177,11 +142,6 @@ namespace Helix.API.Controllers
             return StatusCode((int)(result.StatusCode), result);
         }
 
-        /// <summary>
-        /// Confirm email address using token from email
-        /// </summary>
-        /// <param name="dto">Confirm email data</param>
-        /// <returns>Success message</returns>
         [HttpPost("confirm-email")]
         [ProducesResponseType(typeof(Response<string>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(Response<string>), StatusCodes.Status400BadRequest)]

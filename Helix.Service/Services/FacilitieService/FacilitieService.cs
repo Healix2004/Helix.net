@@ -32,7 +32,7 @@ namespace Helix.Service.Services.FacilitieService
 
         public Task<bool> DeleteFacilitieAsync(Guid id)
         {
-            var facilitie = _unitOfWork.Repository<Facilitie>().Find(f => f.Id == id).FirstOrDefault();
+            var facilitie = _unitOfWork.Repository<Facilitie>().Find(f => f.Id == id).Result.FirstOrDefault();
             if (facilitie == null) return Task.FromResult(false);
 
             _unitOfWork.Repository<Facilitie>().Delete(facilitie);
@@ -42,19 +42,19 @@ namespace Helix.Service.Services.FacilitieService
 
         public Task<IEnumerable<FacilitieDto>> GetAllFacilitiesAsync()
         {
-            var facilities = _unitOfWork.Repository<Facilitie>().GetALL();
+            var facilities = _unitOfWork.Repository<Facilitie>().GetALL().Result;
             return Task.FromResult(_mapper.Map<IEnumerable<FacilitieDto>>(facilities));
         }
 
         public Task<FacilitieDto> GetFacilitieByIdAsync(Guid id)
         {
-            var facilitie = _unitOfWork.Repository<Facilitie>().Find(f => f.Id == id).FirstOrDefault();
+            var facilitie = _unitOfWork.Repository<Facilitie>().Find(f => f.Id == id).Result.FirstOrDefault();
             return Task.FromResult(_mapper.Map<FacilitieDto>(facilitie));
         }
 
         public Task<FacilitieDto> UpdateFacilitieAsync(Guid id, UpdateFacilitieDto updateFacilitieDto)
         {
-            var facilitie = _unitOfWork.Repository<Facilitie>().Find(f => f.Id == id).FirstOrDefault();
+            var facilitie = _unitOfWork.Repository<Facilitie>().Find(f => f.Id == id).Result.FirstOrDefault();
             if (facilitie == null) throw new Exception("Facilitie not found");
 
             _mapper.Map(updateFacilitieDto, facilitie);

@@ -43,7 +43,7 @@ namespace Helix.Service.Services.PatientService
 
         public Task<bool> DeletePatientAsync(Guid id)
         {
-            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == id).FirstOrDefault();
+            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == id).Result.FirstOrDefault();
             if (patient == null)
             {
                 return Task.FromResult(false);
@@ -57,7 +57,7 @@ namespace Helix.Service.Services.PatientService
 
         public Task<IEnumerable<PatientDto>> GetAllPatientsAsync()
         {
-            var patients = _unitOfWork.Repository<Patient>().GetALL();
+            var patients = _unitOfWork.Repository<Patient>().GetALL().Result;
             // Try to map. If lazy loading is enabled, AppUser will be loaded.
             var patientsDto = _mapper.Map<IEnumerable<PatientDto>>(patients);
             return Task.FromResult(patientsDto);
@@ -65,7 +65,19 @@ namespace Helix.Service.Services.PatientService
 
         public Task<PatientDto> GetPatientByIdAsync(Guid id)
         {
-            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == id).FirstOrDefault();
+            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == id).Result.FirstOrDefault();
+            if (patient == null)
+            {
+                return Task.FromResult<PatientDto>(null);
+            }
+
+            var patientDto = _mapper.Map<PatientDto>(patient);
+            return Task.FromResult(patientDto);
+        }
+
+        public Task<PatientDto> GetPatientByUserIdAsync(string userId)
+        {
+            var patient = _unitOfWork.Repository<Patient>().Find(p => p.AppUserId == userId).Result.FirstOrDefault();
             if (patient == null)
             {
                 return Task.FromResult<PatientDto>(null);
@@ -77,7 +89,7 @@ namespace Helix.Service.Services.PatientService
 
         public Task<PatientDto> UpdatePatientAsync(Guid id, UpdatePatientDto updatePatientDto)
         {
-            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == id).FirstOrDefault();
+            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == id).Result.FirstOrDefault();
             if (patient == null)
             {
                 throw new Exception("Patient not found");

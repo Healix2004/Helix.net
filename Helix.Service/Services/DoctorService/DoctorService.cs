@@ -42,7 +42,7 @@ namespace Helix.Service.Services.DoctorService
 
         public Task<bool> DeleteDoctorAsync(Guid id)
         {
-            var doctor = _unitOfWork.Repository<Doctor>().Find(d => d.Id == id).FirstOrDefault();
+            var doctor = _unitOfWork.Repository<Doctor>().Find(d => d.Id == id).Result.FirstOrDefault();
             if (doctor == null)
             {
                 return Task.FromResult(false);
@@ -56,14 +56,26 @@ namespace Helix.Service.Services.DoctorService
 
         public Task<IEnumerable<DoctorDto>> GetAllDoctorsAsync()
         {
-            var doctors = _unitOfWork.Repository<Doctor>().GetALL();
-            var doctorsDto = _mapper.Map<IEnumerable<DoctorDto>>(doctors);
+            var doctors = _unitOfWork.Repository<Doctor>().GetALL().Result;
+            var doctorsDto = _mapper.Map<IEnumerable<Helix.Service.DTOs.DoctorDTOs.DoctorDto>>(doctors);
             return Task.FromResult(doctorsDto);
         }
 
         public Task<DoctorDto> GetDoctorByIdAsync(Guid id)
         {
-            var doctor = _unitOfWork.Repository<Doctor>().Find(d => d.Id == id).FirstOrDefault();
+            var doctor = _unitOfWork.Repository<Doctor>().Find(d => d.Id == id).Result.FirstOrDefault();
+            if (doctor == null)
+            {
+                return Task.FromResult<DoctorDto>(null);
+            }
+
+            var doctorDto = _mapper.Map<DoctorDto>(doctor);
+            return Task.FromResult(doctorDto);
+        }
+
+        public Task<DoctorDto> GetDoctorByUserIdAsync(string userId)
+        {
+            var doctor = _unitOfWork.Repository<Doctor>().Find(d => d.AppUserId == userId).Result.FirstOrDefault();
             if (doctor == null)
             {
                 return Task.FromResult<DoctorDto>(null);
@@ -75,7 +87,7 @@ namespace Helix.Service.Services.DoctorService
 
         public Task<DoctorDto> UpdateDoctorAsync(Guid id, UpdateDoctorDto updateDoctorDto)
         {
-            var doctor = _unitOfWork.Repository<Doctor>().Find(d => d.Id == id).FirstOrDefault();
+            var doctor = _unitOfWork.Repository<Doctor>().Find(d => d.Id == id).Result.FirstOrDefault();
             if (doctor == null)
             {
                 throw new Exception("Doctor not found");

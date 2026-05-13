@@ -1,8 +1,10 @@
 using Helix.Api.Base;
 using Helix.Core.Features.Allergies.Commands.Models;
 using Helix.Core.Features.Allergies.Queries.Models;
+using Helix.Data.Enums;
 using Helix.Service.DTOs.AllergyDTOs;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Helix.API.Controllers
@@ -14,11 +16,7 @@ namespace Helix.API.Controllers
     [ApiController]
     public class AllergyController(IMediator mediator) : AppControllerBase
     {
-        /// <summary>
-        /// Retrieves all allergy records.
-        /// </summary>
-        /// <returns>A list of all allergy records.</returns>
-        /// <response code="200">Returns the list of allergies.</response>
+
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<AllergyDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll()
@@ -28,13 +26,6 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        /// <summary>
-        /// Retrieves a specific allergy record by ID.
-        /// </summary>
-        /// <param name="id">The unique identifier of the allergy record.</param>
-        /// <returns>The allergy record matching the given ID.</returns>
-        /// <response code="200">Returns the allergy record.</response>
-        /// <response code="404">Allergy record not found.</response>
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(AllergyDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -45,13 +36,7 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        /// <summary>
-        /// Creates a new allergy record.
-        /// </summary>
-        /// <param name="dto">The allergy data to create.</param>
-        /// <returns>The newly created allergy record.</returns>
-        /// <response code="201">Allergy created successfully.</response>
-        /// <response code="400">Invalid input data.</response>
+        [Authorize(Roles = nameof(EnRoles.Doctor))]
         [HttpPost]
         [ProducesResponseType(typeof(AllergyDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -62,14 +47,7 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        /// <summary>
-        /// Updates an existing allergy record.
-        /// </summary>
-        /// <param name="id">The unique identifier of the allergy to update.</param>
-        /// <param name="dto">The updated allergy data.</param>
-        /// <returns>The updated allergy record.</returns>
-        /// <response code="200">Allergy updated successfully.</response>
-        /// <response code="404">Allergy not found.</response>
+        [Authorize(Roles = nameof(EnRoles.Doctor))]
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(AllergyDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -80,13 +58,7 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        /// <summary>
-        /// Deletes an allergy record.
-        /// </summary>
-        /// <param name="id">The unique identifier of the allergy to delete.</param>
-        /// <returns>Confirmation of deletion.</returns>
-        /// <response code="200">Allergy deleted successfully.</response>
-        /// <response code="404">Allergy not found.</response>
+        [Authorize(Roles = nameof(EnRoles.Doctor))]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

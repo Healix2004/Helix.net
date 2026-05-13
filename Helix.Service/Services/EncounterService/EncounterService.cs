@@ -22,10 +22,10 @@ namespace Helix.Service.Services.EncounterService
 
         public Task<EncounterDto> CreateEncounterAsync(CreateEncounterDto createEncounterDto)
         {
-            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == createEncounterDto.PatientId).FirstOrDefault();
+            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == createEncounterDto.PatientId).Result.FirstOrDefault();
             if (patient == null) throw new Exception("Patient not found");
 
-            var doctor = _unitOfWork.Repository<Doctor>().Find(d => d.Id == createEncounterDto.DoctorId).FirstOrDefault();
+            var doctor = _unitOfWork.Repository<Doctor>().Find(d => d.Id == createEncounterDto.DoctorId).Result.FirstOrDefault();
             if (doctor == null) throw new Exception("Doctor not found");
 
             var encounter = _mapper.Map<Encounter>(createEncounterDto);
@@ -43,7 +43,7 @@ namespace Helix.Service.Services.EncounterService
 
         public Task<bool> DeleteEncounterAsync(Guid id)
         {
-            var encounter = _unitOfWork.Repository<Encounter>().Find(e => e.Id == id).FirstOrDefault();
+            var encounter = _unitOfWork.Repository<Encounter>().Find(e => e.Id == id).Result.FirstOrDefault();
             if (encounter == null) return Task.FromResult(false);
 
             _unitOfWork.Repository<Encounter>().Delete(encounter);
@@ -53,19 +53,19 @@ namespace Helix.Service.Services.EncounterService
 
         public Task<IEnumerable<EncounterDto>> GetAllEncountersAsync()
         {
-            var encounters = _unitOfWork.Repository<Encounter>().GetALL();
+            var encounters = _unitOfWork.Repository<Encounter>().GetALL().Result;
             return Task.FromResult(_mapper.Map<IEnumerable<EncounterDto>>(encounters));
         }
 
         public Task<EncounterDto> GetEncounterByIdAsync(Guid id)
         {
-            var encounter = _unitOfWork.Repository<Encounter>().Find(e => e.Id == id).FirstOrDefault();
+            var encounter = _unitOfWork.Repository<Encounter>().Find(e => e.Id == id).Result.FirstOrDefault();
             return Task.FromResult(_mapper.Map<EncounterDto>(encounter));
         }
 
         public Task<EncounterDto> UpdateEncounterAsync(Guid id, UpdateEncounterDto updateEncounterDto)
         {
-            var encounter = _unitOfWork.Repository<Encounter>().Find(e => e.Id == id).FirstOrDefault();
+            var encounter = _unitOfWork.Repository<Encounter>().Find(e => e.Id == id).Result.FirstOrDefault();
             if (encounter == null) throw new Exception("Encounter not found");
 
             _mapper.Map(updateEncounterDto, encounter);
