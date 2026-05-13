@@ -1,0 +1,83 @@
+pipeline {
+    agent any
+
+    environment {
+      
+        DOCKER_HUB_IMAGE = 'mostafasaad21/helix-backend'
+        DOCKER_HUB_CREDS = 'docker-hub-creds' 
+        
+        
+        EC2_IP = '54.163.68.219' 
+        EC2_USER = 'ec2-user' 
+        EC2_CREDS_ID = 'aws-ec2-key' 
+    }
+
+    stages {
+        stage('Initialize & Clean') {
+            steps {
+                echo "Cleaning Workspace for HelixBackend..."
+                cleanWs() 
+            }
+        }
+
+        stage('Checkout Source') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build Backend Image') {
+            steps {
+                echo "Building Docker Image for Backend..."
+                sh "docker build -t ${DOCKER_HUB_IMAGE}:v${BUILD_NUMBER} -t ${DOCKER_HUB_IMAGE}:latest ."
+            }
+        }
+
+        stage('Push to Registry') {
+            steps {
+                echo "Pushing Backend Image to Docker Hub..."
+                withCredentials([usernamePassword(credentialsId: "${DOCKER_HUB_CREDS}", passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+                    sh "echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin"
+                    
+                    sh "docker push ${DOCKER_HUB_IMAGE}:v${BUILD_NUMBER}"
+                    sh "docker push ${DOCKER_HUB_IMAGE}:latest"
+                    
+                    sh "docker logout" 
+                }
+            }
+        }
+
+        stage('CleanUp Local Image') {
+            steps {
+                echo "Cleaning up local images..."
+                sh "docker rmi ${DOCKER_HUB_IMAGE}:v${BUILD_NUMBER} || true"
+                sh "docker rmi ${DOCKER_HUB_IMAGE}:latest || true"
+                sh "docker image prune -f"
+            }
+        }
+
+        stage('Deploy Backend to AWS') {
+            steps {
+                echo "Deploying Backend to AWS EC2..."
+                sshagent(credentials: ["${EC2_CREDS_ID}"]) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} '
+                            cd my-web-app &&
+                            docker-compose pull backend &&
+                            docker-compose up -d --no-deps backend
+                        '
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "HelixBackend Pipeline Completed Successfully!"
+        }
+        failure {
+            echo "HelixBackend Pipeline failed. Please check Jenkins Logs."
+        }
+    }
+}
