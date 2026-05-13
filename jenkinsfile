@@ -29,7 +29,7 @@ pipeline {
         stage('Build Backend Image') {
             steps {
                 echo "Building Docker Image for Backend..."
-                sh "docker build -t ${DOCKER_HUB_IMAGE}:v${BUILD_NUMBER} -t ${DOCKER_HUB_IMAGE}:latest ."
+                sh "docker build -t ${DOCKER_HUB_IMAGE}:v${BUILD_NUMBER} -t ${DOCKER_HUB_IMAGE}:latest -f HelixAPI/Dockerfile ."
             }
         }
 
