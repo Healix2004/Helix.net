@@ -48,10 +48,12 @@ namespace Helix.Service
             services.AddDiagnoseService();
             services.AddEncounterService();
             services.AddFacilitieService();
-            services.AddLabTestResultService();
             services.AddMedicationService();
             services.AddObservationService();
+            services.AddRadiologyOrderService();
+            services.AddRadiologyResultService();
             services.AddLabOrderService();
+            services.AddLabTestResultService();
             services.AddTerminologyCodeLookupService();
             services.AddUnitOfWork();
             services.AddLoincService(configuration);
@@ -223,12 +225,6 @@ namespace Helix.Service
             return services;
         }
 
-        private static IServiceCollection AddLabTestResultService(this IServiceCollection services)
-        {
-            services.AddScoped<ILabTestResultService, Helix.Service.Services.LabTestResultService.LabTestResultService>();
-            return services;
-        }
-
         private static IServiceCollection AddMedicationService(this IServiceCollection services)
         {
             services.AddScoped<IMedicationService, Helix.Service.Services.MedicationService.MedicationService>();
@@ -244,6 +240,21 @@ namespace Helix.Service
         private static IServiceCollection AddTerminologyCodeLookupService(this IServiceCollection services)
         {
             services.AddScoped<ITerminologyCodeLookupService, Helix.Service.Services.TerminologyCodeLookupService.TerminologyCodeLookupService>();
+            return services;
+        }
+        private static IServiceCollection AddRadiologyOrderService(this IServiceCollection services)
+        {
+            services.AddScoped<IRadiologyOrderService, Helix.Service.Services.RadiologyOder.RadiologyOderService>();
+            return services;
+        }
+        private static IServiceCollection AddRadiologyResultService(this IServiceCollection services)
+        {
+            services.AddScoped<IRadiologyResultService, Helix.Service.Services.RadiologyResultService.RadiologyResultService>();
+            return services;
+        }
+        private static IServiceCollection AddLabTestResultService(this IServiceCollection services)
+        {
+            services.AddScoped<ILabTestResultService, Helix.Service.Services.LabTestResultService.LabTestResultService>();
             return services;
         }
         private static IServiceCollection AddLabOrderService (this IServiceCollection services)

@@ -5,9 +5,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-// Note: You will likely need to add a using statement for your LabOrder DTOs
-// using Helix.Service.DTOs.LabOrderDTOs;
-
 namespace Helix.Service.Interfaces
 {
     public interface ILabOrderService

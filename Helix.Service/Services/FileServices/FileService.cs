@@ -3,13 +3,16 @@ using Helix.Service.Interfaces;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Helix.Service.Services.FileServices
 {
     public class FileService(IWebHostEnvironment environment, ILogger<FileService> logger) : IFileService
     {
-
-
         public async Task<FileUploadResult> UploadSingleFileAsync(FileUploadDto file)
         {
             try
@@ -38,12 +41,6 @@ namespace Helix.Service.Services.FileServices
 
                 // Ensure directory exists
                 Directory.CreateDirectory(savePath);
-
-                // Delete if file already exists
-                if (System.IO.File.Exists(fullPath))
-                {
-                    System.IO.File.Delete(fullPath);
-                }
 
                 // Save file
                 await using (var stream = new FileStream(fullPath, FileMode.Create))
@@ -102,12 +99,6 @@ namespace Helix.Service.Services.FileServices
                         // Ensure directory exists
                         Directory.CreateDirectory(savePath);
 
-                        // Delete if file already exists
-                        if (System.IO.File.Exists(fullPath))
-                        {
-                            System.IO.File.Delete(fullPath);
-                        }
-
                         // Save file
                         await using (var stream = new FileStream(fullPath, FileMode.Create))
                         {
@@ -155,7 +146,9 @@ namespace Helix.Service.Services.FileServices
                     };
                 }
 
-                var fullPath = Path.Combine(environment.ContentRootPath, filePath);
+                // FIXED PATH RESOLUTION
+                var relativePath = filePath.TrimStart('/', '\\');
+                var fullPath = Path.Combine(environment.WebRootPath, relativePath);
 
                 if (!System.IO.File.Exists(fullPath))
                 {
@@ -204,7 +197,9 @@ namespace Helix.Service.Services.FileServices
                 if (string.IsNullOrWhiteSpace(filePath))
                     return false;
 
-                var fullPath = Path.Combine(environment.ContentRootPath, filePath);
+                // FIXED PATH RESOLUTION
+                var relativePath = filePath.TrimStart('/', '\\');
+                var fullPath = Path.Combine(environment.WebRootPath, relativePath);
 
                 if (!System.IO.File.Exists(fullPath))
                     return false;
@@ -227,7 +222,10 @@ namespace Helix.Service.Services.FileServices
                 if (string.IsNullOrWhiteSpace(filePath))
                     return false;
 
-                var fullPath = Path.Combine(environment.ContentRootPath, filePath);
+                // FIXED PATH RESOLUTION
+                var relativePath = filePath.TrimStart('/', '\\');
+                var fullPath = Path.Combine(environment.WebRootPath, relativePath);
+
                 return System.IO.File.Exists(fullPath);
             }
             catch (Exception ex)
@@ -239,12 +237,23 @@ namespace Helix.Service.Services.FileServices
 
         #region Private Methods
 
-        private (string folderPath, string savePath, string fullPath, string dbPath) GenerateFilePaths(string fileName)
+        private (string folderPath, string savePath, string fullPath, string dbPath) GenerateFilePaths(string originalFileName)
         {
-            var folderPath = Path.Combine("Uploads", DateTime.Now.ToString("yyyy"), DateTime.Now.ToString("MM"));
-            var savePath = Path.Combine(environment.ContentRootPath, folderPath);
-            var fullPath = Path.Combine(savePath, fileName);
-            var dbPath = Path.Combine(folderPath, fileName);
+            // 1. Define the relative folder structure (e.g., "Uploads\2026\05")
+            var folderPath = Path.Combine("Uploads", DateTime.Now.ToString("yyyy"), DateTime.Now.ToString("MM"), DateTime.Now.ToString("dd"));
+
+            // 2. Combine it with WebRootPath to target the wwwroot folder
+            var savePath = Path.Combine(environment.WebRootPath, folderPath);
+
+            // 3. Generate a unique filename to prevent overwriting other patients' files
+            var extension = Path.GetExtension(originalFileName);
+            var uniqueFileName = $"{Guid.NewGuid()}{extension}";
+
+            // 4. The exact physical path on the server where the file will be written
+            var fullPath = Path.Combine(savePath, uniqueFileName);
+
+            // 5. Create a web-safe URL path for the database (e.g., "/Uploads/2026/05/uuid.jpg")
+            var dbPath = $"/{folderPath.Replace("\\", "/")}/{uniqueFileName}";
 
             return (folderPath, savePath, fullPath, dbPath);
         }
@@ -265,7 +274,7 @@ namespace Helix.Service.Services.FileServices
             // Validate file extension
             var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf", ".doc", ".docx", ".txt", ".xls", ".xlsx" };
             var extension = Path.GetExtension(file.FileName)?.ToLowerInvariant();
-            
+
             if (string.IsNullOrEmpty(extension))
                 return (false, "File must have a valid extension.");
 

@@ -7,8 +7,6 @@
         public Guid OrderId { get; set; }
         public Guid PatientId { get; set; }
         public string PatientName { get; set; } = string.Empty;
-        public Guid RadiologistId { get; set; }
-        public string RadiologistName { get; set; } = string.Empty;
         public Guid TerminologyCodeId { get; set; }
         public string TerminologyDisplay { get; set; } = string.Empty; // e.g., "MRI Brain without contrast"
         public string Findings { get; set; } = string.Empty;
