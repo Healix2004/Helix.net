@@ -6,18 +6,24 @@ namespace Helix.Data.Entities
 {
     public  class LabTestResult : BaseEntity
     {
-        public TerminologyCodeLookup TerminologyCode{ get; set; }
-        public Guid PatientId { get; set; } = Guid.Empty;
-        public Guid DoctorId { get; set; } = Guid.Empty;
-        public Guid OrderId { get; set; } = Guid.Empty;
-        public Patient Patient { get; set; }
-        public Doctor Doctor { get; set; }// who doctor request
-        public EnStatus status { get; set; }
-        public decimal? value { get; set; }
-        public string? Unit { get; set; }
-        public DateTime? ResultDate { get; set; }
-        public List<LabImages> images { get; set; }
-        public Encounter Encounter { get; set; }
-        public LabOrder LabOrder { get; set; } = new LabOrder();
+        // Foreign Keys
+        public Guid TerminologyCodeId { get; set; }
+        public Guid PatientId { get; set; }
+        public Guid DoctorId { get; set; }
+        public Guid OrderId { get; set; }
+        public Guid? EncounterId { get; set; }
+
+        // Navigation Properties
+        public virtual TerminologyCodeLookup TerminologyCode { get; set; } = null!;
+        public virtual Patient Patient { get; set; } = null!;
+        public virtual Doctor Doctor { get; set; } = null!;
+        public virtual LabOrder LabOrder { get; set; } = null!;
+        public virtual Encounter? Encounter { get; set; }
+
+        // Data Fields
+        public EnStatus Status { get; set; } = EnStatus.Resolved;
+        public decimal Value { get; set; }
+        public string Unit { get; set; }
+        public DateTime? ResultDate { get; set; } = DateTime.Now;
     }
 }

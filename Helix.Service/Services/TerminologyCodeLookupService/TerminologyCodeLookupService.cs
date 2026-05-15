@@ -46,8 +46,7 @@ namespace Helix.Service.Services.TerminologyCodeLookupService
             var terminologyCodes = _unitOfWork.Repository<TerminologyCodeLookup>().GetALL().Result;
             return Task.FromResult(_mapper.Map<IEnumerable<TerminologyCodeLookupDto>>(terminologyCodes));
         }
-
-        public async Task<List<TerminologyCodeLookupDto>> GetOrFetchLoincCodeAsync(string searchTerm)
+        public async Task<List<TerminologyCodeLookupDto>> GetOrFetchLoincCodeAsync(string searchTerm, EnTerminologyType category = EnTerminologyType.LabTest)
         {
             if (string.IsNullOrWhiteSpace(searchTerm)) return new List<TerminologyCodeLookupDto>();
 
@@ -57,7 +56,7 @@ namespace Helix.Service.Services.TerminologyCodeLookupService
             // 1. Get the data. We use ToLower() to bypass case-sensitivity issues.
             var existingCodes = await repository.Find(t =>
                 t.Display.ToLower().Contains(searchTerm.ToLower()) &&
-                t.TerminologyType == EnTerminologyType.LabTest);
+                t.TerminologyType == category);
 
             // 2. Map directly to DTO using LINQ (Cleaner and more performant)
             var result = existingCodes.Select(terminology => new TerminologyCodeLookupDto

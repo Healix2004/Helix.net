@@ -16,8 +16,9 @@ namespace Helix.Data.Entities
         public List<Encounter> Encounters { get; set; }
         public List<Facilitie> Facilities { get; set; }
 
-        //one to many with consent
-        public List<LabOrder> LabOrders { get; set; }= new List<LabOrder>();
+        //one to many ralations
+        public List<RadiologyOrder> RadiologyOrders { get; set; } = new List<RadiologyOrder>();
+        public List<LabOrder> LabOrders { get; set; } = new List<LabOrder>();
         public List<Consent> Consents { get; set; }= new List<Consent>();
     }
 }

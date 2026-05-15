@@ -25,13 +25,15 @@ namespace Helix.Infrastructure.Context
 
             // facilities doctor relationship 
             builder.Entity<Doctor>().HasMany(Doctor => Doctor.Facilities).WithMany(Facilitie => Facilitie.Doctors);
+            builder.Entity<Doctor>().HasMany(d=> d.RadiologyOrders).WithOne().HasForeignKey(r => r.DoctorId).OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<Doctor>().HasMany(d => d.LabOrders).WithOne().HasForeignKey(l => l.DoctorId).OnDelete(DeleteBehavior.Restrict);
 
             // patient allergy relationship 
-            builder.Entity<Patient>()
-                .HasMany(p => p.Allergies)
-                .WithOne(a => a.Patient)
-                .HasPrincipalKey(p => p.Id)
-                .HasForeignKey(a => a.PatientId);
+            builder.Entity<Patient>().HasMany(p => p.Allergies).WithOne(a => a.Patient).HasPrincipalKey(p => p.Id).HasForeignKey(a => a.PatientId);
+            builder.Entity<Patient>().HasMany(p => p.RadioTestResult).WithOne().OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<Patient>().HasMany(p => p.RadiologyOrders).WithOne().HasForeignKey(r => r.PatientId).OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<Patient>().HasMany(p => p.LabTestResult).WithOne().OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<Patient>().HasMany(p => p.LabOrders).WithOne().OnDelete(DeleteBehavior.Cascade);
 
             //Encounter doctor relationship
             builder.Entity<Encounter>()
@@ -65,12 +67,12 @@ namespace Helix.Infrastructure.Context
                 .HasForeignKey(o => o.EncounterId);
 
             builder.Entity<LabTestResult>().Property(lab => lab.Unit).HasMaxLength(50);
-            builder.Entity<LabTestResult>().HasMany(lab => lab.images).WithOne(o => o.LabTestResult).OnDelete(DeleteBehavior.Cascade);
             builder.Entity<LabTestResult>().HasOne(lab => lab.Patient).WithMany(p => p.LabTestResult).OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<TerminologyCodeLookup>().Property(term=>term.Display).HasMaxLength(850);
             builder.Entity<TerminologyCodeLookup>().Property(term=>term.SystemUrl).HasMaxLength(50);
             builder.Entity<TerminologyCodeLookup>().Property(term=>term.Code).HasMaxLength(25);
+            builder.Entity<TerminologyCodeLookup>().HasIndex(term => term.Code).IsUnique();
             builder.Entity<TerminologyCodeLookup>().HasIndex(term => term.Display);
             // Composite Index is CRITICAL for performance on ValidateCodeAsync
             builder.Entity<TerminologyCodeLookup>().HasIndex(term => new { term.Display, term.SystemUrl});
@@ -87,6 +89,17 @@ namespace Helix.Infrastructure.Context
 
             builder.Entity<LabOrder>().HasOne(l => l.Result).WithOne(p => p.LabOrder).HasForeignKey<LabOrder>(l => l.LabResultId).OnDelete(DeleteBehavior.Restrict);
             builder.Entity<LabOrder>().HasOne(l=> l.Patient).WithMany(p=>p.LabOrders).OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<LabOrder>().HasOne(l => l.Doctor).WithMany(d => d.LabOrders).HasForeignKey(l => l.DoctorId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<RadiologyOrder>().HasOne(r => r.Patient).WithMany(p => p.RadiologyOrders).OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<RadiologyOrder>().HasOne(r => r.Doctor).WithMany(d => d.RadiologyOrders).HasForeignKey(r => r.DoctorId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<RadiologyResult>().HasOne(r => r.Order).WithOne(o => o.Result).HasForeignKey<RadiologyResult>(r => r.OrderId) // The foreign key is in the Result table
+            .OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<RadiologyResult>().HasMany(r => r.Images).WithOne().OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<RadiologyImage>().Property(r=>r.FileName).HasMaxLength(255);
+            builder.Entity<RadiologyImage>().Property(r=>r.FilePath).HasMaxLength(256);
         }
         public DbSet<AppUser> AppUsers { get; set; }
         public DbSet<Doctor> Doctors { get; set; }
@@ -100,5 +113,7 @@ namespace Helix.Infrastructure.Context
         public DbSet<LabOrder> LabOrders { get; set; }
         public DbSet<LabTestResult> LabTestResults { get; set; }
         public DbSet<Diagnose> Diagnoses { get; set; }
+        public DbSet<RadiologyResult> RadiologyResults { get; set; }
+        public DbSet<RadiologyOrder> RadiologyOrders { get; set; } 
     }
 }

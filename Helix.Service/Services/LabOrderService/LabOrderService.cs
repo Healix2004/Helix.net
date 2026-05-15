@@ -61,8 +61,8 @@ namespace Helix.Service.Services.LabOrderService
                 .ToListAsync();
         }
 
-            public async Task<LabOrderDto> GetLabOrderByIdAsync(Guid id)
-            {   
+        public async Task<LabOrderDto> GetLabOrderByIdAsync(Guid id)
+        {
             var order = await unitOfWork.Repository<LabOrder>().Find(o => true).Result
                 .Include(o => o.Patient).ThenInclude(p => p.AppUser)
                 .Include(o => o.TerminologyCode)
@@ -140,7 +140,7 @@ namespace Helix.Service.Services.LabOrderService
             if (order == null) throw new KeyNotFoundException($"LabOrder with ID '{id}' was not found.");
             if (order.Status != EnLabOrderStatus.Pending) throw new InvalidOperationException("Only pending orders can be updated.");
 
-            order.TerminologyCode= dto.TerminologyCodeId;
+            order.TerminologyCode = dto.TerminologyCodeId;
 
             unitOfWork.Repository<LabOrder>().Update(order);
             return unitOfWork.Complete() > 0;
@@ -176,7 +176,7 @@ namespace Helix.Service.Services.LabOrderService
             {
                 PatientId = order.PatientId,
                 DoctorId = order.DoctorId,
-                TerminologyCode= order.TerminologyCode, // Inherits the test 
+                TerminologyCode = order.TerminologyCode, // Inherits the test 
                 ResultDate = DateTime.UtcNow
                 // EncounterId can be mapped here if applicable
             };

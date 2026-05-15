@@ -1,3 +1,4 @@
+using Helix.Data.Enums;
 using Helix.Service.DTOs.TerminologyCodeLookupDTOs;
 using Helix.Service.Interfaces;
 using Hl7.Fhir.Model;
@@ -72,12 +73,12 @@ namespace Helix.Service.Services.LoincTerminology
                 throw new InvalidOperationException($"Failed to lookup LOINC code {loincCode}: {ex.Message}", ex);
             }
         }
-        public async Task<IEnumerable<CodeableConcept>> SearchLoincCodesAsync(string searchTerm)
+        public async Task<IEnumerable<CodeableConcept>> SearchLoincCodesAsync(string searchTerm, EnTerminologyType category = EnTerminologyType.LabTest)
         {
             if (string.IsNullOrWhiteSpace(searchTerm))
                 return Enumerable.Empty<CodeableConcept>();
             // 1. Try to find in the Database first
-            var cachedEntry= await _terminologyCode.GetOrFetchLoincCodeAsync(searchTerm);
+            var cachedEntry= await _terminologyCode.GetOrFetchLoincCodeAsync(searchTerm, category);
             if (cachedEntry.Count > 0)
             {
                 var concepts = cachedEntry.Select(entry => new CodeableConcept

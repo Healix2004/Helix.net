@@ -1,3 +1,4 @@
+using Helix.Data.Enums;
 using Helix.Service.DTOs.TerminologyCodeLookupDTOs;
 using System;
 using System.Collections.Generic;
@@ -14,6 +15,6 @@ namespace Helix.Service.Interfaces
         Task<bool> DeleteTerminologyCodeLookupAsync(Guid id);
 
         // Add this method to handle the LOINC search/cache logic
-        Task<List<TerminologyCodeLookupDto>> GetOrFetchLoincCodeAsync(string searchTerm);
+        Task<List<TerminologyCodeLookupDto>> GetOrFetchLoincCodeAsync(string searchTerm, EnTerminologyType category = EnTerminologyType.LabTest);
     }
 }

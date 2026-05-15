@@ -4,6 +4,7 @@ using Helix.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Helix.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260514194231_add forgin keys for labreslut table")]
+    partial class addforginkeysforlabresluttable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -455,111 +458,6 @@ namespace Helix.Infrastructure.Migrations
                     b.ToTable("Patients");
                 });
 
-            modelBuilder.Entity("Helix.Data.Entities.RadiologyImage", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<string>("FilePath")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<long>("FileSizeInKB")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("Label")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("RadiologyResultId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RadiologyResultId");
-
-                    b.ToTable("RadiologyImage");
-                });
-
-            modelBuilder.Entity("Helix.Data.Entities.RadiologyOrder", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreateDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("DoctorId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("PatientId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("QrToken")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("TerminologyCodeId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DoctorId");
-
-                    b.HasIndex("PatientId");
-
-                    b.HasIndex("TerminologyCodeId");
-
-                    b.ToTable("RadiologyOrders");
-                });
-
-            modelBuilder.Entity("Helix.Data.Entities.RadiologyResult", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Findings")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Impression")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("OrderId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("PatientId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("PerformedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("StudyType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrderId")
-                        .IsUnique();
-
-                    b.HasIndex("PatientId");
-
-                    b.ToTable("RadiologyResults");
-                });
-
             modelBuilder.Entity("Helix.Data.Entities.TerminologyCodeLookup", b =>
                 {
                     b.Property<Guid>("Id")
@@ -866,7 +764,7 @@ namespace Helix.Infrastructure.Migrations
                     b.HasOne("Helix.Data.Entities.Doctor", "Doctor")
                         .WithMany("LabOrders")
                         .HasForeignKey("DoctorId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Helix.Data.Entities.LabTestResult", "Result")
@@ -950,59 +848,6 @@ namespace Helix.Infrastructure.Migrations
                     b.Navigation("AppUser");
                 });
 
-            modelBuilder.Entity("Helix.Data.Entities.RadiologyImage", b =>
-                {
-                    b.HasOne("Helix.Data.Entities.RadiologyResult", null)
-                        .WithMany("Images")
-                        .HasForeignKey("RadiologyResultId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Helix.Data.Entities.RadiologyOrder", b =>
-                {
-                    b.HasOne("Helix.Data.Entities.Doctor", "Doctor")
-                        .WithMany("RadiologyOrders")
-                        .HasForeignKey("DoctorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Helix.Data.Entities.Patient", "Patient")
-                        .WithMany("RadiologyOrders")
-                        .HasForeignKey("PatientId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Helix.Data.Entities.TerminologyCodeLookup", "TerminologyCode")
-                        .WithMany()
-                        .HasForeignKey("TerminologyCodeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Doctor");
-
-                    b.Navigation("Patient");
-
-                    b.Navigation("TerminologyCode");
-                });
-
-            modelBuilder.Entity("Helix.Data.Entities.RadiologyResult", b =>
-                {
-                    b.HasOne("Helix.Data.Entities.RadiologyOrder", "Order")
-                        .WithOne("Result")
-                        .HasForeignKey("Helix.Data.Entities.RadiologyResult", "OrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Helix.Data.Entities.Patient", null)
-                        .WithMany("RadioTestResult")
-                        .HasForeignKey("PatientId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Order");
-                });
-
             modelBuilder.Entity("Helix.Data.Entities.condition", b =>
                 {
                     b.HasOne("Helix.Data.Entities.Encounter", "Encounter")
@@ -1072,8 +917,6 @@ namespace Helix.Infrastructure.Migrations
                     b.Navigation("Encounters");
 
                     b.Navigation("LabOrders");
-
-                    b.Navigation("RadiologyOrders");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.Encounter", b =>
@@ -1102,20 +945,6 @@ namespace Helix.Infrastructure.Migrations
                     b.Navigation("LabOrders");
 
                     b.Navigation("LabTestResult");
-
-                    b.Navigation("RadioTestResult");
-
-                    b.Navigation("RadiologyOrders");
-                });
-
-            modelBuilder.Entity("Helix.Data.Entities.RadiologyOrder", b =>
-                {
-                    b.Navigation("Result");
-                });
-
-            modelBuilder.Entity("Helix.Data.Entities.RadiologyResult", b =>
-                {
-                    b.Navigation("Images");
                 });
 #pragma warning restore 612, 618
         }

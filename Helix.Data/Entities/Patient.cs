@@ -9,15 +9,18 @@ namespace Helix.Data.Entities
     {
         // Relation With AppUser
         public string AppUserId { get; set; }
-        public virtual AppUser AppUser { get; set; }
-        public  EnPatientCategories PatientCategory { get; set; }
+        public AppUser AppUser { get; set; }
+
+        public EnPatientCategories PatientCategory { get; set; }
         public EnBloodTypes? BloodType { get; set; }
         public List<Allergy> Allergies { get; set; }
         public List<Encounter> Encounters { get; set; }
         public List<Diagnose> Diagnose { get; set; }
-        public List<LabTestResult> LabTestResult { get; set; } = new List<LabTestResult>();
         //one to many with consent
-        public List<Consent> Consents { get; set; }=new List<Consent>();
+        public List<LabTestResult> LabTestResult { get; set; } = new List<LabTestResult>();
+        public List<RadiologyResult> RadioTestResult { get; set; } = new List<RadiologyResult>();
+        public List<RadiologyOrder> RadiologyOrders { get; set; } = new List<RadiologyOrder>();
         public List<LabOrder> LabOrders { get; set; }= new List<LabOrder>();
+        public List<Consent> Consents { get; set; }=new List<Consent>();
     }
 }
