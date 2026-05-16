@@ -135,14 +135,14 @@ namespace Helix.Service.Mappings
 
             // LabTestResult Mappings
             CreateMap<LabTestResult, Helix.Service.DTOs.LabTestResultDTOs.LabTestResultDto>()
-                .ForMember(dest => dest.TerminologyCodeId, opt => opt.MapFrom(src => src.TerminologyCode != null ? src.TerminologyCode.Id : default(System.Guid)))
-                .ForMember(dest => dest.PatientId, opt => opt.MapFrom(src => src.Patient != null ? src.Patient.Id : default(System.Guid)))
-                .ForMember(dest => dest.DoctorId, opt => opt.MapFrom(src => src.Doctor != null ? src.Doctor.Id : default(System.Guid)))
-                .ForMember(dest => dest.EncounterId, opt => opt.MapFrom(src => src.Encounter != null ? src.Encounter.Id : default(System.Guid)));
+                .ForMember(dest => dest.TerminologyName, opt => opt.MapFrom(src => src.TerminologyCode != null ? src.TerminologyCode.Display : ""))
+                .ForMember(dest => dest.PatientName, opt => opt.MapFrom(src => src.Patient != null ? $"{src.Patient.AppUser.FirstName} {src.Patient.AppUser.LastName}" : ""))
+                .ForMember(dest => dest.CreateDate, opt => opt.MapFrom(src => src.ResultDate))
+                .ForMember(dest => dest.status,opt => opt.MapFrom(src => src.Status.ToString()) );
+
             CreateMap<Helix.Service.DTOs.LabTestResultDTOs.CreateLabTestResultDto, LabTestResult>()
                 .ForMember(dest => dest.TerminologyCode, opt => opt.Ignore())
                 .ForMember(dest => dest.Patient, opt => opt.Ignore())
-                .ForMember(dest => dest.Doctor, opt => opt.Ignore())
                 .ForMember(dest => dest.Encounter, opt => opt.Ignore());
             CreateMap<Helix.Service.DTOs.LabTestResultDTOs.UpdateLabTestResultDto, LabTestResult>();
 

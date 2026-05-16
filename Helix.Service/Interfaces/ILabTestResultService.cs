@@ -9,7 +9,7 @@ namespace Helix.Service.Interfaces
     {
         Task<LabTestResultDto> GetLabTestResultByIdAsync(Guid id);
         Task<IEnumerable<LabTestResultDto>> GetAllLabTestResultsAsync();
-        Task<LabTestResultDto> CreateLabTestResultAsync(CreateLabTestResultDto createLabTestResultDto);
+        Task<IEnumerable<LabTestResultDto>> GetAllLabTestResultsAsync(Guid patientId);
         Task<LabTestResultDto> UpdateLabTestResultAsync(Guid id, UpdateLabTestResultDto updateLabTestResultDto);
         Task<bool> DeleteLabTestResultAsync(Guid id);
     }

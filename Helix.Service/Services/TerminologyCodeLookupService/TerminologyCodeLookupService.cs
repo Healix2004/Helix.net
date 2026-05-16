@@ -72,6 +72,12 @@ namespace Helix.Service.Services.TerminologyCodeLookupService
             return result;
         }
 
+        public Task<TerminologyCodeLookupDto> GetTerminologyCodeLooKupByCodeAsync(string code)
+        {
+            var terminologyCode = _unitOfWork.Repository<TerminologyCodeLookup>().Find(t => t.Code == code).Result.FirstOrDefault();
+            return Task.FromResult(_mapper.Map<TerminologyCodeLookupDto>(terminologyCode));
+        }
+
         public Task<TerminologyCodeLookupDto> GetTerminologyCodeLookupByIdAsync(Guid id)
         {
             var terminologyCode = _unitOfWork.Repository<TerminologyCodeLookup>().Find(t => t.Id == id).Result.FirstOrDefault();

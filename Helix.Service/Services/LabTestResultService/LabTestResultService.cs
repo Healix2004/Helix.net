@@ -2,6 +2,7 @@ using AutoMapper;
 using Helix.Data.Entities;
 using Helix.Service.DTOs.LabTestResultDTOs;
 using Helix.Service.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,38 +20,6 @@ namespace Helix.Service.Services.LabTestResultService
             _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
-
-        public Task<LabTestResultDto> CreateLabTestResultAsync(CreateLabTestResultDto createLabTestResultDto)
-        {
-            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == createLabTestResultDto.PatientId).Result.FirstOrDefault();
-            if (patient == null) throw new Exception("Patient not found");
-
-            var doctor = _unitOfWork.Repository<Doctor>().Find(d => d.Id == createLabTestResultDto.DoctorId).Result.FirstOrDefault();
-            if (doctor == null) throw new Exception("Doctor not found");
-
-            var terminology = _unitOfWork.Repository<TerminologyCodeLookup>().Find(t => t.Id == createLabTestResultDto.TerminologyCodeId).Result.FirstOrDefault();
-            if (terminology == null) throw new Exception("Terminology Code not found");
-
-            var encounter = _unitOfWork.Repository<Encounter>().Find(e => e.Id == createLabTestResultDto.EncounterId).Result.FirstOrDefault();
-            if (encounter == null) throw new Exception("Encounter not found");
-
-            var labTestResult = _mapper.Map<LabTestResult>(createLabTestResultDto);
-            labTestResult.Patient = patient;
-            labTestResult.Doctor = doctor;
-            labTestResult.TerminologyCode = terminology;
-            labTestResult.Encounter = encounter;
-
-            _unitOfWork.Repository<LabTestResult>().Add(labTestResult);
-            _unitOfWork.Complete();
-
-            var result = _mapper.Map<LabTestResultDto>(labTestResult);
-            result.PatientId = patient.Id;
-            result.DoctorId = doctor.Id;
-            result.TerminologyCodeId = terminology.Id;
-            result.EncounterId = encounter.Id;
-            return Task.FromResult(result);
-        }
-
         public Task<bool> DeleteLabTestResultAsync(Guid id)
         {
             var labTestResult = _unitOfWork.Repository<LabTestResult>().Find(l => l.Id == id).Result.FirstOrDefault();
@@ -63,7 +32,19 @@ namespace Helix.Service.Services.LabTestResultService
 
         public Task<IEnumerable<LabTestResultDto>> GetAllLabTestResultsAsync()
         {
-            var labTestResults = _unitOfWork.Repository<LabTestResult>().GetALL().Result;
+            var labTestResults = _unitOfWork.Repository<LabTestResult>().Find(l => true).Result
+                .Include(l => l.TerminologyCode)
+                .Include(l => l.Patient)
+                    .ThenInclude(p => p.AppUser).ToList();
+            return Task.FromResult(_mapper.Map<IEnumerable<LabTestResultDto>>(labTestResults));
+        }
+
+        public Task<IEnumerable<LabTestResultDto>> GetAllLabTestResultsAsync(Guid patientId)
+        {
+            var labTestResults= _unitOfWork.Repository<LabTestResult>().Find(l=>l.PatientId == patientId).Result
+                .Include(l=>l.TerminologyCode)
+                .Include(l=>l.Patient)
+                    .ThenInclude(p=>p.AppUser).ToList();
             return Task.FromResult(_mapper.Map<IEnumerable<LabTestResultDto>>(labTestResults));
         }
 

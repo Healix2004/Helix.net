@@ -12,7 +12,7 @@ using Helix.Service.DTOs.LabOrderDTOs;
 
 namespace Helix.Service.Services.LabOrderService
 {
-    public class LabOrderService(IUnitOfWork unitOfWork) : ILabOrderService
+    public class LabOrderService(IUnitOfWork unitOfWork, ITerminologyCodeLookupService terminologyService) : ILabOrderService
     {
 
         public async Task<Guid> CreateLabOrderAsync(CreateLabOrderDto dto)
@@ -24,7 +24,7 @@ namespace Helix.Service.Services.LabOrderService
             {
                 PatientId = dto.PatientId,
                 DoctorId = dto.DoctorId,
-                TerminologyCodeId = dto.TerminologyCodeId,
+                TerminologyCodeId = (await terminologyService.GetTerminologyCodeLooKupByCodeAsync(dto.TerminologyCode)).Id,
                 QrToken = qrToken,
                 Status = EnLabOrderStatus.Pending,
                 CreatedAt = DateTime.UtcNow
@@ -140,7 +140,7 @@ namespace Helix.Service.Services.LabOrderService
             if (order == null) throw new KeyNotFoundException($"LabOrder with ID '{id}' was not found.");
             if (order.Status != EnLabOrderStatus.Pending) throw new InvalidOperationException("Only pending orders can be updated.");
 
-            order.TerminologyCode = dto.TerminologyCodeId;
+            order.TerminologyCodeId = (await terminologyService.GetTerminologyCodeLooKupByCodeAsync(dto.TerminologyCode)).Id;
 
             unitOfWork.Repository<LabOrder>().Update(order);
             return unitOfWork.Complete() > 0;
@@ -161,9 +161,8 @@ namespace Helix.Service.Services.LabOrderService
             throw new ArgumentException($"'{newStatus}' is not a valid lab order status.");
         }
 
-        public async Task<bool> UploadLabResultAsync(LabTestResultDto dto)
+        public async Task<bool> UploadLabResultAsync(UploadLabResultDto dto)
         {
-            // Assuming your LabTestResultDto contains the OrderId it belongs to
             var order = await unitOfWork.Repository<LabOrder>().Get(dto.OrderId);
 
             if (order == null || order.Status != EnLabOrderStatus.Pending)
@@ -174,11 +173,14 @@ namespace Helix.Service.Services.LabOrderService
             // 1. Create the new lab result based on the DTO properties
             var result = new LabTestResult
             {
+                OrderId = dto.OrderId,
                 PatientId = order.PatientId,
-                DoctorId = order.DoctorId,
-                TerminologyCode = order.TerminologyCode, // Inherits the test 
-                ResultDate = DateTime.UtcNow
-                // EncounterId can be mapped here if applicable
+                TerminologyCodeId = order.TerminologyCodeId,
+                ResultDate = DateTime.UtcNow,
+                Status = EnLabOrderStatus.Completed,
+                // Value and Unit can be mapped here if applicable
+                 Value = dto.Value,
+                Unit = dto.Unit
             };
 
             await unitOfWork.Repository<LabTestResult>().Add(result);

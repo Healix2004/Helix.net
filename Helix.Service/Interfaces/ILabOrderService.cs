@@ -14,7 +14,7 @@ namespace Helix.Service.Interfaces
         // ==========================================
         Task<List<PendingLabOrderDto>> GetPendingOrdersAsync(Guid patientId);
         Task<LabOrderDto> ScanLabOrderAsync(string qrToken);
-        Task<bool> UploadLabResultAsync(LabTestResultDto dto);
+        Task<bool> UploadLabResultAsync(UploadLabResultDto dto);
 
         // ==========================================
         // DOCTOR WORKFLOW

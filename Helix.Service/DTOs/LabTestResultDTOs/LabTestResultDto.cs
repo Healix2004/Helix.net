@@ -7,11 +7,10 @@ namespace Helix.Service.DTOs.LabTestResultDTOs
     {
         public Guid Id { get; set; }
         public Guid OrderId { get; set; }
-        public Guid TerminologyCodeId { get; set; }
-        public Guid PatientId { get; set; }
-        public Guid DoctorId { get; set; }
-        public Guid EncounterId { get; set; }
-        public EnStatus status { get; set; }
+        public string PatientName { get; set; }
+        public string TerminologyName { get; set; }
+        public DateTime CreateDate { get; set; }
+        public string status { get; set; }
         public decimal value { get; set; }
         public string Unit { get; set; }
     }

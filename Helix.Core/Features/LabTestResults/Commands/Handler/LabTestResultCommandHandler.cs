@@ -7,28 +7,6 @@ using MediatR;
 namespace Helix.Core.Features.LabTestResults.Commands.Handler
 {
     /// <summary>
-    /// Handles <see cref="CreateLabTestResultCommand"/> and creates a new lab test result record.
-    /// </summary>
-    public class CreateLabTestResultCommandHandler : IRequestHandler<CreateLabTestResultCommand, Response<LabTestResultDto>>
-    {
-        private readonly ILabTestResultService _labTestResultService;
-        private readonly ResponseHandler _responseHandler;
-
-        public CreateLabTestResultCommandHandler(ILabTestResultService labTestResultService, ResponseHandler responseHandler)
-        {
-            _labTestResultService = labTestResultService;
-            _responseHandler = responseHandler;
-        }
-
-        /// <inheritdoc />
-        public async Task<Response<LabTestResultDto>> Handle(CreateLabTestResultCommand request, CancellationToken cancellationToken)
-        {
-            var result = await _labTestResultService.CreateLabTestResultAsync(request.Dto);
-            return _responseHandler.Created(result);
-        }
-    }
-
-    /// <summary>
     /// Handles <see cref="UpdateLabTestResultCommand"/> and updates an existing lab test result record.
     /// Returns <see cref="System.Net.HttpStatusCode.NotFound"/> if the record does not exist.
     /// </summary>

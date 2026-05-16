@@ -1,9 +1,15 @@
 using Helix.Api.Base;
 using Helix.Core.Features.LabTestResults.Commands.Models;
 using Helix.Core.Features.LabTestResults.Queries.Models;
+using Helix.Data.Enums;
 using Helix.Service.DTOs.LabTestResultDTOs;
+using Helix.Service.Interfaces;
+using Helix.Service.Services.PatientService;
+using Hl7.Fhir.Model;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Helix.API.Controllers
 {
@@ -12,14 +18,19 @@ namespace Helix.API.Controllers
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]
-    public class LabTestResultController(IMediator mediator) : AppControllerBase
+    public class LabTestResultController(IMediator mediator,IPatientService patientService) : AppControllerBase
     {
-        /// <summary>
-        /// Retrieves all lab test result records.
-        /// </summary>
-        /// <returns>A list of all lab test result records.</returns>
-        /// <response code="200">Returns the list of lab test results.</response>
+        [Authorize(Roles = nameof(EnRoles.Patient))]
         [HttpGet]
+        public async Task<IActionResult> GetPatientLabResult()
+        {
+            var query = new GetLabTestResultListForPatientQuery(GetPatientId());
+            var response = await mediator.Send(query);
+            return NewResult(response);
+        }
+
+        [Authorize(Roles = nameof(EnRoles.Admin))]
+        [HttpGet("Get-All")]
         [ProducesResponseType(typeof(IEnumerable<LabTestResultDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll()
         {
@@ -27,6 +38,7 @@ namespace Helix.API.Controllers
             var response = await mediator.Send(query);
             return NewResult(response);
         }
+        [Authorize(Roles = nameof(EnRoles.Admin))]
 
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(LabTestResultDto), StatusCodes.Status200OK)]
@@ -48,6 +60,7 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
+        [Authorize(Roles = nameof(EnRoles.Admin))]
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(LabTestResultDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -57,7 +70,7 @@ namespace Helix.API.Controllers
             var response = await mediator.Send(command);
             return NewResult(response);
         }
-
+        [Authorize(Roles = nameof(EnRoles.Admin))]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -67,5 +80,22 @@ namespace Helix.API.Controllers
             var response = await mediator.Send(command);
             return NewResult(response);
         }
+
+        #region Help
+        private Guid GetPatientId()
+        {
+            // 1. Extract the user ID from the JWT Claims
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            // 2. get the patient record based on the user ID
+            var patient = patientService.GetPatientByUserIdAsync(userIdString).Result;
+            if (patient != null)
+            {
+                return patient.Id;
+            }
+
+            throw new UnauthorizedAccessException("Invalid patient ID.");
+        }
+
+        #endregion
     }
 }

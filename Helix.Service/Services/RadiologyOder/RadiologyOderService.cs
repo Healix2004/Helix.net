@@ -12,7 +12,7 @@ using System.Text;
 
 namespace Helix.Service.Services.RadiologyOder
 {
-    public class RadiologyOderService(IUnitOfWork unitOfWork) : IRadiologyOrderService
+    public class RadiologyOderService(IUnitOfWork unitOfWork,ITerminologyCodeLookupService terminologyService) : IRadiologyOrderService
     {
         public async Task<Guid> CreateRadiologyOrderAsync(CreateRadiologyOrderDto dto)
         {
@@ -23,7 +23,7 @@ namespace Helix.Service.Services.RadiologyOder
             {
                 PatientId = dto.PatientId,
                 DoctorId = dto.DoctorId,
-                TerminologyCodeId = dto.TerminologyCodeId,
+                TerminologyCodeId = (await terminologyService.GetTerminologyCodeLooKupByCodeAsync(dto.TerminologyCode)).Id,
                 QrToken = qrToken,
                 Status = EnLabOrderStatus.Pending,
                 CreateDate = DateTime.UtcNow

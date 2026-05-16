@@ -12,6 +12,6 @@ namespace Helix.Service.DTOs.LabOrderDTOs
         public Guid DoctorId { get; set; }
 
         [Required(ErrorMessage = "You must select a specific lab test (Terminology Code).")]
-        public Guid TerminologyCodeId { get; set; }
+        public string TerminologyCode { get; set; }
     }
 }

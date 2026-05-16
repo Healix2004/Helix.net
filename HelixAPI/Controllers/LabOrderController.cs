@@ -44,9 +44,9 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
         [HttpPost("{orderId}/results")]
-        public async Task<IActionResult> UploadLabResult(Guid orderId, [FromBody] LabTestResultDto dto)
+        public async Task<IActionResult> UploadLabResult(Guid orderId, [FromBody] UploadLabResultDto dto)
         {
-            dto.Id = orderId; // <-- Check this property name
+            dto.OrderId = orderId; // <-- Check this property name
             var result = await labOrderService.UploadLabResultAsync(dto);
             var response = new Response<bool>(result)
             {

@@ -12,6 +12,6 @@ namespace Helix.Service.DTOs.RadiologyOrderDto
         public Guid DoctorId { get; set; }
 
         [Required(ErrorMessage = "You must select a specific scan (e.g., MRI Brain).")]
-        public Guid TerminologyCodeId { get; set; }
+        public string TerminologyCode { get; set; } = string.Empty;
     }
 }

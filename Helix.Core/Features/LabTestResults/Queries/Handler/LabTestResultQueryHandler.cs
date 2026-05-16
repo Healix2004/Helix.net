@@ -2,6 +2,7 @@ using Helix.Core.Bases;
 using Helix.Core.Features.LabTestResults.Queries.Models;
 using Helix.Service.DTOs.LabTestResultDTOs;
 using Helix.Service.Interfaces;
+using Helix.Service.Services.LabTestResultService;
 using MediatR;
 
 namespace Helix.Core.Features.LabTestResults.Queries.Handler
@@ -27,7 +28,14 @@ namespace Helix.Core.Features.LabTestResults.Queries.Handler
             return _responseHandler.Success(result);
         }
     }
-
+    public class GetLabTestResultListForPatientQueryHandler(ILabTestResultService labTestResultService, ResponseHandler responseHandler) : IRequestHandler<GetLabTestResultListForPatientQuery, Response<IEnumerable<LabTestResultDto>>>
+    {
+        public async Task<Response<IEnumerable<LabTestResultDto>>> Handle(GetLabTestResultListForPatientQuery request, CancellationToken cancellationToken)
+        {
+            var result = await labTestResultService.GetAllLabTestResultsAsync(request.PatientId);
+            return responseHandler.Success(result);
+        }
+    }
     /// <summary>
     /// Handles <see cref="GetLabTestResultByIdQuery"/> and returns a single lab test result.
     /// Returns <see cref="System.Net.HttpStatusCode.NotFound"/> if no record exists with the given ID.
