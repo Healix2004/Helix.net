@@ -1,4 +1,5 @@
-﻿using Helix.Service.DTOs.FileDto;
+﻿using Helix.Data.Entities;
+using Helix.Service.DTOs.FileDto;
 using Helix.Service.Interfaces;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -64,6 +65,62 @@ namespace Helix.Service.Services.FileServices
                     Success = false,
                     ErrorMessage = $"Error uploading file: {ex.Message}"
                 };
+            }
+        }
+        public async Task<IEnumerable<RadiologyImage>> UploadMultipleFilesAsync(List<IFormFile> files , string PatientName, Guid PatientId)
+        {
+            try
+            {
+                if (files == null || !files.Any())
+                {
+
+                }
+
+                var result = new List<RadiologyImage>();
+                var errors = new List<string>();
+
+                foreach (var file in files)
+                {
+                    var validationResult = ValidateFile(file);
+                    if (!validationResult.IsValid)
+                    {
+                        errors.Add($"File {file.FileName}: {validationResult.ErrorMessage}");
+                        continue;
+                    }
+
+                    try
+                    {
+                        var (folderPath, savePath, fullPath, dbPath) = GenerateFilePaths(file.FileName,PatientName,PatientId);
+
+                        // Ensure directory exists
+                        Directory.CreateDirectory(savePath);
+
+                        // Save file
+                        await using (var stream = new FileStream(fullPath, FileMode.Create))
+                        {
+                            await file.CopyToAsync(stream);
+                        }
+
+                        result.Add(new RadiologyImage()
+                        {
+                            FilePath = dbPath,
+                            FileName = Path.GetFileName(fullPath),
+                            FileSizeInKB = file.Length / 1024
+                        });
+                        logger.LogInformation("File uploaded successfully: {FilePath}", dbPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        errors.Add($"File {file.FileName}: {ex.Message}");
+                        logger.LogError(ex, "Error uploading file: {FileName}", file.FileName);
+                    }
+                }
+                return result;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error uploading multiple files");
+                return new List<RadiologyImage>();
             }
         }
 
@@ -258,6 +315,36 @@ namespace Helix.Service.Services.FileServices
             return (folderPath, savePath, fullPath, dbPath);
         }
 
+        private string SanitizeFolderName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return "Unknown_Patient";
+
+            // 1. Remove characters that are illegal in Windows/Linux folder names
+            var invalidChars = Path.GetInvalidFileNameChars();
+            var cleanName = new string(name.Where(ch => !invalidChars.Contains(ch)).ToArray());
+
+            // 2. Replace spaces with underscores so your web URLs are clean (no "%20")
+            return cleanName.Replace(" ", "_");
+        }
+        private (string folderPath, string savePath, string fullPath, string dbPath) GenerateFilePaths(string originalFileName, string patientName, Guid patientId)
+        {
+            string safePatientName = SanitizeFolderName(patientName);
+
+            // 2. THE FIX: Combine the name and the unique ID!
+            string uniquePatientFolder = $"{safePatientName}_{patientId}";
+
+            // 3. Use the unique folder here
+            var folderPath = Path.Combine("Uploads", uniquePatientFolder, DateTime.Now.ToString("yyyy"), DateTime.Now.ToString("MM"), DateTime.Now.ToString("dd"));
+
+            var savePath = Path.Combine(environment.WebRootPath, folderPath);
+            var extension = Path.GetExtension(originalFileName);
+            var uniqueFileName = $"{Guid.NewGuid()}{extension}";
+            var fullPath = Path.Combine(savePath, uniqueFileName);
+            var dbPath = $"/{folderPath.Replace("\\", "/")}/{uniqueFileName}";
+
+            return (folderPath, savePath, fullPath, dbPath);
+        }
         private (bool IsValid, string ErrorMessage) ValidateFile(IFormFile file)
         {
             if (file == null)

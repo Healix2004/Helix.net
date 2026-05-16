@@ -6,13 +6,14 @@ using Helix.Service.DTOs.RadiologyTestResultDto;
 using Helix.Service.Interfaces;
 using Helix.Service.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace Helix.Service.Services.RadiologyOder
 {
-    public class RadiologyOderService(IUnitOfWork unitOfWork,ITerminologyCodeLookupService terminologyService) : IRadiologyOrderService
+    public class RadiologyOderService(IUnitOfWork unitOfWork,ITerminologyCodeLookupService terminologyService,IFileService fileService) : IRadiologyOrderService
     {
         public async Task<Guid> CreateRadiologyOrderAsync(CreateRadiologyOrderDto dto)
         {
@@ -90,13 +91,17 @@ namespace Helix.Service.Services.RadiologyOder
         public async Task<List<PendingRadiologyOrderDto>> GetPendingOrdersAsync(Guid patientId)
         {
             var pendingOrders = await unitOfWork.Repository<RadiologyOrder>().Find(o => o.PatientId == patientId && o.Status == EnLabOrderStatus.Pending).Result
+            .Include(o => o.Patient).ThenInclude(p => p.AppUser)
             .Include(o => o.TerminologyCode)
             .Select(o => new PendingRadiologyOrderDto
             {
                 Id = o.Id,
-                TerminologyDisplay= o.TerminologyCode.Display,
+                PatientName = $"{o.Patient.AppUser.FirstName} {o.Patient.AppUser.LastName}",
+
+                TerminologyDisplay = o.TerminologyCode.Display,
                 QrToken = o.QrToken,
                 CreatedAt = o.CreateDate,
+                RequestingDoctorName = $"{o.Doctor.AppUser.FirstName} {o.Doctor.AppUser.LastName}",
             })
             .ToListAsync();
 
@@ -105,8 +110,10 @@ namespace Helix.Service.Services.RadiologyOder
 
         public async Task<RadiologyOrderDto> GetRadiologyOrderByIdAsync(Guid id)
         {
-            var order = await unitOfWork.Repository<RadiologyOrder>().Get(id);
-            if(order == null) throw new KeyNotFoundException($"LabOrder with ID '{id}' was not found.");
+            var order = await unitOfWork.Repository<RadiologyOrder>().Find(o => o.Id == id && o.Status == EnLabOrderStatus.Pending).Result
+            .Include(o => o.Patient).ThenInclude(p => p.AppUser)
+            .Include(o => o.TerminologyCode)
+            .FirstOrDefaultAsync(); if (order == null) throw new KeyNotFoundException($"LabOrder with ID '{id}' was not found.");
 
             return new RadiologyOrderDto
             {
@@ -172,7 +179,6 @@ namespace Helix.Service.Services.RadiologyOder
 
         public async Task<bool> UploadResultAsync(CreateRadiologyTestResultDto dto)
         {
-            // Assuming your LabTestResultDto contains the OrderId it belongs to
             var order = await unitOfWork.Repository<RadiologyOrder>().Get(dto.OrderId);
 
             if (order == null || order.Status != EnLabOrderStatus.Pending)
@@ -180,36 +186,38 @@ namespace Helix.Service.Services.RadiologyOder
                 throw new KeyNotFoundException($"Pending LabOrder with ID '{dto.OrderId}' was not found.");
             }
 
-            // 1. Create the new lab result based on the DTO properties
+            // Ensure we have the patient navigation loaded (avoid possible null dereference)
+            var patient = order.Patient ?? unitOfWork.Repository<Patient>().Find(p=>p.Id==order.PatientId).Result
+                .Include(p=>p.AppUser).FirstOrDefault();
+            if (patient == null)
+            {
+                throw new KeyNotFoundException($"Patient for order '{dto.OrderId}' was not found.");
+            }
+
+            // Safely get a patient name for file upload folder/name
+            var patientName = patient.AppUser?.FirstName+"_"+ patient.AppUser?.LastName ?? "Patient";
+
+            // 1. Create the new radiology result based on the DTO properties
+            var uploadedImages = await fileService.UploadMultipleFilesAsync(dto.UploadedFilePaths, patientName, order.PatientId);
             var result = new RadiologyResult
             {
                 PatientId = order.PatientId,
-                Findings=dto.Findings,                
+                OrderId = order.Id,
+                Findings = dto.Findings,
                 Impression = dto.Impression,
                 PerformedDate = DateTime.UtcNow,
                 StudyType = "Some Study Type",
-                Images= dto.UploadedFilePaths.Select(filePath => new RadiologyImage()
-                {
-                    FilePath = filePath,
-                    FileName = Path.GetFileName(filePath),
-                    FileSizeInKB = new FileInfo(filePath).Length / 1024
-                }).ToList()
-                // EncounterId can be mapped here if applicable
+                Images = new List<RadiologyImage>(uploadedImages) // convert IEnumerable to ICollection by creating a List
             };
 
             await unitOfWork.Repository<RadiologyResult>().Add(result);
-
-            // Note: We have to save once here if you need the RadiologyResult.Id to assign back to the order
             unitOfWork.Complete();
 
             // 2. Update order status and link the result
             order.Status = EnLabOrderStatus.Completed;
-            order.Result = result; // Linking the newly created result to the order
+            order.Result = result;
 
             unitOfWork.Repository<RadiologyOrder>().Update(order);
-            unitOfWork.Complete();
-
-            // 3. Commit transaction
             return unitOfWork.Complete() > 0;
         }
     }

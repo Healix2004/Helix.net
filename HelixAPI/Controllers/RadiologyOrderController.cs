@@ -48,7 +48,7 @@ namespace Helix.API.Controllers
         }
 
         [HttpPost("{orderId}/results")]
-        public async Task<IActionResult> UploadRadiologyResult(Guid orderId, [FromBody] CreateRadiologyTestResultDto dto)
+        public async Task<IActionResult> UploadRadiologyResult(Guid orderId, [FromForm] CreateRadiologyTestResultDto dto)
         {
             dto.OrderId = orderId;
             var result = await radiologyOrderService.UploadResultAsync(dto);

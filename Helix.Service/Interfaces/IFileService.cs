@@ -1,4 +1,6 @@
+using Helix.Data.Entities;
 using Helix.Service.DTOs.FileDto;
+using Microsoft.AspNetCore.Http;
 
 namespace Helix.Service.Interfaces
 {
@@ -9,5 +11,6 @@ namespace Helix.Service.Interfaces
         Task<FileDownloadResult> DownloadFileAsync(string filePath);
         Task<bool> DeleteFileAsync(string filePath);
         Task<bool> FileExistsAsync(string filePath);
+        Task<IEnumerable<RadiologyImage>> UploadMultipleFilesAsync(List<IFormFile> files, string PatientName, Guid PatientId);
     }
 }
