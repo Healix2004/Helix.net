@@ -4,92 +4,80 @@ using Helix.Service.DTOs.ConsentDTOs;
 using Helix.Service.Interfaces;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Helix.Service.Services.ConsentService
 {
-    public class ConsentService : IConsentService
+    // Using C# 12 Primary Constructor for cleaner Dependency Injection
+    public class ConsentService(IUnitOfWork unitOfWork, IMapper mapper) : IConsentService
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
-
-        public ConsentService(IUnitOfWork unitOfWork, IMapper mapper)
+        public async Task<ConsentDto> CreateConsentAsync(CreateConsentDto createConsentDto)
         {
-            _unitOfWork = unitOfWork;
-            _mapper = mapper;
+            // 1. Optimize: Use GetByIdAsync instead of Find().FirstOrDefault()
+            var patient = await unitOfWork.Repository<Patient>().GetByIdAsync(createConsentDto.PatientId);
+            if (patient == null)
+                throw new Exception($"Patient with ID {createConsentDto.PatientId} not found.");
+
+            var doctor = await unitOfWork.Repository<Doctor>().GetByIdAsync(createConsentDto.DoctorId);
+            if (doctor == null)
+                throw new Exception($"Doctor with ID {createConsentDto.DoctorId} not found.");
+
+            var consent = mapper.Map<Consent>(createConsentDto);
+
+            consent.PatientId = patient.Id;
+            consent.DoctorId = doctor.Id;
+
+            await unitOfWork.Repository<Consent>().AddAsync(consent);
+            await unitOfWork.CompleteAsync();
+
+            return mapper.Map<ConsentDto>(consent);
         }
 
-        public Task<ConsentDto> CreateConsentAsync(CreateConsentDto createConsentDto)
+        public async Task<bool> DeleteConsentAsync(Guid id)
         {
-            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == createConsentDto.PatientId).Result.FirstOrDefault();
-            if (patient == null) throw new Exception("Patient not found");
+            var consent = await unitOfWork.Repository<Consent>().GetByIdAsync(id);
 
-            var doctor = _unitOfWork.Repository<Doctor>().Find(d => d.Id == createConsentDto.DoctorId).Result.FirstOrDefault();
-            if (doctor == null) throw new Exception("Doctor not found");
-
-            var consent = _mapper.Map<Consent>(createConsentDto);
-            consent.Patient = patient;
-            consent.Doctor = doctor;
-            
-            _unitOfWork.Repository<Consent>().Add(consent);
-            _unitOfWork.Complete();
-
-            var result = _mapper.Map<ConsentDto>(consent);
-            // Manually map IDs just in case they aren't shadow-mapped correctly by EF immediately before saving.
-            result.PatientId = consent.Patient.Id;
-            result.DoctorId = consent.Doctor.Id;
-            
-            return Task.FromResult(result);
-        }
-
-        public Task<bool> DeleteConsentAsync(Guid id)
-        {
-            var consent = _unitOfWork.Repository<Consent>().Find(c => c.Id == id).Result.FirstOrDefault();
             if (consent == null)
             {
-                return Task.FromResult(false);
+                return false;
             }
 
-            _unitOfWork.Repository<Consent>().Delete(consent);
-            _unitOfWork.Complete();
+            await unitOfWork.Repository<Consent>().DeleteAsync(consent);
+            await unitOfWork.CompleteAsync();
 
-            return Task.FromResult(true);
+            return true;
         }
 
-        public Task<IEnumerable<ConsentDto>> GetAllConsentsAsync()
+        public async Task<IEnumerable<ConsentDto>> GetAllConsentsAsync()
         {
-            var consents = _unitOfWork.Repository<Consent>().GetALL();
-            var consentsDto = _mapper.Map<IEnumerable<ConsentDto>>(consents);
-            return Task.FromResult(consentsDto);
+            // 3. True async await instead of .Result and Task.FromResult
+            var consents = await unitOfWork.Repository<Consent>().GetAllAsync();
+            return mapper.Map<IEnumerable<ConsentDto>>(consents);
         }
 
-        public Task<ConsentDto> GetConsentByIdAsync(Guid id)
+        public async Task<ConsentDto?> GetConsentByIdAsync(Guid id)
         {
-            var consent = _unitOfWork.Repository<Consent>().Find(c => c.Id == id).Result.FirstOrDefault();
+            var consent = await unitOfWork.Repository<Consent>().GetByIdAsync(id);
+
+            return consent == null ? null : mapper.Map<ConsentDto>(consent);
+        }
+
+        public async Task<ConsentDto> UpdateConsentAsync(Guid id, UpdateConsentDto updateConsentDto)
+        {
+            var consent = await unitOfWork.Repository<Consent>().GetByIdAsync(id);
+
             if (consent == null)
             {
-                return Task.FromResult<ConsentDto>(null);
+                throw new Exception($"Consent with ID {id} not found.");
             }
 
-            var consentDto = _mapper.Map<ConsentDto>(consent);
-            return Task.FromResult(consentDto);
-        }
+            // Maps the new values from the DTO directly onto the tracked DB entity
+            mapper.Map(updateConsentDto, consent);
 
-        public Task<ConsentDto> UpdateConsentAsync(Guid id, UpdateConsentDto updateConsentDto)
-        {
-            var consent = _unitOfWork.Repository<Consent>().Find(c => c.Id == id).Result.FirstOrDefault();
-            if (consent == null)
-            {
-                throw new Exception("Consent not found");
-            }
+            await unitOfWork.Repository<Consent>().UpdateAsync(consent);
+            await unitOfWork.CompleteAsync();
 
-            _mapper.Map(updateConsentDto, consent);
-            
-            _unitOfWork.Repository<Consent>().Update(consent);
-            _unitOfWork.Complete();
-
-            return Task.FromResult(_mapper.Map<ConsentDto>(consent));
+            return mapper.Map<ConsentDto>(consent);
         }
     }
 }

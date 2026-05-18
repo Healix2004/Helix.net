@@ -1,31 +1,29 @@
 ﻿using Helix.Data.Entities;
 using Helix.Service.Specification;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Helix.Service.Interfaces
 {
-    public interface IRepository <T> where T : BaseEntity
+    public interface IRepository<T> where T : BaseEntity
     {
-        public Task Add(T entity);
+        // 1. Core CRUD
+        Task<T> AddAsync(T entity, CancellationToken cancellationToken = default);
+        Task UpdateAsync(T entity, CancellationToken cancellationToken = default);
+        Task DeleteAsync(T entity, CancellationToken cancellationToken = default);
 
-        public Task Update(T entity);
+        // 2. Retrieval by ID
+        Task<T?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+        Task<T?> GetByIdAsync(string id, CancellationToken cancellationToken = default);
 
-        public Task Delete(T entity);
+        // 3. Collections
+        Task<IReadOnlyList<T>> GetAllAsync(CancellationToken cancellationToken = default);
 
-        public Task<T> Get(Guid Id);
-        public Task<T> Get(string Id);
+        // 4. Filtering
+        Task<IReadOnlyList<T>> FindAsync(Expression<Func<T, bool>> filter, CancellationToken cancellationToken = default);
+        Task<IQueryable<T>> FindAsQueryable(Expression<Func<T, bool>> filter);
 
-        public Task<IEnumerable<T>> GetALL();
-
-        public Task<IQueryable<T>> Find(Expression<Func<T, bool>> filter);
-       
-
-        public Task<T> GetEntityWithSpec(ISpecification<T> spec); 
-        public Task<IEnumerable<T>> GetALLWithSpec(ISpecification<T> spec);
+        // 5. Specifications
+        Task<T?> GetEntityWithSpecAsync(ISpecification<T> spec, CancellationToken cancellationToken = default);
+        Task<IQueryable<T>> GetAllWithSpecAsync(ISpecification<T> spec, CancellationToken cancellationToken = default);
     }
 }

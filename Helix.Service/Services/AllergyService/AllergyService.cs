@@ -9,68 +9,77 @@ using System.Threading.Tasks;
 
 namespace Helix.Service.Services.AllergyService
 {
-    public class AllergyService : IAllergyService
+    public class AllergyService(IUnitOfWork unitOfWork, IMapper mapper) : IAllergyService
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
-
-        public AllergyService(IUnitOfWork unitOfWork, IMapper mapper)
+        public async Task<AllergyDto> CreateAllergyAsync(CreateAllergyDto createAllergyDto)
         {
-            _unitOfWork = unitOfWork;
-            _mapper = mapper;
+            // 1. Truly await the database call using the new GetByIdAsync
+            var patient = await unitOfWork.Repository<Patient>().GetByIdAsync(createAllergyDto.PatientId);
+
+            if (patient == null)
+                throw new Exception($"Patient with ID {createAllergyDto.PatientId} not found.");
+
+            var allergy = mapper.Map<Allergy>(createAllergyDto);
+
+            // Note: EF Core usually just needs the Foreign Key, but setting the entity is fine too
+            allergy.PatientId = patient.Id;
+
+            // 2. Await the repository and UnitOfWork operations
+            await unitOfWork.Repository<Allergy>().AddAsync(allergy);
+            await unitOfWork.CompleteAsync(); // Ensure your UnitOfWork has an async Complete method!
+
+            return mapper.Map<AllergyDto>(allergy);
         }
 
-        public Task<AllergyDto> CreateAllergyAsync(CreateAllergyDto createAllergyDto)
+        public async Task<bool> DeleteAllergyAsync(Guid id)
         {
-            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == createAllergyDto.PatientId).Result.FirstOrDefault();
-            if (patient == null) throw new Exception("Patient not found");
+            var allergy = await unitOfWork.Repository<Allergy>().GetByIdAsync(id);
 
-            var allergy = _mapper.Map<Allergy>(createAllergyDto);
-            allergy.Patient = patient;
+            if (allergy == null)
+                return false;
 
-            _unitOfWork.Repository<Allergy>().Add(allergy);
-            _unitOfWork.Complete();
+            await unitOfWork.Repository<Allergy>().DeleteAsync(allergy);
+            await unitOfWork.CompleteAsync();
 
-            var result = _mapper.Map<AllergyDto>(allergy);
-            result.PatientId = patient.Id;
-            return Task.FromResult(result);
+            return true;
         }
 
-        public Task<bool> DeleteAllergyAsync(Guid id)
+        public async Task<IEnumerable<AllergyDto>> GetAllAllergiesAsync()
         {
-            var allergy = _unitOfWork.Repository<Allergy>().Find(a => a.Id == id).Result.FirstOrDefault();
-            if (allergy == null) return Task.FromResult(false);
-
-            _unitOfWork.Repository<Allergy>().Delete(allergy);
-            _unitOfWork.Complete();
-            return Task.FromResult(true);
+            var allergies = await unitOfWork.Repository<Allergy>().GetAllAsync();
+            return mapper.Map<IEnumerable<AllergyDto>>(allergies);
         }
 
-        public Task<IEnumerable<AllergyDto>> GetAllAllergiesAsync()
+        public async Task<IEnumerable<AllergyDto>> GetPatientAllergiesAsync(Guid patientId)
         {
-            var allergies = _unitOfWork.Repository<Allergy>().GetALL().Result;
-            return Task.FromResult(_mapper.Map<IEnumerable<AllergyDto>>(allergies));
+            // FIX: Your original code checked "a => a.Id == PatiendId". 
+            // That was comparing the Allergy's ID to the Patient's ID!
+            // Changed to a.PatientId == patientId
+            var allergies = await unitOfWork.Repository<Allergy>().FindAsync(a => a.PatientId == patientId);
+            return mapper.Map<IEnumerable<AllergyDto>>(allergies);
         }
-        public Task<IEnumerable<AllergyDto>> GetPatientAllergiesAsync(Guid PatiendId)
-        {
-            var allergies = _unitOfWork.Repository<Allergy>().Find(a => a.Id == PatiendId).Result.ToList();
-            return Task.FromResult(_mapper.Map<IEnumerable<AllergyDto>>(allergies));
-        }
-        public Task<AllergyDto> GetAllergyByIdAsync(Guid id)
-        {
-            var allergy = _unitOfWork.Repository<Allergy>().Find(a => a.Id == id).Result.FirstOrDefault();
-            return Task.FromResult(_mapper.Map<AllergyDto>(allergy));
-        }
-        public Task<AllergyDto> UpdateAllergyAsync(Guid id, UpdateAllergyDto updateAllergyDto)
-        {
-            var allergy = _unitOfWork.Repository<Allergy>().Find(a => a.Id == id).Result.FirstOrDefault();
-            if (allergy == null) throw new Exception("Allergy not found");
 
-            _mapper.Map(updateAllergyDto, allergy);
-            _unitOfWork.Repository<Allergy>().Update(allergy);
-            _unitOfWork.Complete();
+        public async Task<AllergyDto?> GetAllergyByIdAsync(Guid id)
+        {
+            // Used GetByIdAsync instead of Find().FirstOrDefault()
+            var allergy = await unitOfWork.Repository<Allergy>().GetByIdAsync(id);
 
-            return Task.FromResult(_mapper.Map<AllergyDto>(allergy));
+            return allergy == null ? null : mapper.Map<AllergyDto>(allergy);
+        }
+
+        public async Task<AllergyDto> UpdateAllergyAsync(Guid id, UpdateAllergyDto updateAllergyDto)
+        {
+            var allergy = await unitOfWork.Repository<Allergy>().GetByIdAsync(id);
+
+            if (allergy == null)
+                throw new Exception($"Allergy with ID {id} not found.");
+
+            mapper.Map(updateAllergyDto, allergy);
+
+            await unitOfWork.Repository<Allergy>().UpdateAsync(allergy);
+            await unitOfWork.CompleteAsync();
+
+            return mapper.Map<AllergyDto>(allergy);
         }
     }
 }

@@ -2,77 +2,76 @@ using AutoMapper;
 using Helix.Data.Entities;
 using Helix.Service.DTOs.EncounterDTOs;
 using Helix.Service.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Helix.Service.Services.EncounterService
 {
-    public class EncounterService : IEncounterService
+    public class EncounterService(IUnitOfWork unitOfWork, IMapper mapper) : IEncounterService
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
-
-        public EncounterService(IUnitOfWork unitOfWork, IMapper mapper)
+        public async Task<EncounterDto> CreateEncounterAsync(CreateEncounterDto createEncounterDto)
         {
-            _unitOfWork = unitOfWork;
-            _mapper = mapper;
+            // 1. Optimize: Use GetByIdAsync for faster validation leveraging EF Core's local cache
+            var patient = await unitOfWork.Repository<Patient>().GetByIdAsync(createEncounterDto.PatientId);
+            if (patient == null)
+                throw new Exception($"Patient with ID {createEncounterDto.PatientId} not found.");
+
+            var doctor = await unitOfWork.Repository<Doctor>().GetByIdAsync(createEncounterDto.DoctorId);
+            if (doctor == null)
+                throw new Exception($"Doctor with ID {createEncounterDto.DoctorId} not found.");
+
+            var encounter = mapper.Map<Encounter>(createEncounterDto);
+
+            // 2. Optimize: You only need to set the Foreign Keys! 
+            // Attaching the full objects is unnecessary overhead.
+            encounter.PatientId = patient.Id;
+            encounter.DoctorId = doctor.Id;
+
+            await unitOfWork.Repository<Encounter>().AddAsync(encounter);
+            await unitOfWork.CompleteAsync(); // Using the async commit method!
+
+            return mapper.Map<EncounterDto>(encounter);
         }
 
-        public Task<EncounterDto> CreateEncounterAsync(CreateEncounterDto createEncounterDto)
+        public async Task<bool> DeleteEncounterAsync(Guid id)
         {
-            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == createEncounterDto.PatientId).Result.FirstOrDefault();
-            if (patient == null) throw new Exception("Patient not found");
+            var encounter = await unitOfWork.Repository<Encounter>().GetByIdAsync(id);
 
-            var doctor = _unitOfWork.Repository<Doctor>().Find(d => d.Id == createEncounterDto.DoctorId).Result.FirstOrDefault();
-            if (doctor == null) throw new Exception("Doctor not found");
+            if (encounter == null)
+                return false;
 
-            var encounter = _mapper.Map<Encounter>(createEncounterDto);
-            encounter.patient = patient;
-            encounter.Doctor = doctor;
+            await unitOfWork.Repository<Encounter>().DeleteAsync(encounter);
+            await unitOfWork.CompleteAsync();
 
-            _unitOfWork.Repository<Encounter>().Add(encounter);
-            _unitOfWork.Complete();
-
-            var result = _mapper.Map<EncounterDto>(encounter);
-            result.PatientId = patient.Id;
-            result.DoctorId = doctor.Id;
-            return Task.FromResult(result);
+            return true;
         }
 
-        public Task<bool> DeleteEncounterAsync(Guid id)
+        public async Task<IEnumerable<EncounterDto>> GetAllEncountersAsync()
         {
-            var encounter = _unitOfWork.Repository<Encounter>().Find(e => e.Id == id).Result.FirstOrDefault();
-            if (encounter == null) return Task.FromResult(false);
-
-            _unitOfWork.Repository<Encounter>().Delete(encounter);
-            _unitOfWork.Complete();
-            return Task.FromResult(true);
+            // 3. True asynchronous await instead of .Result and Task.FromResult
+            var encounters = await unitOfWork.Repository<Encounter>().GetAllAsync();
+            return mapper.Map<IEnumerable<EncounterDto>>(encounters);
         }
 
-        public Task<IEnumerable<EncounterDto>> GetAllEncountersAsync()
+        public async Task<EncounterDto?> GetEncounterByIdAsync(Guid id)
         {
-            var encounters = _unitOfWork.Repository<Encounter>().GetALL().Result;
-            return Task.FromResult(_mapper.Map<IEnumerable<EncounterDto>>(encounters));
+            var encounter = await unitOfWork.Repository<Encounter>().GetByIdAsync(id);
+
+            return encounter == null ? null : mapper.Map<EncounterDto>(encounter);
         }
 
-        public Task<EncounterDto> GetEncounterByIdAsync(Guid id)
+        public async Task<EncounterDto> UpdateEncounterAsync(Guid id, UpdateEncounterDto updateEncounterDto)
         {
-            var encounter = _unitOfWork.Repository<Encounter>().Find(e => e.Id == id).Result.FirstOrDefault();
-            return Task.FromResult(_mapper.Map<EncounterDto>(encounter));
-        }
+            var encounter = await unitOfWork.Repository<Encounter>().GetByIdAsync(id);
 
-        public Task<EncounterDto> UpdateEncounterAsync(Guid id, UpdateEncounterDto updateEncounterDto)
-        {
-            var encounter = _unitOfWork.Repository<Encounter>().Find(e => e.Id == id).Result.FirstOrDefault();
-            if (encounter == null) throw new Exception("Encounter not found");
+            if (encounter == null)
+                throw new Exception($"Encounter with ID {id} not found.");
 
-            _mapper.Map(updateEncounterDto, encounter);
-            _unitOfWork.Repository<Encounter>().Update(encounter);
-            _unitOfWork.Complete();
+            // Maps the new values from the DTO directly onto the tracked DB entity
+            mapper.Map(updateEncounterDto, encounter);
 
-            return Task.FromResult(_mapper.Map<EncounterDto>(encounter));
+            await unitOfWork.Repository<Encounter>().UpdateAsync(encounter);
+            await unitOfWork.CompleteAsync();
+
+            return mapper.Map<EncounterDto>(encounter);
         }
     }
 }

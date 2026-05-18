@@ -8,5 +8,6 @@ namespace Helix.Service.DTOs.ObservationDTOs
         public decimal? value { get; set; }
         public string unit { get; set; }
         public Guid EncounterId { get; set; }
+        public Guid PatientId { get; set; }
     }
 }

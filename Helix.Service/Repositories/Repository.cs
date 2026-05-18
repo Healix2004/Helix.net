@@ -11,51 +11,67 @@ using System.Threading.Tasks;
 
 namespace Helix.Service.Repositories
 {
-    public class Repository<T> : IRepository<T> where T : BaseEntity
+    public class Repository<T>(ApplicationDbContext context) : IRepository<T> where T : BaseEntity
     {
-        private readonly ApplicationDbContext context;
-
-        public Repository(ApplicationDbContext context)
+        private readonly DbSet<T> _dbSet = context.Set<T>();
+        // 1. Core CRUD
+        public async Task<T> AddAsync(T entity, CancellationToken cancellationToken = default)
         {
-            this.context = context;
+            await _dbSet.AddAsync(entity, cancellationToken);
+            return entity;
         }
-
-        public Task Add(T entity)
+        public Task UpdateAsync(T entity, CancellationToken cancellationToken = default)
         {
-            context.Set<T>().Add(entity);
+            _dbSet.Update(entity);
             return Task.CompletedTask;
         }
-
-        public Task Delete(T entity)
+        public Task DeleteAsync(T entity, CancellationToken cancellationToken = default)
         {
-            context.Set<T>().Remove(entity);
+            _dbSet.Remove(entity);
             return Task.CompletedTask;
         }
-
-        public Task Update(T entity)
+        // 2. Retrieval by ID
+        public async Task<T?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            context.Set<T>().Update(entity);
-            return Task.CompletedTask;
+            return await _dbSet.FindAsync([id], cancellationToken);
+        }
+        public async Task<T?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
+        {
+            return await _dbSet.FindAsync([id], cancellationToken);
         }
 
-        public Task<T> Get(Guid Id) => Task.FromResult(context.Set<T>().Find(Id));
-        public Task<T> Get(string Id) => Task.FromResult(context.Set<T>().Find(Id));
-
-         public Task<IEnumerable<T>> GetALL()
+        // 3. Collections
+        public async Task<IReadOnlyList<T>> GetAllAsync(CancellationToken cancellationToken = default)
         {
-            // ensure the returned Task<T> generic matches IEnumerable<T>
-            return Task.FromResult<IEnumerable<T>>(context.Set<T>().AsNoTracking().ToList());
+            return await _dbSet.ToListAsync(cancellationToken);
         }
 
-        public Task<IQueryable<T>> Find(Expression<Func<T, bool>> filter)
+        // 4. Filtering
+        public async Task<IReadOnlyList<T>> FindAsync(Expression<Func<T, bool>> filter, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(context.Set<T>().Where(filter));
+            return await _dbSet.Where(filter).ToListAsync(cancellationToken);
         }
 
-        public Task<T> GetEntityWithSpec(ISpecification<T> spec) => Task.FromResult(ApplySpec(spec).FirstOrDefault());
-        public Task<IEnumerable<T>> GetALLWithSpec(ISpecification<T> spec) => Task.FromResult<IEnumerable<T>>(ApplySpec(spec).AsNoTracking().ToList());
+        public async Task<IQueryable<T>> FindAsQueryable(Expression<Func<T, bool>> filter)
+        {
+            // Returns the queryable without executing it yet
+            return await Task.FromResult(_dbSet.Where(filter));
+        }
 
-        //helper
-        private IQueryable<T> ApplySpec(ISpecification<T> spec) => SpecificationEvaluator<T>.GetQuery(context.Set<T>(), spec);
+        // 5. Specifications
+        public async Task<T?> GetEntityWithSpecAsync(ISpecification<T> spec, CancellationToken cancellationToken = default)
+        {
+            return await ApplySpecification(spec).FirstOrDefaultAsync(cancellationToken);
+        }
+        public async Task<IQueryable<T>> GetAllWithSpecAsync(ISpecification<T> spec, CancellationToken cancellationToken = default)
+        {
+            return await Task.FromResult(ApplySpecification(spec));
+        }
+        // Helper Method to use the SpecificationEvaluator
+        private IQueryable<T> ApplySpecification(ISpecification<T> spec)
+        {
+            return SpecificationEvaluator<T>.GetQuery(_dbSet.AsQueryable(), spec);
+        }
     }
+
 }

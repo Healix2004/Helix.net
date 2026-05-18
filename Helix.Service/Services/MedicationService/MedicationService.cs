@@ -2,80 +2,76 @@ using AutoMapper;
 using Helix.Data.Entities;
 using Helix.Service.DTOs.MedicationDTOs;
 using Helix.Service.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Helix.Service.Services.MedicationService
 {
-    public class MedicationService : IMedicationService
+    public class MedicationService(IUnitOfWork unitOfWork, IMapper mapper) : IMedicationService
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
-
-        public MedicationService(IUnitOfWork unitOfWork, IMapper mapper)
+        public async Task<MedicationDto> CreateMedicationAsync(CreateMedicationDto createMedicationDto)
         {
-            _unitOfWork = unitOfWork;
-            _mapper = mapper;
+            // 1. Optimize: Use GetByIdAsync for fast memory-cache lookups
+            var patient = await unitOfWork.Repository<Patient>().GetByIdAsync(createMedicationDto.PatientId);
+            if (patient == null)
+                throw new Exception($"Patient with ID {createMedicationDto.PatientId} not found.");
+
+            var terminology = await unitOfWork.Repository<TerminologyCodeLookup>().GetByIdAsync(createMedicationDto.TerminologyCodeId);
+            if (terminology == null)
+                throw new Exception($"Terminology Code with ID {createMedicationDto.TerminologyCodeId} not found.");
+
+            var medication = mapper.Map<Medication>(createMedicationDto);
+
+            // 2. Optimize: Set Foreign Keys directly to avoid unnecessary EF Core object tracking
+            medication.PatientId = patient.Id;
+            medication.TerminologyCodeId = terminology.Id;
+
+            await unitOfWork.Repository<Medication>().AddAsync(medication);
+            await unitOfWork.CompleteAsync(); // Asynchronous database commit
+
+            return mapper.Map<MedicationDto>(medication);
         }
 
-        public Task<MedicationDto> CreateMedicationAsync(CreateMedicationDto createMedicationDto)
+        public async Task<bool> DeleteMedicationAsync(Guid id)
         {
-            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == createMedicationDto.PatientId).Result.FirstOrDefault();
-            if (patient == null) throw new Exception("Patient not found");
+            var medication = await unitOfWork.Repository<Medication>().GetByIdAsync(id);
+            if (medication == null) return false;
 
-            var terminology = _unitOfWork.Repository<TerminologyCodeLookup>().Find(t => t.Id == createMedicationDto.TerminologyCodeId).Result.FirstOrDefault();
-            if (terminology == null) throw new Exception("Terminology Code not found");
-
-            var medication = _mapper.Map<Medication>(createMedicationDto);
-            medication.Patient = patient;
-            medication.TerminologyCode = terminology;
-
-            _unitOfWork.Repository<Medication>().Add(medication);
-            _unitOfWork.Complete();
-
-            var result = _mapper.Map<MedicationDto>(medication);
-            result.PatientId = patient.Id;
-            result.TerminologyCodeId = terminology.Id;
-            return Task.FromResult(result);
+            await unitOfWork.Repository<Medication>().DeleteAsync(medication);
+            await unitOfWork.CompleteAsync();
+            return true;
         }
 
-        public Task<bool> DeleteMedicationAsync(Guid id)
+        public async Task<IEnumerable<MedicationDto>> GetAllMedicationsAsync()
         {
-            var medication = _unitOfWork.Repository<Medication>().Find(m => m.Id == id).Result.FirstOrDefault();
-            if (medication == null) return Task.FromResult(false);
-
-            _unitOfWork.Repository<Medication>().Delete(medication);
-            _unitOfWork.Complete();
-            return Task.FromResult(true);
-        }
-        public Task<IEnumerable<MedicationDto>> GetAllMedicationsAsync()
-        {
-            var medications = _unitOfWork.Repository<Medication>().GetALL();
-            return Task.FromResult(_mapper.Map<IEnumerable<MedicationDto>>(medications));
-        }
-        public Task<IEnumerable<MedicationDto>> GetPatientMedicationsAsync(Guid patientId)
-        {
-            var medications = _unitOfWork.Repository<Medication>().Find(m => m.Id == patientId).Result.ToList();
-            return Task.FromResult(_mapper.Map<IEnumerable<MedicationDto>>(medications));
+            // 3. True async execution replacing .Result
+            var medications = await unitOfWork.Repository<Medication>().GetAllAsync();
+            return mapper.Map<IEnumerable<MedicationDto>>(medications);
         }
 
-        public Task<MedicationDto> GetMedicationByIdAsync(Guid id)
+        public async Task<IEnumerable<MedicationDto>> GetPatientMedicationsAsync(Guid patientId)
         {
-            var medication = _unitOfWork.Repository<Medication>().Find(m => m.Id == id).Result.FirstOrDefault();
-            return Task.FromResult(_mapper.Map<MedicationDto>(medication));
+            // 4. THE FIX: Changed 'm => m.Id' to 'm => m.PatientId'
+            var medications = await unitOfWork.Repository<Medication>().FindAsync(m => m.PatientId == patientId);
+            return mapper.Map<IEnumerable<MedicationDto>>(medications);
         }
-        public Task<MedicationDto> UpdateMedicationAsync(Guid id, UpdateMedicationDto updateMedicationDto)
+
+        public async Task<MedicationDto?> GetMedicationByIdAsync(Guid id)
         {
-            var medication = _unitOfWork.Repository<Medication>().Find(m => m.Id == id).Result.FirstOrDefault();
-            if (medication == null) throw new Exception("Medication not found");
+            var medication = await unitOfWork.Repository<Medication>().GetByIdAsync(id);
+            return medication == null ? null : mapper.Map<MedicationDto>(medication);
+        }
 
-            _mapper.Map(updateMedicationDto, medication);
-            _unitOfWork.Repository<Medication>().Update(medication);
-            _unitOfWork.Complete();
+        public async Task<MedicationDto> UpdateMedicationAsync(Guid id, UpdateMedicationDto updateMedicationDto)
+        {
+            var medication = await unitOfWork.Repository<Medication>().GetByIdAsync(id);
+            if (medication == null)
+                throw new Exception($"Medication with ID {id} not found.");
 
-            return Task.FromResult(_mapper.Map<MedicationDto>(medication));
+            mapper.Map(updateMedicationDto, medication);
+
+            await unitOfWork.Repository<Medication>().UpdateAsync(medication);
+            await unitOfWork.CompleteAsync();
+
+            return mapper.Map<MedicationDto>(medication);
         }
     }
 }

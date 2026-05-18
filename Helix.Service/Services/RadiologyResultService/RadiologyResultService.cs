@@ -3,9 +3,6 @@ using Helix.Service.DTOs.RadiologyTestResultDto;
 using Helix.Service.Interfaces;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Helix.Service.Services.RadiologyResultService
 {
@@ -14,11 +11,13 @@ namespace Helix.Service.Services.RadiologyResultService
         //===========================================
         // PATIENT WORKFLOW
         //===========================================
+
         public async Task<RadiologyTestResultDto> GetRadiologyResultByOrderIdAsync(Guid orderId)
         {
-            var result = await unitOfWork.Repository<RadiologyResult>()
-                .Find(r => true).Result
-                .Where(r => r.OrderId == orderId)
+            // 1. Optimized: Filter directly in FindAsQueryable
+            var query = await unitOfWork.Repository<RadiologyResult>().FindAsQueryable(r => r.OrderId == orderId);
+
+            var result = await query
                 .Include(r => r.Order)
                     .ThenInclude(o => o.Patient)
                         .ThenInclude(p => p.AppUser) // To get the patient's name
@@ -50,9 +49,9 @@ namespace Helix.Service.Services.RadiologyResultService
 
         public async Task<List<RadiologyTestResultDto>> GetRadiologyResultsByPatientIdAsync(Guid patientId)
         {
-            return await unitOfWork.Repository<RadiologyResult>()
-                .Find(r => true).Result
-                .Where(r => r.PatientId == patientId)
+            var query = await unitOfWork.Repository<RadiologyResult>().FindAsQueryable(r => r.PatientId == patientId);
+
+            return await query
                 .Include(r => r.Order)
                 .Select(r => new RadiologyTestResultDto
                 {
@@ -79,21 +78,20 @@ namespace Helix.Service.Services.RadiologyResultService
 
         public async Task<bool> DeleteRadiologyResultAsync(Guid id)
         {
-            var result = await unitOfWork.Repository<RadiologyResult>()
-                .Find(r => true).Result
+            var query = await unitOfWork.Repository<RadiologyResult>().FindAsQueryable(r => r.Id == id);
+
+            var result = await query
                 .Include(r => r.Images) // Must include images to get their file paths
-                .FirstOrDefaultAsync(r => r.Id == id);
+                .FirstOrDefaultAsync();
 
             if (result == null) return false;
 
-            // Optional but Highly Recommended: Delete the physical files from the server
-            // so your hard drive doesn't fill up with orphaned X-Rays!
+            // Delete the physical files from the server
             if (result.Images != null && result.Images.Any())
             {
                 var webRootPath = env.WebRootPath ?? System.IO.Directory.GetCurrentDirectory();
                 foreach (var img in result.Images)
                 {
-                    // Convert the relative URL ("/uploads/...") to a physical C:\ path
                     var fullPath = System.IO.Path.Combine(webRootPath, img.FilePath.TrimStart('/'));
                     if (System.IO.File.Exists(fullPath))
                     {
@@ -103,13 +101,13 @@ namespace Helix.Service.Services.RadiologyResultService
             }
 
             // Remove the database record
-            unitOfWork.Repository<RadiologyResult>().Delete(result);
-            return unitOfWork.Complete() > 0;
+            await unitOfWork.Repository<RadiologyResult>().DeleteAsync(result);
+            return await unitOfWork.CompleteAsync() > 0;
         }
 
-        public async Task UpdateRadiologyResultAsync(UpdateRadiologyTestResultDto dto) // <-- Tweaked the DTO here!
+        public async Task UpdateRadiologyResultAsync(UpdateRadiologyTestResultDto dto)
         {
-            var result = await unitOfWork.Repository<RadiologyResult>().Get(dto.Id);
+            var result = await unitOfWork.Repository<RadiologyResult>().GetByIdAsync(dto.Id);
 
             if (result == null)
                 throw new KeyNotFoundException("Radiology result not found.");
@@ -121,14 +119,15 @@ namespace Helix.Service.Services.RadiologyResultService
             if (!string.IsNullOrWhiteSpace(dto.Impression))
                 result.Impression = dto.Impression;
 
-            unitOfWork.Repository<RadiologyResult>().Update(result);
-            unitOfWork.Complete() ;
+            await unitOfWork.Repository<RadiologyResult>().UpdateAsync(result);
+            await unitOfWork.CompleteAsync();
         }
 
         public async Task<List<RadiologyTestResultDto>> GetAllRadiologyResultsAsync()
         {
-            return await unitOfWork.Repository<RadiologyResult>()
-                .Find(r => true).Result
+            var query = await unitOfWork.Repository<RadiologyResult>().FindAsQueryable(r => true);
+
+            return await query
                 .Include(r => r.Order)
                     .ThenInclude(o => o.Patient)
                         .ThenInclude(p => p.AppUser) // To get the patient's name

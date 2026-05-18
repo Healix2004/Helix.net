@@ -1,125 +1,133 @@
 ﻿using Helix.Service.DTOs.DrugDTOs;
 using Helix.Service.Interfaces;
 using Microsoft.AspNetCore.Hosting;
-using System;
-using System.Collections.Generic;
-using System.IO; // Needed for Path and File
-using System.Linq; // Needed for FirstOrDefault
-using System.Net.Http;
+using Microsoft.Extensions.Caching.Memory;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Helix.Service.Services.DrugDataService
 {
-    public class DrugDataService : IDrugDataService
+    public class DrugDataService(IWebHostEnvironment env,IHttpClientFactory httpClientFactory,
+        IMemoryCache cache) : IDrugDataService
     {
-        private readonly List<DrugDTO> _drugs = new List<DrugDTO>();
-        private readonly IHttpClientFactory _httpClientFactory;
+        private const string DrugCacheKey = "DrugListCache";
+        private const string IpCacheKey = "PythonApiIpCache";
+        private const string DefaultServerIp = "helix.ai.ddi";
 
-        // Default IP to localhost if not set, preventing crashes
-        private string _serverIP = "helix.ai.ddi";
+        // ==========================================
+        // CACHE MANAGEMENT (The Fix)
+        // ==========================================
 
-        public DrugDataService(IWebHostEnvironment env, IHttpClientFactory httpClientFactory)
+        private async Task<List<DrugDTO>> GetDrugsFromCacheAsync()
         {
-            _httpClientFactory = httpClientFactory;
-
-            // --- FIX 1: LOAD DATA IMMEDIATELY ---
-            var filePath = Path.Combine(env.ContentRootPath, "wwwroot", "DrugList.txt");
-            if (File.Exists(filePath))
+            // This guarantees the file is read from the hard drive EXACTLY ONCE.
+            // After the first read, it serves the list instantly from RAM.
+            return await cache.GetOrCreateAsync(DrugCacheKey, async entry =>
             {
-                var lines = File.ReadAllLines(filePath);
-                int count = 0;
-                foreach (var line in lines)
+                // Keep it in memory forever (or until the app restarts)
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(365);
+
+                var drugs = new List<DrugDTO>();
+                var filePath = Path.Combine(env.ContentRootPath, "wwwroot", "DrugList.txt");
+
+                if (File.Exists(filePath))
                 {
-                    if (!string.IsNullOrWhiteSpace(line))
+                    // Asynchronous file reading! Doesn't block the thread.
+                    var lines = await File.ReadAllLinesAsync(filePath);
+                    int count = 0;
+                    foreach (var line in lines)
                     {
-                        _drugs.Add(new DrugDTO
+                        if (!string.IsNullOrWhiteSpace(line))
                         {
-                            Id = count,
-                            Name = line.Trim()
-                        });
-                        count++;
+                            drugs.Add(new DrugDTO { Id = count, Name = line.Trim() });
+                            count++;
+                        }
                     }
                 }
-            }
+                return drugs;
+            });
         }
 
-        public async Task<InteractionResponseDTO> CheckDrugInteractionAsync(InteractionRequestDTO dto)
-        {
-            // --- FIX 2: AWAIT THE TASKS ---
-            // Since we already have the data in memory, we don't strictly need async for validity checks,
-            // but we keep it to match your Interface signature.
-            bool isValid1 = await IsValidDrug(dto.IdDrug1);
-            bool isValid2 = await IsValidDrug(dto.IdDrug2);
+        // ==========================================
+        // AI INTEGRATION
+        // ==========================================
 
-            if (isValid1 && isValid2)
+        public async Task<InteractionResponseDTO?> CheckDrugInteractionAsync(InteractionRequestDTO dto)
+        {
+            var drugs = await GetDrugsFromCacheAsync();
+
+            var drug1 = drugs.FirstOrDefault(d => d.Id == dto.IdDrug1);
+            var drug2 = drugs.FirstOrDefault(d => d.Id == dto.IdDrug2);
+
+            if (drug1 == null || drug2 == null)
             {
-                // Retrieve names (Since data is in memory, we can grab it synchronously effectively)
-                string drugName1 = _drugs.FirstOrDefault(d => d.Id == dto.IdDrug1)?.Name;
-                string drugName2 = _drugs.FirstOrDefault(d => d.Id == dto.IdDrug2)?.Name;
-
-                var pythonApiUrl = $"http://{_serverIP}:8000/predict";
-
-                var payload = new
-                {
-                    drug_a = drugName1,
-                    drug_b = drugName2
-                };
-
-                var json = JsonSerializer.Serialize(payload);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                var client = _httpClientFactory.CreateClient();
-
-                try
-                {
-                    var response = await client.PostAsync(pythonApiUrl, content);
-                    response.EnsureSuccessStatusCode();
-
-                    var responseContent = await response.Content.ReadAsStringAsync();
-
-                    // Ensure case-insensitive deserialization usually helps with Python APIs
-                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                    var result = JsonSerializer.Deserialize<InteractionResponseDTO>(responseContent, options);
-
-                    return result;
-                }
-                catch (Exception ex)
-                {
-                    // Log error here
-                    throw new Exception($"Error connecting to AI Server at {pythonApiUrl}: {ex.Message}");
-                }
+                return null; // Or throw a specific custom exception
             }
 
-            return null; // Or throw an exception saying "Invalid Drug ID"
+            var serverIp = await GetServerIP();
+            var pythonApiUrl = $"http://{serverIp}:8000/predict";
+
+            var payload = new
+            {
+                drug_a = drug1.Name,
+                drug_b = drug2.Name
+            };
+
+            var json = JsonSerializer.Serialize(payload);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var client = httpClientFactory.CreateClient();
+
+            try
+            {
+                var response = await client.PostAsync(pythonApiUrl, content);
+                response.EnsureSuccessStatusCode();
+
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                return JsonSerializer.Deserialize<InteractionResponseDTO>(responseContent, options);
+            }
+            catch (HttpRequestException ex)
+            {
+                // Better error logging indicating a network issue
+                throw new Exception($"Network error connecting to Python AI Server at {pythonApiUrl}: {ex.Message}");
+            }
         }
 
-        // We can keep this method if the Interface requires it, but it just returns the already loaded list.
-        public Task<List<DrugDTO>> ImportDrugDataAsync()
+        // ==========================================
+        // INTERFACE IMPLEMENTATIONS
+        // ==========================================
+
+        public async Task<List<DrugDTO>> ImportDrugDataAsync()
         {
-            return Task.FromResult(_drugs);
+            return await GetDrugsFromCacheAsync();
         }
 
-        public Task<bool> IsValidDrug(int drugId)
+        public async Task<bool> IsValidDrug(int drugId)
         {
-            return Task.FromResult(_drugs.Any(d => d.Id == drugId));
+            var drugs = await GetDrugsFromCacheAsync();
+            return drugs.Any(d => d.Id == drugId);
         }
 
-        public Task<string> GetDrugName(int drugId)
+        public async Task<string?> GetDrugName(int drugId)
         {
-            var drug = _drugs.FirstOrDefault(d => d.Id == drugId);
-            return Task.FromResult(drug?.Name);
+            var drugs = await GetDrugsFromCacheAsync();
+            return drugs.FirstOrDefault(d => d.Id == drugId)?.Name;
         }
 
         public Task<string> GetServerIP()
         {
-            return Task.FromResult(_serverIP);
+            // Safely fetch the IP from cache, falling back to the default if it hasn't been changed
+            var ip = cache.Get<string>(IpCacheKey) ?? DefaultServerIp;
+            return Task.FromResult(ip);
         }
 
         public Task SetServerIP(string ip)
         {
-            _serverIP = ip;
+            // Saving the IP in the global memory cache means the change applies instantly
+            // to all future requests, regardless of the DI lifecycle!
+            cache.Set(IpCacheKey, ip);
             return Task.CompletedTask;
         }
     }

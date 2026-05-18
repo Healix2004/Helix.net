@@ -8,11 +8,10 @@ namespace Helix.Data.Entities
     {
         public DateTime ConsentGrantedAt { get; set; } = DateTime.Now;
         public DateTime ConsentExpiresAt { get; set; } = DateTime.Now.AddHours(5);
-
+        public Guid PatientId { get; set; }
+        public Guid DoctorId {  get; set; }
         public bool IsEmergencyOverride { get; set; }=false;
-        //one to many with patient
         public Patient Patient { get; set; }
-        //one to many with doctor
         public Doctor Doctor { get; set; }
     }
 }

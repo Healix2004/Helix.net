@@ -3,104 +3,82 @@ using Helix.Data.Entities;
 using Helix.Service.DTOs.PatientDTOs;
 using Helix.Service.Interfaces;
 using Microsoft.AspNetCore.Identity;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Helix.Service.Services.PatientService
 {
-    public class PatientService : IPatientService
+    public class PatientService(IUnitOfWork unitOfWork, IMapper mapper, UserManager<AppUser> userManager) : IPatientService
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
-        private readonly UserManager<AppUser> _userManager;
-
-        public PatientService(IUnitOfWork unitOfWork, IMapper mapper, UserManager<AppUser> userManager)
-        {
-            _unitOfWork = unitOfWork;
-            _mapper = mapper;
-            _userManager = userManager;
-        }
-
         public async Task<PatientDto> CreatePatientAsync(CreatePatientDto createPatientDto)
         {
-            var user = await _userManager.FindByIdAsync(createPatientDto.AppUserId);
+            // 1. Verify the Identity user exists without attaching the massive object to EF Core
+            var user = await userManager.FindByIdAsync(createPatientDto.AppUserId);
             if (user == null)
             {
-                throw new Exception("User not found");
+                throw new Exception($"Identity User with ID {createPatientDto.AppUserId} not found.");
             }
 
-            var patient = _mapper.Map<Patient>(createPatientDto);
-            // patient.AppUser = user; // Depending on how EF handles it, sometimes just AppUserId is enough if exposed, but Patient only has virtual AppUser
-            patient.AppUser = user;
-            
-            _unitOfWork.Repository<Patient>().Add(patient);
-            _unitOfWork.Complete();
+            var patient = mapper.Map<Patient>(createPatientDto);
 
-            return _mapper.Map<PatientDto>(patient);
+            // 2. EF Core Optimization: Just set the Foreign Key string
+            patient.AppUserId = createPatientDto.AppUserId;
+
+            await unitOfWork.Repository<Patient>().AddAsync(patient);
+            await unitOfWork.CompleteAsync(); // Asynchronous database commit
+
+            return mapper.Map<PatientDto>(patient);
         }
 
-        public Task<bool> DeletePatientAsync(Guid id)
+        public async Task<bool> DeletePatientAsync(Guid id)
         {
-            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == id).Result.FirstOrDefault();
+            // 3. Memory-optimized lookup using GetByIdAsync
+            var patient = await unitOfWork.Repository<Patient>().GetByIdAsync(id);
             if (patient == null)
             {
-                return Task.FromResult(false);
+                return false;
             }
 
-            _unitOfWork.Repository<Patient>().Delete(patient);
-            _unitOfWork.Complete();
+            await unitOfWork.Repository<Patient>().DeleteAsync(patient);
+            await unitOfWork.CompleteAsync();
 
-            return Task.FromResult(true);
+            return true;
         }
 
-        public Task<IEnumerable<PatientDto>> GetAllPatientsAsync()
+        public async Task<IEnumerable<PatientDto>> GetAllPatientsAsync()
         {
-            var patients = _unitOfWork.Repository<Patient>().GetALL().Result;
-            // Try to map. If lazy loading is enabled, AppUser will be loaded.
-            var patientsDto = _mapper.Map<IEnumerable<PatientDto>>(patients);
-            return Task.FromResult(patientsDto);
+            // 4. True asynchronous execution
+            var patients = await unitOfWork.Repository<Patient>().GetAllAsync();
+            return mapper.Map<IEnumerable<PatientDto>>(patients);
         }
 
-        public Task<PatientDto> GetPatientByIdAsync(Guid id)
+        public async Task<PatientDto?> GetPatientByIdAsync(Guid id)
         {
-            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == id).Result.FirstOrDefault();
+            var patient = await unitOfWork.Repository<Patient>().GetByIdAsync(id);
+            return patient == null ? null : mapper.Map<PatientDto>(patient);
+        }
+
+        public async Task<PatientDto?> GetPatientByUserIdAsync(string userId)
+        {
+            // FindAsync returns an IReadOnlyList, so we await it, then take the FirstOrDefault
+            var patients = await unitOfWork.Repository<Patient>().FindAsync(p => p.AppUserId == userId);
+            var patient = patients.FirstOrDefault();
+
+            return patient == null ? null : mapper.Map<PatientDto>(patient);
+        }
+
+        public async Task<PatientDto> UpdatePatientAsync(Guid id, UpdatePatientDto updatePatientDto)
+        {
+            var patient = await unitOfWork.Repository<Patient>().GetByIdAsync(id);
             if (patient == null)
             {
-                return Task.FromResult<PatientDto>(null);
+                throw new Exception($"Patient with ID {id} not found.");
             }
 
-            var patientDto = _mapper.Map<PatientDto>(patient);
-            return Task.FromResult(patientDto);
-        }
+            mapper.Map(updatePatientDto, patient);
 
-        public Task<PatientDto> GetPatientByUserIdAsync(string userId)
-        {
-            var patient = _unitOfWork.Repository<Patient>().Find(p => p.AppUserId == userId).Result.FirstOrDefault();
-            if (patient == null)
-            {
-                return Task.FromResult<PatientDto>(null);
-            }
+            await unitOfWork.Repository<Patient>().UpdateAsync(patient);
+            await unitOfWork.CompleteAsync();
 
-            var patientDto = _mapper.Map<PatientDto>(patient);
-            return Task.FromResult(patientDto);
-        }
-
-        public Task<PatientDto> UpdatePatientAsync(Guid id, UpdatePatientDto updatePatientDto)
-        {
-            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == id).Result.FirstOrDefault();
-            if (patient == null)
-            {
-                throw new Exception("Patient not found");
-            }
-
-            _mapper.Map(updatePatientDto, patient);
-            
-            _unitOfWork.Repository<Patient>().Update(patient);
-            _unitOfWork.Complete();
-
-            return Task.FromResult(_mapper.Map<PatientDto>(patient));
+            return mapper.Map<PatientDto>(patient);
         }
     }
 }

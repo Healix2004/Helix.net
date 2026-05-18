@@ -2,66 +2,63 @@ using AutoMapper;
 using Helix.Data.Entities;
 using Helix.Service.DTOs.FacilitieDTOs;
 using Helix.Service.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Helix.Service.Services.FacilitieService
 {
-    public class FacilitieService : IFacilitieService
+    public class FacilitieService(IUnitOfWork unitOfWork, IMapper mapper) : IFacilitieService
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
-
-        public FacilitieService(IUnitOfWork unitOfWork, IMapper mapper)
+        public async Task<FacilitieDto> CreateFacilitieAsync(CreateFacilitieDto createFacilitieDto)
         {
-            _unitOfWork = unitOfWork;
-            _mapper = mapper;
+            var facilitie = mapper.Map<Facilitie>(createFacilitieDto);
+
+            await unitOfWork.Repository<Facilitie>().AddAsync(facilitie);
+            await unitOfWork.CompleteAsync(); // Using the async commit method!
+
+            return mapper.Map<FacilitieDto>(facilitie);
         }
 
-        public Task<FacilitieDto> CreateFacilitieAsync(CreateFacilitieDto createFacilitieDto)
+        public async Task<bool> DeleteFacilitieAsync(Guid id)
         {
-            var facilitie = _mapper.Map<Facilitie>(createFacilitieDto);
-            
-            _unitOfWork.Repository<Facilitie>().Add(facilitie);
-            _unitOfWork.Complete();
+            // 1. Memory-optimized lookup using GetByIdAsync instead of Find().FirstOrDefault()
+            var facilitie = await unitOfWork.Repository<Facilitie>().GetByIdAsync(id);
 
-            return Task.FromResult(_mapper.Map<FacilitieDto>(facilitie));
+            if (facilitie == null)
+                return false;
+
+            await unitOfWork.Repository<Facilitie>().DeleteAsync(facilitie);
+            await unitOfWork.CompleteAsync();
+
+            return true;
         }
 
-        public Task<bool> DeleteFacilitieAsync(Guid id)
+        public async Task<IEnumerable<FacilitieDto>> GetAllFacilitiesAsync()
         {
-            var facilitie = _unitOfWork.Repository<Facilitie>().Find(f => f.Id == id).Result.FirstOrDefault();
-            if (facilitie == null) return Task.FromResult(false);
-
-            _unitOfWork.Repository<Facilitie>().Delete(facilitie);
-            _unitOfWork.Complete();
-            return Task.FromResult(true);
+            // 2. True asynchronous execution instead of .Result
+            var facilities = await unitOfWork.Repository<Facilitie>().GetAllAsync();
+            return mapper.Map<IEnumerable<FacilitieDto>>(facilities);
         }
 
-        public Task<IEnumerable<FacilitieDto>> GetAllFacilitiesAsync()
+        public async Task<FacilitieDto?> GetFacilitieByIdAsync(Guid id)
         {
-            var facilities = _unitOfWork.Repository<Facilitie>().GetALL().Result;
-            return Task.FromResult(_mapper.Map<IEnumerable<FacilitieDto>>(facilities));
+            var facilitie = await unitOfWork.Repository<Facilitie>().GetByIdAsync(id);
+
+            return facilitie == null ? null : mapper.Map<FacilitieDto>(facilitie);
         }
 
-        public Task<FacilitieDto> GetFacilitieByIdAsync(Guid id)
+        public async Task<FacilitieDto> UpdateFacilitieAsync(Guid id, UpdateFacilitieDto updateFacilitieDto)
         {
-            var facilitie = _unitOfWork.Repository<Facilitie>().Find(f => f.Id == id).Result.FirstOrDefault();
-            return Task.FromResult(_mapper.Map<FacilitieDto>(facilitie));
-        }
+            var facilitie = await unitOfWork.Repository<Facilitie>().GetByIdAsync(id);
 
-        public Task<FacilitieDto> UpdateFacilitieAsync(Guid id, UpdateFacilitieDto updateFacilitieDto)
-        {
-            var facilitie = _unitOfWork.Repository<Facilitie>().Find(f => f.Id == id).Result.FirstOrDefault();
-            if (facilitie == null) throw new Exception("Facilitie not found");
+            if (facilitie == null)
+                throw new Exception($"Facility with ID {id} not found.");
 
-            _mapper.Map(updateFacilitieDto, facilitie);
-            _unitOfWork.Repository<Facilitie>().Update(facilitie);
-            _unitOfWork.Complete();
+            // Maps the new values from the DTO directly onto the tracked DB entity
+            mapper.Map(updateFacilitieDto, facilitie);
 
-            return Task.FromResult(_mapper.Map<FacilitieDto>(facilitie));
+            await unitOfWork.Repository<Facilitie>().UpdateAsync(facilitie);
+            await unitOfWork.CompleteAsync();
+
+            return mapper.Map<FacilitieDto>(facilitie);
         }
     }
 }

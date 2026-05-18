@@ -4,7 +4,6 @@ using Helix.Service.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Helix.Data.Enums;
@@ -14,41 +13,44 @@ namespace Helix.Service.Services.LabOrderService
 {
     public class LabOrderService(IUnitOfWork unitOfWork, ITerminologyCodeLookupService terminologyService) : ILabOrderService
     {
-
         public async Task<Guid> CreateLabOrderAsync(CreateLabOrderDto dto)
         {
-            // Generate a secure, 10-character random token for the QR code
             string qrToken = $"ORD-{Guid.NewGuid().ToString("N").Substring(0, 7).ToUpper()}";
+
+            var terminologyLookup = await terminologyService.GetTerminologyCodeLooKupByCodeAsync(dto.TerminologyCode);
 
             var labOrder = new LabOrder
             {
                 PatientId = dto.PatientId,
                 DoctorId = dto.DoctorId,
-                TerminologyCodeId = (await terminologyService.GetTerminologyCodeLooKupByCodeAsync(dto.TerminologyCode)).Id,
+                TerminologyCodeId = terminologyLookup.Id,
                 QrToken = qrToken,
                 Status = EnLabOrderStatus.Pending,
                 CreatedAt = DateTime.UtcNow
             };
 
-            await unitOfWork.Repository<LabOrder>().Add(labOrder);
-            unitOfWork.Complete();
+            await unitOfWork.Repository<LabOrder>().AddAsync(labOrder);
+            await unitOfWork.CompleteAsync();
 
             return labOrder.Id;
         }
 
         public async Task<bool> DeleteLabOrderAsync(Guid id)
         {
-            var order = await unitOfWork.Repository<LabOrder>().Get(id);
+            var order = await unitOfWork.Repository<LabOrder>().GetByIdAsync(id);
             if (order == null) return false;
 
-            unitOfWork.Repository<LabOrder>().Delete(order);
-            return unitOfWork.Complete() > 0;
+            await unitOfWork.Repository<LabOrder>().DeleteAsync(order);
+            return await unitOfWork.CompleteAsync() > 0;
         }
 
         public async Task<List<LabOrderDto>> GetAllLabOrdersAsync()
         {
-            // Assuming your UnitOfWork has a way to expose IQueryable, like GetAll() or GetQueryable()
-            return await unitOfWork.Repository<LabOrder>().Find(o => true).Result
+            // 1. Await the Queryable safely without locking the thread
+            var query = await unitOfWork.Repository<LabOrder>().FindAsQueryable(o => true);
+
+            // 2. Await the final execution (.ToListAsync)
+            return await query
                 .Include(o => o.Patient).ThenInclude(p => p.AppUser)
                 .Include(o => o.TerminologyCode)
                 .Select(o => new LabOrderDto
@@ -63,12 +65,16 @@ namespace Helix.Service.Services.LabOrderService
 
         public async Task<LabOrderDto> GetLabOrderByIdAsync(Guid id)
         {
-            var order = await unitOfWork.Repository<LabOrder>().Find(o => true).Result
+            // Filter directly in the FindAsQueryable for maximum database efficiency
+            var query = await unitOfWork.Repository<LabOrder>().FindAsQueryable(o => o.Id == id);
+
+            var order = await query
                 .Include(o => o.Patient).ThenInclude(p => p.AppUser)
                 .Include(o => o.TerminologyCode)
-                .FirstOrDefaultAsync(o => o.Id == id);
+                .FirstOrDefaultAsync();
 
-            if (order == null) throw new KeyNotFoundException($"LabOrder with ID '{id}' was not found.");
+            if (order == null)
+                throw new KeyNotFoundException($"LabOrder with ID '{id}' was not found.");
 
             return new LabOrderDto
             {
@@ -81,7 +87,9 @@ namespace Helix.Service.Services.LabOrderService
 
         public async Task<List<LabOrderDto>> GetOrdersByDoctorAsync(Guid doctorId)
         {
-            return await unitOfWork.Repository<LabOrder>().Find(o => o.DoctorId == doctorId).Result
+            var query = await unitOfWork.Repository<LabOrder>().FindAsQueryable(o => o.DoctorId == doctorId);
+
+            return await query
                 .Include(o => o.Patient).ThenInclude(p => p.AppUser)
                 .Include(o => o.TerminologyCode)
                 .Select(o => new LabOrderDto
@@ -96,7 +104,9 @@ namespace Helix.Service.Services.LabOrderService
 
         public async Task<List<PendingLabOrderDto>> GetPendingOrdersAsync(Guid patientId)
         {
-            var pendingOrders = await unitOfWork.Repository<LabOrder>().Find(o => o.PatientId == patientId && o.Status == EnLabOrderStatus.Pending).Result
+            var query = await unitOfWork.Repository<LabOrder>().FindAsQueryable(o => o.PatientId == patientId && o.Status == EnLabOrderStatus.Pending);
+
+            return await query
                 .Include(o => o.TerminologyCode)
                 .Select(o => new PendingLabOrderDto
                 {
@@ -106,21 +116,19 @@ namespace Helix.Service.Services.LabOrderService
                     CreatedAt = o.CreatedAt
                 })
                 .ToListAsync();
-
-            return pendingOrders;
         }
 
         public async Task<LabOrderDto> ScanLabOrderAsync(string qrToken)
         {
-            var order = await unitOfWork.Repository<LabOrder>().Find(o => o.QrToken == qrToken && o.Status == EnLabOrderStatus.Pending).Result
-                .Include(o => o.Patient)
-                    .ThenInclude(p => p.AppUser)
+            var query = await unitOfWork.Repository<LabOrder>().FindAsQueryable(o => o.QrToken == qrToken && o.Status == EnLabOrderStatus.Pending);
+
+            var order = await query
+                .Include(o => o.Patient).ThenInclude(p => p.AppUser)
                 .Include(o => o.TerminologyCode)
                 .FirstOrDefaultAsync();
 
             if (order == null)
             {
-                // Changed from DllNotFoundException (which is for Windows System files) to KeyNotFoundException
                 throw new KeyNotFoundException($"Pending LabOrder with QR Token '{qrToken}' was not found or is expired.");
             }
 
@@ -135,27 +143,28 @@ namespace Helix.Service.Services.LabOrderService
 
         public async Task<bool> UpdateLabOrderAsync(Guid id, UpdateLabOrderDto dto)
         {
-            var order = await unitOfWork.Repository<LabOrder>().Get(id);
+            var order = await unitOfWork.Repository<LabOrder>().GetByIdAsync(id);
 
             if (order == null) throw new KeyNotFoundException($"LabOrder with ID '{id}' was not found.");
             if (order.Status != EnLabOrderStatus.Pending) throw new InvalidOperationException("Only pending orders can be updated.");
 
-            order.TerminologyCodeId = (await terminologyService.GetTerminologyCodeLooKupByCodeAsync(dto.TerminologyCode)).Id;
+            var terminologyLookup = await terminologyService.GetTerminologyCodeLooKupByCodeAsync(dto.TerminologyCode);
+            order.TerminologyCodeId = terminologyLookup.Id;
 
-            unitOfWork.Repository<LabOrder>().Update(order);
-            return unitOfWork.Complete() > 0;
+            await unitOfWork.Repository<LabOrder>().UpdateAsync(order);
+            return await unitOfWork.CompleteAsync() > 0;
         }
 
         public async Task<bool> UpdateOrderStatusAsync(Guid id, string newStatus)
         {
-            var order = await unitOfWork.Repository<LabOrder>().Get(id);
+            var order = await unitOfWork.Repository<LabOrder>().GetByIdAsync(id);
             if (order == null) throw new KeyNotFoundException($"LabOrder with ID '{id}' was not found.");
 
             if (Enum.TryParse<EnLabOrderStatus>(newStatus, true, out var parsedStatus))
             {
                 order.Status = parsedStatus;
-                unitOfWork.Repository<LabOrder>().Update(order);
-                return unitOfWork.Complete() > 0;
+                await unitOfWork.Repository<LabOrder>().UpdateAsync(order);
+                return await unitOfWork.CompleteAsync() > 0;
             }
 
             throw new ArgumentException($"'{newStatus}' is not a valid lab order status.");
@@ -163,14 +172,13 @@ namespace Helix.Service.Services.LabOrderService
 
         public async Task<bool> UploadLabResultAsync(UploadLabResultDto dto)
         {
-            var order = await unitOfWork.Repository<LabOrder>().Get(dto.OrderId);
+            var order = await unitOfWork.Repository<LabOrder>().GetByIdAsync(dto.OrderId);
 
             if (order == null || order.Status != EnLabOrderStatus.Pending)
             {
                 throw new KeyNotFoundException($"Pending LabOrder with ID '{dto.OrderId}' was not found.");
             }
 
-            // 1. Create the new lab result based on the DTO properties
             var result = new LabTestResult
             {
                 OrderId = dto.OrderId,
@@ -178,24 +186,22 @@ namespace Helix.Service.Services.LabOrderService
                 TerminologyCodeId = order.TerminologyCodeId,
                 ResultDate = DateTime.UtcNow,
                 Status = EnLabOrderStatus.Completed,
-                // Value and Unit can be mapped here if applicable
-                 Value = dto.Value,
+                Value = dto.Value,
                 Unit = dto.Unit
             };
 
-            await unitOfWork.Repository<LabTestResult>().Add(result);
+            await unitOfWork.Repository<LabTestResult>().AddAsync(result);
 
-            // Note: We have to save once here if you need the LabTestResult.Id to assign back to the order
-            unitOfWork.Complete();
+            // 3. Double Await Strategy: First save generates the Guid/ID for the LabTestResult
+            await unitOfWork.CompleteAsync();
 
-            // 2. Update order status and link the result
             order.Status = EnLabOrderStatus.Completed;
-            order.LabResultId = result.Id; // Linking the newly created result to the order
+            order.LabResultId = result.Id;
 
-            unitOfWork.Repository<LabOrder>().Update(order);
+            await unitOfWork.Repository<LabOrder>().UpdateAsync(order);
 
-            // 3. Commit transaction
-            return unitOfWork.Complete() > 0;
+            // 4. Second save commits the updated order
+            return await unitOfWork.CompleteAsync() > 0;
         }
     }
 }

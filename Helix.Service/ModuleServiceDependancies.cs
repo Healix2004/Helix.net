@@ -10,6 +10,7 @@ using Helix.Service.Services.AuthServices;
 using Helix.Service.Services.DrugDataService;
 using Helix.Service.Services.FileServices;
 using Helix.Service.Services.LoincTerminology;
+using Helix.Service.Services.RadiologyOrderService;
 using Helix.Service.Services.RxNavTerminology;
 using Helix.Service.Services.SnowstormTerminology;
 using Helix.Service.Services.TokenProvider;
@@ -244,7 +245,7 @@ namespace Helix.Service
         }
         private static IServiceCollection AddRadiologyOrderService(this IServiceCollection services)
         {
-            services.AddScoped<IRadiologyOrderService, Helix.Service.Services.RadiologyOder.RadiologyOderService>();
+            services.AddScoped<IRadiologyOrderService, RadiologyOrderService>();
             return services;
         }
         private static IServiceCollection AddRadiologyResultService(this IServiceCollection services)

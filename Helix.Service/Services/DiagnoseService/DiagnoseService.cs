@@ -4,86 +4,87 @@ using Helix.Service.DTOs.DiagnoseDTOs;
 using Helix.Service.Interfaces;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Helix.Service.Services.DiagnoseService
 {
-    public class DiagnoseService : IDiagnoseService
+    public class DiagnoseService(IUnitOfWork unitOfWork, IMapper mapper) : IDiagnoseService
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
-
-        public DiagnoseService(IUnitOfWork unitOfWork, IMapper mapper)
+        public async Task<DiagnoseDto> CreateDiagnoseAsync(CreateDiagnoseDto createDiagnoseDto)
         {
-            _unitOfWork = unitOfWork;
-            _mapper = mapper;
+            // 1. Optimize: Use GetByIdAsync for faster validation
+            var patient = await unitOfWork.Repository<Patient>().GetByIdAsync(createDiagnoseDto.PatientId);
+            if (patient == null)
+                throw new Exception($"Patient with ID {createDiagnoseDto.PatientId} not found.");
+
+            var doctor = await unitOfWork.Repository<Doctor>().GetByIdAsync(createDiagnoseDto.DoctorId);
+            if (doctor == null)
+                throw new Exception($"Doctor with ID {createDiagnoseDto.DoctorId} not found.");
+
+            // Assuming TerminologyCode uses an 'int' ID based on previous controllers, adjust if it uses Guid
+            var terminology = await unitOfWork.Repository<TerminologyCodeLookup>().GetByIdAsync(createDiagnoseDto.TerminologyCodeId);
+            if (terminology == null)
+                throw new Exception($"Terminology Code with ID {createDiagnoseDto.TerminologyCodeId} not found.");
+
+            var diagnose = mapper.Map<Diagnose>(createDiagnoseDto);
+
+            diagnose.PatientId = patient.Id;
+            diagnose.DoctorId = doctor.Id;
+            diagnose.TerminologyCodeLookupId = terminology.Id;
+
+            await unitOfWork.Repository<Diagnose>().AddAsync(diagnose);
+            await unitOfWork.CompleteAsync(); // Ensure we use the async Complete method we built!
+
+            return mapper.Map<DiagnoseDto>(diagnose);
         }
 
-        public Task<DiagnoseDto> CreateDiagnoseAsync(CreateDiagnoseDto createDiagnoseDto)
+        public async Task<bool> DeleteDiagnoseAsync(Guid id)
         {
-            var patient = _unitOfWork.Repository<Patient>().Find(p => p.Id == createDiagnoseDto.PatientId).Result.FirstOrDefault();
-            if (patient == null) throw new Exception("Patient not found");
+            var diagnose = await unitOfWork.Repository<Diagnose>().GetByIdAsync(id);
 
-            var doctor = _unitOfWork.Repository<Doctor>().Find(d => d.Id == createDiagnoseDto.DoctorId).Result.FirstOrDefault();
-            if (doctor == null) throw new Exception("Doctor not found");
+            if (diagnose == null)
+                return false;
 
-            var terminology = _unitOfWork.Repository<TerminologyCodeLookup>().Find(t => t.Id == createDiagnoseDto.TerminologyCodeId).Result.FirstOrDefault();
-            if (terminology == null) throw new Exception("Terminology Code not found");
+            await unitOfWork.Repository<Diagnose>().DeleteAsync(diagnose);
+            await unitOfWork.CompleteAsync();
 
-            var diagnose = _mapper.Map<Diagnose>(createDiagnoseDto);
-            diagnose.Patient = patient;
-            diagnose.doctor = doctor;
-            diagnose.TerminologyCode = terminology;
-
-            _unitOfWork.Repository<Diagnose>().Add(diagnose);
-            _unitOfWork.Complete();
-
-            var result = _mapper.Map<DiagnoseDto>(diagnose);
-            result.PatientId = patient.Id;
-            result.DoctorId = doctor.Id;
-            result.TerminologyCodeId = terminology.Id;
-            return Task.FromResult(result);
+            return true;
         }
 
-        public Task<bool> DeleteDiagnoseAsync(Guid id)
+        public async Task<IEnumerable<DiagnoseDto>> GetAllDiagnosesAsync()
         {
-            var diagnose = _unitOfWork.Repository<Diagnose>().Find(d => d.Id == id).Result.FirstOrDefault();
-            if (diagnose == null) return Task.FromResult(false);
-
-            _unitOfWork.Repository<Diagnose>().Delete(diagnose);
-            _unitOfWork.Complete();
-            return Task.FromResult(true);
+            // 3. True async await instead of .Result and Task.FromResult
+            var diagnoses = await unitOfWork.Repository<Diagnose>().GetAllAsync();
+            return mapper.Map<IEnumerable<DiagnoseDto>>(diagnoses);
         }
 
-        public Task<IEnumerable<DiagnoseDto>> GetAllDiagnosesAsync()
+        public async Task<DiagnoseDto?> GetDiagnoseByIdAsync(Guid id)
         {
-            var diagnoses = _unitOfWork.Repository<Diagnose>().GetALL().Result;
-            return Task.FromResult(_mapper.Map<IEnumerable<DiagnoseDto>>(diagnoses));
+            var diagnose = await unitOfWork.Repository<Diagnose>().GetByIdAsync(id);
+
+            return diagnose == null ? null : mapper.Map<DiagnoseDto>(diagnose);
         }
 
-        public Task<DiagnoseDto> GetDiagnoseByIdAsync(Guid id)
+        public async Task<IEnumerable<DiagnoseDto>> GetPatientDiagnosesAsync(Guid patientId)
         {
-            var diagnose = _unitOfWork.Repository<Diagnose>().Find(d => d.Id == id).Result.FirstOrDefault();
-            return Task.FromResult(_mapper.Map<DiagnoseDto>(diagnose));
+            var diagnoses = await unitOfWork.Repository<Diagnose>().FindAsync(d => d.PatientId == patientId);
+            return mapper.Map<IEnumerable<DiagnoseDto>>(diagnoses);
         }
 
-        public Task<IEnumerable<DiagnoseDto>> GetPatientDiagnosesAsync(Guid patientId)
+        public async Task<DiagnoseDto> UpdateDiagnoseAsync(Guid id, UpdateDiagnoseDto updateDiagnoseDto)
         {
-            var diagnoses = _unitOfWork.Repository<Diagnose>().Find(d=>d.PatientId == patientId).Result.ToList();
-            return Task.FromResult(_mapper.Map<IEnumerable<DiagnoseDto>>(diagnoses));
-        }
+            var diagnose = await unitOfWork.Repository<Diagnose>().GetByIdAsync(id);
 
-        public Task<DiagnoseDto> UpdateDiagnoseAsync(Guid id, UpdateDiagnoseDto updateDiagnoseDto)
-        {
-            var diagnose = _unitOfWork.Repository<Diagnose>().Find(d => d.Id == id).Result.FirstOrDefault();
-            if (diagnose == null) throw new Exception("Diagnose not found");
+            if (diagnose == null)
+                throw new Exception($"Diagnose with ID {id} not found.");
 
-            _mapper.Map(updateDiagnoseDto, diagnose);
-            _unitOfWork.Repository<Diagnose>().Update(diagnose);
-            _unitOfWork.Complete();
+            // Maps the new values from the DTO directly onto the tracked DB entity
+            mapper.Map(updateDiagnoseDto, diagnose);
 
-            return Task.FromResult(_mapper.Map<DiagnoseDto>(diagnose));
+            await unitOfWork.Repository<Diagnose>().UpdateAsync(diagnose);
+            await unitOfWork.CompleteAsync();
+
+            return mapper.Map<DiagnoseDto>(diagnose);
         }
     }
 }

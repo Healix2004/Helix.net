@@ -5,65 +5,70 @@ using Helix.Service.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Helix.Service.Services.LabTestResultService
 {
-    public class LabTestResultService : ILabTestResultService
+    public class LabTestResultService(IUnitOfWork unitOfWork, IMapper mapper) : ILabTestResultService
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
-
-        public LabTestResultService(IUnitOfWork unitOfWork, IMapper mapper)
+        public async Task<bool> DeleteLabTestResultAsync(Guid id)
         {
-            _unitOfWork = unitOfWork;
-            _mapper = mapper;
-        }
-        public Task<bool> DeleteLabTestResultAsync(Guid id)
-        {
-            var labTestResult = _unitOfWork.Repository<LabTestResult>().Find(l => l.Id == id).Result.FirstOrDefault();
-            if (labTestResult == null) return Task.FromResult(false);
+            var labTestResult = await unitOfWork.Repository<LabTestResult>().GetByIdAsync(id);
+            if (labTestResult == null) return false;
 
-            _unitOfWork.Repository<LabTestResult>().Delete(labTestResult);
-            _unitOfWork.Complete();
-            return Task.FromResult(true);
+            await unitOfWork.Repository<LabTestResult>().DeleteAsync(labTestResult);
+            await unitOfWork.CompleteAsync(); // Asynchronous commit
+            return true;
         }
 
-        public Task<IEnumerable<LabTestResultDto>> GetAllLabTestResultsAsync()
+        public async Task<IEnumerable<LabTestResultDto>> GetAllLabTestResultsAsync()
         {
-            var labTestResults = _unitOfWork.Repository<LabTestResult>().Find(l => true).Result
+            // 1. Safely await the Queryable to keep the thread alive
+            var query = await unitOfWork.Repository<LabTestResult>().FindAsQueryable(l => true);
+
+            // 2. Attach includes and execute asynchronously with ToListAsync()
+            var labTestResults = await query
                 .Include(l => l.TerminologyCode)
                 .Include(l => l.Patient)
-                    .ThenInclude(p => p.AppUser).ToList();
-            return Task.FromResult(_mapper.Map<IEnumerable<LabTestResultDto>>(labTestResults));
+                    .ThenInclude(p => p.AppUser)
+                .ToListAsync();
+
+            return mapper.Map<IEnumerable<LabTestResultDto>>(labTestResults);
         }
 
-        public Task<IEnumerable<LabTestResultDto>> GetAllLabTestResultsAsync(Guid patientId)
+        public async Task<IEnumerable<LabTestResultDto>> GetAllLabTestResultsAsync(Guid patientId)
         {
-            var labTestResults= _unitOfWork.Repository<LabTestResult>().Find(l=>l.PatientId == patientId).Result
-                .Include(l=>l.TerminologyCode)
-                .Include(l=>l.Patient)
-                    .ThenInclude(p=>p.AppUser).ToList();
-            return Task.FromResult(_mapper.Map<IEnumerable<LabTestResultDto>>(labTestResults));
+            // Filter directly at the database level inside FindAsQueryable
+            var query = await unitOfWork.Repository<LabTestResult>().FindAsQueryable(l => l.PatientId == patientId);
+
+            var labTestResults = await query
+                .Include(l => l.TerminologyCode)
+                .Include(l => l.Patient)
+                    .ThenInclude(p => p.AppUser)
+                .ToListAsync();
+
+            return mapper.Map<IEnumerable<LabTestResultDto>>(labTestResults);
         }
 
-        public Task<LabTestResultDto> GetLabTestResultByIdAsync(Guid id)
+        public async Task<LabTestResultDto?> GetLabTestResultByIdAsync(Guid id)
         {
-            var labTestResult = _unitOfWork.Repository<LabTestResult>().Find(l => l.Id == id).Result.FirstOrDefault();
-            return Task.FromResult(_mapper.Map<LabTestResultDto>(labTestResult));
+            // Memory-optimized lookup
+            var labTestResult = await unitOfWork.Repository<LabTestResult>().GetByIdAsync(id);
+            return labTestResult == null ? null : mapper.Map<LabTestResultDto>(labTestResult);
         }
 
-        public Task<LabTestResultDto> UpdateLabTestResultAsync(Guid id, UpdateLabTestResultDto updateLabTestResultDto)
+        public async Task<LabTestResultDto> UpdateLabTestResultAsync(Guid id, UpdateLabTestResultDto updateLabTestResultDto)
         {
-            var labTestResult = _unitOfWork.Repository<LabTestResult>().Find(l => l.Id == id).Result.FirstOrDefault();
-            if (labTestResult == null) throw new Exception("LabTestResult not found");
+            var labTestResult = await unitOfWork.Repository<LabTestResult>().GetByIdAsync(id);
+            if (labTestResult == null)
+                throw new Exception($"LabTestResult with ID {id} not found.");
 
-            _mapper.Map(updateLabTestResultDto, labTestResult);
-            _unitOfWork.Repository<LabTestResult>().Update(labTestResult);
-            _unitOfWork.Complete();
+            mapper.Map(updateLabTestResultDto, labTestResult);
 
-            return Task.FromResult(_mapper.Map<LabTestResultDto>(labTestResult));
+            await unitOfWork.Repository<LabTestResult>().UpdateAsync(labTestResult);
+            await unitOfWork.CompleteAsync();
+
+            return mapper.Map<LabTestResultDto>(labTestResult);
         }
     }
 }

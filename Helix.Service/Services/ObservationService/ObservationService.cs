@@ -4,76 +4,71 @@ using Helix.Service.DTOs.ObservationDTOs;
 using Helix.Service.Interfaces;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Helix.Service.Services.ObservationService
 {
-    public class ObservationService : IObservationService
+    public class ObservationService(IUnitOfWork unitOfWork, IMapper mapper) : IObservationService
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
-
-        public ObservationService(IUnitOfWork unitOfWork, IMapper mapper)
+        public async Task<ObservationDto> CreateObservationAsync(CreateObservationDto createObservationDto)
         {
-            _unitOfWork = unitOfWork;
-            _mapper = mapper;
+            // 1. Optimize: Fast memory-cache lookup
+            var encounter = await unitOfWork.Repository<Encounter>().GetByIdAsync(createObservationDto.EncounterId);
+            if (encounter == null)
+                throw new Exception($"Encounter with ID {createObservationDto.EncounterId} not found.");
+
+            var observation = mapper.Map<Observation>(createObservationDto);
+
+            // 2. Optimize: Set the Foreign Key directly to avoid unnecessary EF Core object tracking overhead
+            observation.EncounterId = encounter.Id;
+
+            await unitOfWork.Repository<Observation>().AddAsync(observation);
+            await unitOfWork.CompleteAsync(); // Asynchronous database commit
+
+            return mapper.Map<ObservationDto>(observation);
         }
 
-        public Task<ObservationDto> CreateObservationAsync(CreateObservationDto createObservationDto)
+        public async Task<bool> DeleteObservationAsync(Guid id)
         {
-            var encounter = _unitOfWork.Repository<Encounter>().Find(e => e.Id == createObservationDto.EncounterId).Result.FirstOrDefault();
-            if (encounter == null) throw new Exception("Encounter not found");
+            var observation = await unitOfWork.Repository<Observation>().GetByIdAsync(id);
+            if (observation == null) return false;
 
-            var observation = _mapper.Map<Observation>(createObservationDto);
-            observation.Encounter = encounter;
-
-            _unitOfWork.Repository<Observation>().Add(observation);
-            _unitOfWork.Complete();
-
-            var result = _mapper.Map<ObservationDto>(observation);
-            result.EncounterId = encounter.Id;
-            return Task.FromResult(result);
+            await unitOfWork.Repository<Observation>().DeleteAsync(observation);
+            await unitOfWork.CompleteAsync();
+            return true;
         }
 
-        public Task<bool> DeleteObservationAsync(Guid id)
+        public async Task<IEnumerable<ObservationDto>> GetAllObservationsAsync()
         {
-            var observation = _unitOfWork.Repository<Observation>().Find(o => o.Id == id).Result.FirstOrDefault();
-            if (observation == null) return Task.FromResult(false);
-
-            _unitOfWork.Repository<Observation>().Delete(observation);
-            _unitOfWork.Complete();
-            return Task.FromResult(true);
+            var observations = await unitOfWork.Repository<Observation>().GetAllAsync();
+            return mapper.Map<IEnumerable<ObservationDto>>(observations);
         }
 
-        public Task<IEnumerable<ObservationDto>> GetAllObservationsAsync()
+        public async Task<ObservationDto?> GetObservationByIdAsync(Guid id)
         {
-            var observations = _unitOfWork.Repository<Observation>().GetALL().Result;
-            return Task.FromResult(_mapper.Map<IEnumerable<ObservationDto>>(observations));
+            var observation = await unitOfWork.Repository<Observation>().GetByIdAsync(id);
+            return observation == null ? null : mapper.Map<ObservationDto>(observation);
         }
 
-        public Task<ObservationDto> GetObservationByIdAsync(Guid id)
+        public async Task<IEnumerable<ObservationDto>> GetPatientObservationsAsync(Guid patientId)
         {
-            var observation = _unitOfWork.Repository<Observation>().Find(o => o.Id == id).Result.FirstOrDefault();
-            return Task.FromResult(_mapper.Map<ObservationDto>(observation));
+            var observations = await unitOfWork.Repository<Observation>().FindAsync(o => o.PatientId == patientId);
+            return mapper.Map<IEnumerable<ObservationDto>>(observations);
         }
 
-        public Task<IEnumerable<ObservationDto>> GetPatientObservationsAsync(Guid PatientId)
+        public async Task<ObservationDto> UpdateObservationAsync(Guid id, UpdateObservationDto updateObservationDto)
         {
-            var observations = _unitOfWork.Repository<Observation>().Find(o => o.Id == PatientId).Result.ToList();
-            return Task.FromResult(_mapper.Map<IEnumerable<ObservationDto>>(observations));
-        }
+            var observation = await unitOfWork.Repository<Observation>().GetByIdAsync(id);
+            if (observation == null)
+                throw new Exception($"Observation with ID {id} not found.");
 
-        public Task<ObservationDto> UpdateObservationAsync(Guid id, UpdateObservationDto updateObservationDto)
-        {
-            var observation = _unitOfWork.Repository<Observation>().Find(o => o.Id == id).Result.FirstOrDefault();
-            if (observation == null) throw new Exception("Observation not found");
+            // Maps the new values from the DTO directly onto the tracked DB entity
+            mapper.Map(updateObservationDto, observation);
 
-            _mapper.Map(updateObservationDto, observation);
-            _unitOfWork.Repository<Observation>().Update(observation);
-            _unitOfWork.Complete();
+            await unitOfWork.Repository<Observation>().UpdateAsync(observation);
+            await unitOfWork.CompleteAsync();
 
-            return Task.FromResult(_mapper.Map<ObservationDto>(observation));
+            return mapper.Map<ObservationDto>(observation);
         }
     }
 }

@@ -3,97 +3,84 @@ using Helix.Data.Entities;
 using Helix.Data.Enums;
 using Helix.Service.DTOs.TerminologyCodeLookupDTOs;
 using Helix.Service.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Helix.Service.Services.TerminologyCodeLookupService
 {
-    public class TerminologyCodeLookupService : ITerminologyCodeLookupService
+    public class TerminologyCodeLookupService(IUnitOfWork unitOfWork, IMapper mapper) : ITerminologyCodeLookupService
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
-
-        public TerminologyCodeLookupService(IUnitOfWork unitOfWork, IMapper mapper)
+        public async Task<TerminologyCodeLookupDto> CreateTerminologyCodeLookupAsync(CreateTerminologyCodeLookupDto createDto)
         {
-            _unitOfWork = unitOfWork;
-            _mapper = mapper;
+            var terminologyCode = mapper.Map<TerminologyCodeLookup>(createDto);
+
+            await unitOfWork.Repository<TerminologyCodeLookup>().AddAsync(terminologyCode);
+            await unitOfWork.CompleteAsync(); // Asynchronous commit
+
+            return mapper.Map<TerminologyCodeLookupDto>(terminologyCode);
         }
 
-        public Task<TerminologyCodeLookupDto> CreateTerminologyCodeLookupAsync(CreateTerminologyCodeLookupDto createDto)
+        public async Task<bool> DeleteTerminologyCodeLookupAsync(Guid id)
         {
-            var terminologyCode = _mapper.Map<TerminologyCodeLookup>(createDto);
-            
-            _unitOfWork.Repository<TerminologyCodeLookup>().Add(terminologyCode);
-            _unitOfWork.Complete();
+            // Memory-optimized lookup
+            var terminologyCode = await unitOfWork.Repository<TerminologyCodeLookup>().GetByIdAsync(id);
+            if (terminologyCode == null)
+                return false;
 
-            return Task.FromResult(_mapper.Map<TerminologyCodeLookupDto>(terminologyCode));
+            await unitOfWork.Repository<TerminologyCodeLookup>().DeleteAsync(terminologyCode);
+            await unitOfWork.CompleteAsync();
+            return true;
         }
 
-        public Task<bool> DeleteTerminologyCodeLookupAsync(Guid id)
+        public async Task<IEnumerable<TerminologyCodeLookupDto>> GetAllTerminologyCodeLookupsAsync()
         {
-            var terminologyCode = _unitOfWork.Repository<TerminologyCodeLookup>().Find(t => t.Id == id).Result.FirstOrDefault();
-            if (terminologyCode == null) return Task.FromResult(false);
-
-            _unitOfWork.Repository<TerminologyCodeLookup>().Delete(terminologyCode);
-            _unitOfWork.Complete();
-            return Task.FromResult(true);
+            // True asynchronous execution
+            var terminologyCodes = await unitOfWork.Repository<TerminologyCodeLookup>().GetAllAsync();
+            return mapper.Map<IEnumerable<TerminologyCodeLookupDto>>(terminologyCodes);
         }
 
-        public Task<IEnumerable<TerminologyCodeLookupDto>> GetAllTerminologyCodeLookupsAsync()
-        {
-            var terminologyCodes = _unitOfWork.Repository<TerminologyCodeLookup>().GetALL().Result;
-            return Task.FromResult(_mapper.Map<IEnumerable<TerminologyCodeLookupDto>>(terminologyCodes));
-        }
         public async Task<List<TerminologyCodeLookupDto>> GetOrFetchLoincCodeAsync(string searchTerm, EnTerminologyType category = EnTerminologyType.LabTest)
         {
-            if (string.IsNullOrWhiteSpace(searchTerm)) return new List<TerminologyCodeLookupDto>();
+            if (string.IsNullOrWhiteSpace(searchTerm))
+                return new List<TerminologyCodeLookupDto>();
 
-            var repository = _unitOfWork.Repository<TerminologyCodeLookup>();
-            searchTerm = searchTerm.Trim();
+            // Normalize search term once
+            searchTerm = searchTerm.Trim().ToLower();
 
-            // 1. Get the data. We use ToLower() to bypass case-sensitivity issues.
-            var existingCodes = await repository.Find(t =>
-                t.Display.ToLower().Contains(searchTerm.ToLower()) &&
+            // Safely await the asynchronous Find method
+            var existingCodes = await unitOfWork.Repository<TerminologyCodeLookup>().FindAsync(t =>
+                t.Display.ToLower().Contains(searchTerm) &&
                 t.TerminologyType == category);
 
-            // 2. Map directly to DTO using LINQ (Cleaner and more performant)
-            var result = existingCodes.Select(terminology => new TerminologyCodeLookupDto
-            {
-                Id = terminology.Id,
-                Code = terminology.Code,
-                Display = terminology.Display,
-                SystemUrl = terminology.SystemUrl,
-                TerminologyType = terminology.TerminologyType,
-                UsageCount = terminology.UsageCount
-            }).ToList();
-
-            return result;
+            // Consistency Fix: Use AutoMapper instead of manual LINQ selection
+            return mapper.Map<List<TerminologyCodeLookupDto>>(existingCodes);
         }
 
-        public Task<TerminologyCodeLookupDto> GetTerminologyCodeLooKupByCodeAsync(string code)
+        public async Task<TerminologyCodeLookupDto?> GetTerminologyCodeLooKupByCodeAsync(string code)
         {
-            var terminologyCode = _unitOfWork.Repository<TerminologyCodeLookup>().Find(t => t.Code == code).Result.FirstOrDefault();
-            return Task.FromResult(_mapper.Map<TerminologyCodeLookupDto>(terminologyCode));
+            // FindAsync returns a read-only list, so we await it and take the first item
+            var existingCodes = await unitOfWork.Repository<TerminologyCodeLookup>().FindAsync(t => t.Code == code);
+            var terminologyCode = existingCodes.FirstOrDefault();
+
+            return terminologyCode == null ? null : mapper.Map<TerminologyCodeLookupDto>(terminologyCode);
         }
 
-        public Task<TerminologyCodeLookupDto> GetTerminologyCodeLookupByIdAsync(Guid id)
+        public async Task<TerminologyCodeLookupDto?> GetTerminologyCodeLookupByIdAsync(Guid id)
         {
-            var terminologyCode = _unitOfWork.Repository<TerminologyCodeLookup>().Find(t => t.Id == id).Result.FirstOrDefault();
-            return Task.FromResult(_mapper.Map<TerminologyCodeLookupDto>(terminologyCode));
+            var terminologyCode = await unitOfWork.Repository<TerminologyCodeLookup>().GetByIdAsync(id);
+            return terminologyCode == null ? null : mapper.Map<TerminologyCodeLookupDto>(terminologyCode);
         }
 
-        public Task<TerminologyCodeLookupDto> UpdateTerminologyCodeLookupAsync(Guid id, UpdateTerminologyCodeLookupDto updateDto)
+        public async Task<TerminologyCodeLookupDto> UpdateTerminologyCodeLookupAsync(Guid id, UpdateTerminologyCodeLookupDto updateDto)
         {
-            var terminologyCode = _unitOfWork.Repository<TerminologyCodeLookup>().Find(t => t.Id == id).Result.FirstOrDefault();
-            if (terminologyCode == null) throw new Exception("TerminologyCodeLookup not found");
+            var terminologyCode = await unitOfWork.Repository<TerminologyCodeLookup>().GetByIdAsync(id);
+            if (terminologyCode == null)
+                throw new Exception($"TerminologyCodeLookup with ID {id} not found.");
 
-            _mapper.Map(updateDto, terminologyCode);
-            _unitOfWork.Repository<TerminologyCodeLookup>().Update(terminologyCode);
-            _unitOfWork.Complete();
+            mapper.Map(updateDto, terminologyCode);
 
-            return Task.FromResult(_mapper.Map<TerminologyCodeLookupDto>(terminologyCode));
+            await unitOfWork.Repository<TerminologyCodeLookup>().UpdateAsync(terminologyCode);
+            await unitOfWork.CompleteAsync();
+
+            return mapper.Map<TerminologyCodeLookupDto>(terminologyCode);
         }
     }
 }

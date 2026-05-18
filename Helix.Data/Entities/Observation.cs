@@ -11,7 +11,9 @@ namespace Helix.Data.Entities
         public string? unit { get; set; }
 
         //encounter Relationship
+        public Guid PatientId { get; set; }
         public Guid EncounterId { get; set; }
         public Encounter Encounter { get; set; }
+        public Patient Patient { get; set; }
     }
 }
