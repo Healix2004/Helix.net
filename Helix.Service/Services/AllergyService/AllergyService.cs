@@ -51,13 +51,16 @@ namespace Helix.Service.Services.AllergyService
             var allergies = _unitOfWork.Repository<Allergy>().GetALL().Result;
             return Task.FromResult(_mapper.Map<IEnumerable<AllergyDto>>(allergies));
         }
-
+        public Task<IEnumerable<AllergyDto>> GetPatientAllergiesAsync(Guid PatiendId)
+        {
+            var allergies = _unitOfWork.Repository<Allergy>().Find(a => a.Id == PatiendId).Result.ToList();
+            return Task.FromResult(_mapper.Map<IEnumerable<AllergyDto>>(allergies));
+        }
         public Task<AllergyDto> GetAllergyByIdAsync(Guid id)
         {
             var allergy = _unitOfWork.Repository<Allergy>().Find(a => a.Id == id).Result.FirstOrDefault();
             return Task.FromResult(_mapper.Map<AllergyDto>(allergy));
         }
-
         public Task<AllergyDto> UpdateAllergyAsync(Guid id, UpdateAllergyDto updateAllergyDto)
         {
             var allergy = _unitOfWork.Repository<Allergy>().Find(a => a.Id == id).Result.FirstOrDefault();

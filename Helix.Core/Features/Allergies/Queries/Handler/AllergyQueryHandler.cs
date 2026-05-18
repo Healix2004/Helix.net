@@ -28,6 +28,15 @@ namespace Helix.Core.Features.Allergies.Queries.Handler
             return _responseHandler.Success(result);
         }
     }
+    public class GetAllergyListForPatientQueryHandler(IAllergyService allergyService, ResponseHandler responseHandler) : IRequestHandler<GetAllergyListForPatientQuery, Response<IEnumerable<AllergyDto>>>
+    {
+        /// <inheritdoc />
+        public async Task<Response<IEnumerable<AllergyDto>>> Handle(GetAllergyListForPatientQuery request, CancellationToken cancellationToken)
+        {
+            var result = await allergyService.GetPatientAllergiesAsync(request.Id);
+            return responseHandler.Success(result);
+        }
+    }
 
     /// <summary>
     /// Handles <see cref="GetAllergyByIdQuery"/> and returns a single allergy record.

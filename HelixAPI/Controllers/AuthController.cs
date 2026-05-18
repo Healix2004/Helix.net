@@ -15,6 +15,17 @@ namespace Helix.API.Controllers
     [Route("api/[controller]")]
     public class AuthController : AppControllerBase
     {
+        [HttpPost("login")]
+        [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Login([FromBody] LoginDto dto)
+        {
+            var command = new LoginCommand(dto);
+            var result = await mediator.Send(command);
+
+            return StatusCode((int)(result.StatusCode), result);
+        }
 
         [HttpPost("register")]
         [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status201Created)]
@@ -55,18 +66,6 @@ namespace Helix.API.Controllers
             {
                 return StatusCode((int)(result.StatusCode), result);
             }
-            return StatusCode((int)(result.StatusCode), result);
-        }
-
-        [HttpPost("login")]
-        [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> Login([FromBody] LoginDto dto)
-        {
-            var command = new LoginCommand(dto);
-            var result = await mediator.Send(command);
-
             return StatusCode((int)(result.StatusCode), result);
         }
 

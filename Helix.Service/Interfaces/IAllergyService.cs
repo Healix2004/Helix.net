@@ -9,6 +9,7 @@ namespace Helix.Service.Interfaces
     {
         Task<AllergyDto> GetAllergyByIdAsync(Guid id);
         Task<IEnumerable<AllergyDto>> GetAllAllergiesAsync();
+        Task<IEnumerable<AllergyDto>> GetPatientAllergiesAsync(Guid PatiendId);
         Task<AllergyDto> CreateAllergyAsync(CreateAllergyDto createAllergyDto);
         Task<AllergyDto> UpdateAllergyAsync(Guid id, UpdateAllergyDto updateAllergyDto);
         Task<bool> DeleteAllergyAsync(Guid id);
