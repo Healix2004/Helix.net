@@ -9,6 +9,7 @@ namespace Helix.Service.Interfaces
     {
         Task<MedicationDto> GetMedicationByIdAsync(Guid id);
         Task<IEnumerable<MedicationDto>> GetAllMedicationsAsync();
+        Task<IEnumerable<MedicationDto>> GetPatientMedicationsAsync(Guid patientId);
         Task<MedicationDto> CreateMedicationAsync(CreateMedicationDto createMedicationDto);
         Task<MedicationDto> UpdateMedicationAsync(Guid id, UpdateMedicationDto updateMedicationDto);
         Task<bool> DeleteMedicationAsync(Guid id);

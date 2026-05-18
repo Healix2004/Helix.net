@@ -27,6 +27,15 @@ namespace Helix.Core.Features.Observations.Queries.Handler
             return _responseHandler.Success(result);
         }
     }
+    public class GetObservationListForPatientQueryHandler(IObservationService observationService, ResponseHandler responseHandler) : IRequestHandler<GetObservationListForPatientQuery, Response<IEnumerable<ObservationDto>>>
+    {
+        /// <inheritdoc />
+        public async Task<Response<IEnumerable<ObservationDto>>> Handle(GetObservationListForPatientQuery request, CancellationToken cancellationToken)
+        {
+            var result = await observationService.GetPatientObservationsAsync(request.Id);
+            return responseHandler.Success(result);
+        }
+    }
 
     /// <summary>
     /// Handles <see cref="GetObservationByIdQuery"/> and returns a single clinical observation record.

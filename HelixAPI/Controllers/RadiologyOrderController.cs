@@ -1,32 +1,30 @@
 ﻿using Helix.Api.Base;
 using Helix.Core.Bases;
 using Helix.Data.Enums;
-using Helix.Service.DTOs.LabTestResultDTOs;
 using Helix.Service.DTOs.RadiologyOrderDto;
 using Helix.Service.DTOs.RadiologyTestResultDto;
 using Helix.Service.Helper;
 using Helix.Service.Interfaces;
-using Helix.Service.Services.LabTestResultService;
-using Helix.Service.Services.PatientService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Helix.API.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/radiology-orders")] // FIX 1: Explicit RESTful routing
     [ApiController]
     public class RadiologyOrderController(IRadiologyOrderService radiologyOrderService, IPatientService patientService, IDoctorService doctorService) : AppControllerBase
     {
         // ==========================================
-        // PATIENT & RADIOLOGY SPECIALIST WORKFLOW (QR)
+        // PATIENT WORKFLOW
         // ==========================================
+
+        [HttpGet("my-pending")] // FIX 2: Cleaner RESTful route
         [Authorize(Roles = nameof(EnRoles.Patient))]
-        [HttpGet("patient/GetPendingOrders")]
         public async Task<IActionResult> GetPendingOrders()
         {
             var patientId = await User.GetPatientIdAsync(patientService);
             var result = await radiologyOrderService.GetPendingOrdersAsync(patientId);
+
             var response = new Response<List<PendingRadiologyOrderDto>>(result)
             {
                 Succeeded = result != null,
@@ -36,10 +34,16 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
+        // ==========================================
+        // RADIOLOGY SPECIALIST WORKFLOW (QR)
+        // ==========================================
+
         [HttpGet("scan/{qrToken}")]
+        [Authorize(Roles = "Admin,Radiologist")] // FIX 3: CRITICAL SECURITY LOCK
         public async Task<IActionResult> ScanRadiologyOrder(string qrToken)
         {
             var result = await radiologyOrderService.ScanRadiologyOrderAsync(qrToken);
+
             var response = new Response<RadiologyOrderDto>(result)
             {
                 Succeeded = result != null,
@@ -50,10 +54,13 @@ namespace Helix.API.Controllers
         }
 
         [HttpPost("{orderId}/results")]
+        [Authorize(Roles = "Admin,Radiologist")] // FIX 3: CRITICAL SECURITY LOCK
+        // Note: [FromForm] is correct here since we are handling file uploads!
         public async Task<IActionResult> UploadRadiologyResult(Guid orderId, [FromForm] CreateRadiologyTestResultDto dto)
         {
             dto.OrderId = orderId;
             var result = await radiologyOrderService.UploadResultAsync(dto);
+
             var response = new Response<bool>(result)
             {
                 Succeeded = result,
@@ -66,12 +73,14 @@ namespace Helix.API.Controllers
         // ==========================================
         // DOCTOR WORKFLOW
         // ==========================================
+
+        [HttpGet("my-orders")] // FIX 2: Cleaner RESTful route
         [Authorize(Roles = nameof(EnRoles.Doctor))]
-        [HttpGet("doctor/all")]
         public async Task<IActionResult> GetOrdersByDoctor()
         {
             var doctorId = await User.GetDoctorIdAsync(doctorService);
             var result = await radiologyOrderService.GetOrdersByDoctorAsync(doctorId);
+
             var response = new Response<List<RadiologyOrderDto>>(result)
             {
                 Succeeded = true,
@@ -81,13 +90,14 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
+        [HttpPost] // Changed from "create" to standard POST route
         [Authorize(Roles = nameof(EnRoles.Doctor))]
-        [HttpPost("create")]
         public async Task<IActionResult> CreateRadiologyOrder([FromBody] CreateRadiologyOrderDto dto)
         {
             dto.DoctorId = await User.GetDoctorIdAsync(doctorService);
             var result = await radiologyOrderService.CreateRadiologyOrderAsync(dto);
-            var response = new Response<Guid>(result.ToString())
+
+            var response = new Response<Guid>(result)
             {
                 StatusCode = result != Guid.Empty ? System.Net.HttpStatusCode.Created : System.Net.HttpStatusCode.BadRequest,
                 Succeeded = result != Guid.Empty,
@@ -96,12 +106,24 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        [Authorize(Roles = nameof(EnRoles.Doctor))]
         [HttpPut("{id}")]
+        [Authorize(Roles = nameof(EnRoles.Doctor))]
         public async Task<IActionResult> UpdateRadiologyOrder(Guid id, [FromBody] UpdateRadiologyOrderDto dto)
         {
+            // FIX 4: Prevent ID Spoofing!
+            if (id != dto.Id)
+            {
+                return BadRequest("The ID in the URL does not match the ID in the body.");
+            }
+
             var result = await radiologyOrderService.UpdateRadiologyOrderAsync(id, dto);
-            var response = new Response<bool>(result);
+
+            var response = new Response<bool>(result)
+            {
+                Succeeded = result,
+                StatusCode = result ? System.Net.HttpStatusCode.OK : System.Net.HttpStatusCode.BadRequest,
+                Message = result ? "Order updated successfully." : "Update failed."
+            };
             return NewResult(response);
         }
 
@@ -109,8 +131,8 @@ namespace Helix.API.Controllers
         // ADMIN & MANAGEMENT WORKFLOW (CRUD)
         // ==========================================
 
-        [Authorize(Roles = nameof(EnRoles.Admin))]
         [HttpGet("{id}")]
+        [Authorize(Roles = nameof(EnRoles.Admin))]
         public async Task<IActionResult> GetRadiologyOrderById(Guid id)
         {
             var result = await radiologyOrderService.GetRadiologyOrderByIdAsync(id);
@@ -123,8 +145,8 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        [Authorize(Roles = nameof(EnRoles.Admin))]
         [HttpGet("all")]
+        [Authorize(Roles = nameof(EnRoles.Admin))]
         public async Task<IActionResult> GetAllRadiologyOrders()
         {
             var result = await radiologyOrderService.GetAllRadiologyOrdersAsync();
@@ -137,8 +159,8 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        [Authorize(Roles = nameof(EnRoles.Admin))]
         [HttpPut("{id}/status/{newStatus}")]
+        [Authorize(Roles = "Admin,Radiologist")] // Radiologists likely need to update status too
         public async Task<IActionResult> UpdateOrderStatus(Guid id, string newStatus)
         {
             var result = await radiologyOrderService.UpdateOrderStatusAsync(id, newStatus);
@@ -151,8 +173,8 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        [Authorize(Roles = nameof(EnRoles.Admin))]
         [HttpDelete("{id}")]
+        [Authorize(Roles = nameof(EnRoles.Admin))]
         public async Task<IActionResult> DeleteRadiologyOrder(Guid id)
         {
             var result = await radiologyOrderService.DeleteRadiologyOrderAsync(id);

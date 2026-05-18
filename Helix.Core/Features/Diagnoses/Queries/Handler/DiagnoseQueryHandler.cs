@@ -6,9 +6,6 @@ using MediatR;
 
 namespace Helix.Core.Features.Diagnoses.Queries.Handler
 {
-    /// <summary>
-    /// Handles <see cref="GetDiagnoseListQuery"/> and returns all diagnosis records.
-    /// </summary>
     public class GetDiagnoseListQueryHandler : IRequestHandler<GetDiagnoseListQuery, Response<IEnumerable<DiagnoseDto>>>
     {
         private readonly IDiagnoseService _diagnoseService;
@@ -27,11 +24,6 @@ namespace Helix.Core.Features.Diagnoses.Queries.Handler
             return _responseHandler.Success(result);
         }
     }
-
-    /// <summary>
-    /// Handles <see cref="GetDiagnoseByIdQuery"/> and returns a single diagnosis record.
-    /// Returns <see cref="System.Net.HttpStatusCode.NotFound"/> if no record exists with the given ID.
-    /// </summary>
     public class GetDiagnoseByIdQueryHandler : IRequestHandler<GetDiagnoseByIdQuery, Response<DiagnoseDto>>
     {
         private readonly IDiagnoseService _diagnoseService;
@@ -46,10 +38,20 @@ namespace Helix.Core.Features.Diagnoses.Queries.Handler
         /// <inheritdoc />
         public async Task<Response<DiagnoseDto>> Handle(GetDiagnoseByIdQuery request, CancellationToken cancellationToken)
         {
-            var result = await _diagnoseService.GetDiagnoseByIdAsync(Guid.Parse(request.Id.ToString()));
+            var result = await _diagnoseService.GetDiagnoseByIdAsync(request.Id);
             if (result == null)
                 return _responseHandler.NotFound<DiagnoseDto>("Diagnose not found.");
             return _responseHandler.Success(result);
+        }
+    }
+
+    public class GetDiagnoseListForPatientQueryHandler(IDiagnoseService diagnoseService, ResponseHandler responseHandler) : IRequestHandler<GetDiagnoseListForPatientQuery, Response<IEnumerable<DiagnoseDto>>>
+    {
+        /// <inheritdoc />
+        public async Task<Response<IEnumerable<DiagnoseDto>>> Handle(GetDiagnoseListForPatientQuery request, CancellationToken cancellationToken)
+        {
+            var result = await diagnoseService.GetPatientDiagnosesAsync(request.PatiendId);
+            return responseHandler.Success(result);
         }
     }
 }

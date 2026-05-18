@@ -58,6 +58,12 @@ namespace Helix.Service.Services.ObservationService
             return Task.FromResult(_mapper.Map<ObservationDto>(observation));
         }
 
+        public Task<IEnumerable<ObservationDto>> GetPatientObservationsAsync(Guid PatientId)
+        {
+            var observations = _unitOfWork.Repository<Observation>().Find(o => o.Id == PatientId).Result.ToList();
+            return Task.FromResult(_mapper.Map<IEnumerable<ObservationDto>>(observations));
+        }
+
         public Task<ObservationDto> UpdateObservationAsync(Guid id, UpdateObservationDto updateObservationDto)
         {
             var observation = _unitOfWork.Repository<Observation>().Find(o => o.Id == id).Result.FirstOrDefault();

@@ -12,14 +12,14 @@ namespace Helix.Core.Features.Drugs.Commands.Models
 
     public class UpdateDrugCommand : IRequest<Response<DrugDTO>>
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
         public UpdateDrugDto Dto { get; set; }
-        public UpdateDrugCommand(int id, UpdateDrugDto dto) { Id = id; Dto = dto; }
+        public UpdateDrugCommand(Guid id, UpdateDrugDto dto) { Id = id; Dto = dto; }
     }
 
     public class DeleteDrugCommand : IRequest<Response<bool>>
     {
-        public int Id { get; set; }
-        public DeleteDrugCommand(int id) => Id = id;
+        public Guid Id { get; set; }
+        public DeleteDrugCommand(Guid id) => Id = id;
     }
 }

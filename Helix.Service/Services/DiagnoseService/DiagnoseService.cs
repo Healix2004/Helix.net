@@ -68,6 +68,12 @@ namespace Helix.Service.Services.DiagnoseService
             return Task.FromResult(_mapper.Map<DiagnoseDto>(diagnose));
         }
 
+        public Task<IEnumerable<DiagnoseDto>> GetPatientDiagnosesAsync(Guid patientId)
+        {
+            var diagnoses = _unitOfWork.Repository<Diagnose>().Find(d=>d.PatientId == patientId).Result.ToList();
+            return Task.FromResult(_mapper.Map<IEnumerable<DiagnoseDto>>(diagnoses));
+        }
+
         public Task<DiagnoseDto> UpdateDiagnoseAsync(Guid id, UpdateDiagnoseDto updateDiagnoseDto)
         {
             var diagnose = _unitOfWork.Repository<Diagnose>().Find(d => d.Id == id).Result.FirstOrDefault();

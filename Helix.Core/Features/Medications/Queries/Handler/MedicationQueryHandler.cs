@@ -1,5 +1,6 @@
 using Helix.Core.Bases;
 using Helix.Core.Features.Medications.Queries.Models;
+using Helix.Core.Features.Patients.Queries.Models;
 using Helix.Service.DTOs.MedicationDTOs;
 using Helix.Service.Interfaces;
 using MediatR;
@@ -25,6 +26,15 @@ namespace Helix.Core.Features.Medications.Queries.Handler
         {
             var result = await _medicationService.GetAllMedicationsAsync();
             return _responseHandler.Success(result);
+        }
+    }
+    public class GetMedicationListForPatientQueryHandler(IMedicationService medicationService, ResponseHandler responseHandler) : IRequestHandler<GetMedicationListForPatientQuery, Response<IEnumerable<MedicationDto>>>
+    {
+        /// <inheritdoc />
+        public async Task<Response<IEnumerable<MedicationDto>>> Handle(GetMedicationListForPatientQuery request, CancellationToken cancellationToken)
+        {
+            var result = await medicationService.GetPatientMedicationsAsync(request.Id);
+            return responseHandler.Success(result);
         }
     }
 

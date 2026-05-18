@@ -5,9 +5,8 @@ using Helix.Core.Features.Consents.Queries.Models;
 using Helix.Data.Entities;
 using Helix.Data.Enums;
 using Helix.Service.DTOs.ConsentDTOs;
+using Helix.Service.Helper;
 using Helix.Service.Interfaces;
-using Helix.Service.Services.PatientService;
-using Hl7.Fhir.Utility;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -18,11 +17,16 @@ using System.Security.Claims;
 namespace Helix.API.Controllers
 {
     /// <summary>
-    /// Manages patient consent records in the Helix healthcare system.
+    /// Manages patient consent records and temporary access tokens in the HELIX ecosystem.
     /// </summary>
-    [Route("api/[controller]")]
+    [Route("api/consents")] // FIX 1: Explicit RESTful routing
     [ApiController]
-    public class ConsentController(IMediator mediator,ITokenProvider jwtService, IMemoryCache cache,UserManager<AppUser> userManager,IPatientService patientService) : AppControllerBase
+    public class ConsentController(
+        IMediator mediator,
+        ITokenProvider jwtService,
+        IMemoryCache cache,
+        UserManager<AppUser> userManager,
+        IPatientService patientService) : AppControllerBase
     {
         // ==========================================
         // 1. PATIENT WORKFLOW (Generates the QR)
@@ -32,24 +36,25 @@ namespace Helix.API.Controllers
         [Authorize(Roles = nameof(EnRoles.Patient))]
         public async Task<IActionResult> GenerateConsentQr([FromBody] ConsentRequestDto request)
         {
-            // 1. Get the current logged-in user and their Patient ID
+            // 1. Safely extract the Patient ID using your new Extension Method!
+            Guid patientId = await User.GetPatientIdAsync(patientService);
+
+            // 2. We still need the AppUser object for the token generation claims
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var user = await userManager.FindByIdAsync(userIdString);
-            var patient = await patientService.GetPatientByUserIdAsync(userIdString);
 
-            // 2. Pass it all to your newly updated method!
-            string realJwt = await jwtService.GenerateConsentToken(user, patient.Id, request);
-            
-            // 3. Generate a short, 8-character token for the QR code
+            // 3. Generate the massive 2-Hour JWT
+            string realJwt = await jwtService.GenerateConsentToken(user, patientId, request);
+
+            // 4. Generate a short, 8-character token for the QR code
             string shortQrToken = Guid.NewGuid().ToString("N").Substring(0, 8);
 
-            // 4. Save it in Memory Cache for exactly 5 minutes!
+            // 5. Save it in Memory Cache for exactly 5 minutes!
             var cacheOptions = new MemoryCacheEntryOptions()
                 .SetAbsoluteExpiration(TimeSpan.FromMinutes(5));
 
             cache.Set(shortQrToken, realJwt, cacheOptions);
 
-            // 5. Return it using your standard HELIX Response wrapper!
             var response = new Response<string>()
             {
                 Data = shortQrToken,
@@ -69,16 +74,14 @@ namespace Helix.API.Controllers
         [Authorize(Roles = nameof(EnRoles.Doctor))]
         public IActionResult RedeemQr([FromBody] string scannedQrToken)
         {
-            // 1. Check if the token exists in the cache
             if (cache.TryGetValue(scannedQrToken, out string realJwt))
             {
-                // 2. BURN THE TOKEN! A QR code can only be used once.
+                // BURN THE TOKEN! A QR code can only be used once.
                 cache.Remove(scannedQrToken);
 
-                // 3. Give the doctor the real 2-Hour JWT
                 var successResponse = new Response<string>()
                 {
-                    Data=realJwt,
+                    Data = realJwt,
                     Succeeded = true,
                     StatusCode = System.Net.HttpStatusCode.OK,
                     Message = "Token redeemed successfully."
@@ -86,7 +89,6 @@ namespace Helix.API.Controllers
                 return NewResult(successResponse);
             }
 
-            // If it's not in the cache, it expired or is fake
             var failResponse = new Response<string>(null)
             {
                 Succeeded = false,
@@ -96,8 +98,12 @@ namespace Helix.API.Controllers
             return NewResult(failResponse);
         }
 
+        // ==========================================
+        // 3. ADMIN WORKFLOW (Database Management)
+        // ==========================================
+
+        [HttpGet("all")] // RESTful path
         [Authorize(Roles = nameof(EnRoles.Admin))]
-        [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<ConsentDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll()
         {
@@ -107,6 +113,7 @@ namespace Helix.API.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Roles = nameof(EnRoles.Admin))] // FIX 2: Locked this down!
         [ProducesResponseType(typeof(ConsentDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetById(int id)
@@ -117,6 +124,7 @@ namespace Helix.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = nameof(EnRoles.Admin))] // FIX 3: Prevented anonymous record creation!
         [ProducesResponseType(typeof(ConsentDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Create([FromBody] CreateConsentDto dto)
@@ -126,22 +134,28 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        [Authorize(Roles = nameof(EnRoles.Admin))]
         [HttpPut("{id}")]
+        [Authorize(Roles = nameof(EnRoles.Admin))]
         [ProducesResponseType(typeof(ConsentDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Update(int id, [FromBody] UpdateConsentDto dto)
+        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateConsentDto dto)
         {
+            // FIX 4: Security check to prevent ID spoofing
+            if (id != dto.Id)
+            {
+                return BadRequest("The ID in the URL does not match the ID in the body.");
+            }
+
             var command = new UpdateConsentCommand(id, dto);
             var response = await mediator.Send(command);
             return NewResult(response);
         }
 
-        [Authorize(Roles = nameof(EnRoles.Admin))]
         [HttpDelete("{id}")]
+        [Authorize(Roles = nameof(EnRoles.Admin))]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(Guid id)
         {
             var command = new DeleteConsentCommand(id);
             var response = await mediator.Send(command);

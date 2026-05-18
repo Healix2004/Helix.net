@@ -7,23 +7,23 @@ using Helix.Service.Helper;
 using Helix.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Helix.API.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/lab-orders")] // FIX 1: Explicit RESTful routing
     [ApiController]
     public class LabOrderController(ILabOrderService labOrderService, IPatientService patientService, IDoctorService doctorService) : AppControllerBase
     {
         // ==========================================
-        // PATIENT & LAB SPECIALIST WORKFLOW (QR)
+        // PATIENT WORKFLOW
         // ==========================================
+        [HttpGet("my-pending")] // FIX 2: Cleaner RESTful route
         [Authorize(Roles = nameof(EnRoles.Patient))]
-        [HttpGet("patient/GetPendingOrders")]
         public async Task<IActionResult> GetPendingOrders()
         {
             var patientId = await User.GetPatientIdAsync(patientService);
             var result = await labOrderService.GetPendingOrdersAsync(patientId);
+
             var response = new Response<List<PendingLabOrderDto>>(result)
             {
                 Succeeded = result != null,
@@ -32,10 +32,17 @@ namespace Helix.API.Controllers
             };
             return NewResult(response);
         }
+
+        // ==========================================
+        // LAB SPECIALIST WORKFLOW (QR)
+        // ==========================================
+
         [HttpGet("scan/{qrToken}")]
+        [Authorize(Roles = nameof(EnRoles.Admin))] // FIX 3: CRITICAL SECURITY LOCK
         public async Task<IActionResult> ScanLabOrder(string qrToken)
         {
             var result = await labOrderService.ScanLabOrderAsync(qrToken);
+
             var response = new Response<LabOrderDto>(result)
             {
                 Succeeded = result != null,
@@ -44,11 +51,14 @@ namespace Helix.API.Controllers
             };
             return NewResult(response);
         }
+
         [HttpPost("{orderId}/results")]
+        [Authorize(Roles = nameof(EnRoles.Patient))]
         public async Task<IActionResult> UploadLabResult(Guid orderId, [FromBody] UploadLabResultDto dto)
         {
-            dto.OrderId = orderId; // <-- Check this property name
+            dto.OrderId = orderId;
             var result = await labOrderService.UploadLabResultAsync(dto);
+
             var response = new Response<bool>(result)
             {
                 Succeeded = result,
@@ -57,15 +67,18 @@ namespace Helix.API.Controllers
             };
             return NewResult(response);
         }
+
         // ==========================================
         // DOCTOR WORKFLOW
         // ==========================================
+
+        [HttpGet("my-orders")] // FIX 2: Cleaner RESTful route
         [Authorize(Roles = nameof(EnRoles.Doctor))]
-        [HttpGet("doctor/all")]
         public async Task<IActionResult> GetOrdersByDoctor()
         {
             var doctorId = await User.GetDoctorIdAsync(doctorService);
             var result = await labOrderService.GetOrdersByDoctorAsync(doctorId);
+
             var response = new Response<List<LabOrderDto>>(result)
             {
                 Succeeded = true,
@@ -74,13 +87,15 @@ namespace Helix.API.Controllers
             };
             return NewResult(response);
         }
+
+        [HttpPost] // Changed from "create" to standard POST route
         [Authorize(Roles = nameof(EnRoles.Doctor))]
-        [HttpPost("create")]
         public async Task<IActionResult> CreateLabOrder([FromBody] CreateLabOrderDto dto)
         {
             dto.DoctorId = await User.GetDoctorIdAsync(doctorService);
             var result = await labOrderService.CreateLabOrderAsync(dto);
-            var response = new Response<Guid>(result.ToString())
+
+            var response = new Response<Guid>(result) // Note: No need for .ToString() if Response<T> takes a Guid
             {
                 StatusCode = result != Guid.Empty ? System.Net.HttpStatusCode.Created : System.Net.HttpStatusCode.BadRequest,
                 Succeeded = result != Guid.Empty,
@@ -88,20 +103,33 @@ namespace Helix.API.Controllers
             };
             return NewResult(response);
         }
-        [Authorize(Roles = nameof(EnRoles.Doctor))]
+
         [HttpPut("{id}")]
+        [Authorize(Roles = nameof(EnRoles.Doctor))]
         public async Task<IActionResult> UpdateLabOrder(Guid id, [FromBody] UpdateLabOrderDto dto)
         {
+            // FIX 4: Prevent ID Spoofing!
+            if (id != dto.Id)
+            {
+                return BadRequest("The ID in the URL does not match the ID in the body.");
+            }
+
             var result = await labOrderService.UpdateLabOrderAsync(id, dto);
-            var response = new Response<bool>(result);
+            var response = new Response<bool>(result)
+            {
+                Succeeded = result,
+                StatusCode = result ? System.Net.HttpStatusCode.OK : System.Net.HttpStatusCode.BadRequest,
+                Message = result ? "Order updated successfully." : "Update failed."
+            };
             return NewResult(response);
         }
+
         // ==========================================
         // ADMIN & MANAGEMENT WORKFLOW (CRUD)
         // ==========================================
 
-        [Authorize(Roles = nameof(EnRoles.Admin))]
         [HttpGet("{id}")]
+        [Authorize(Roles = nameof(EnRoles.Admin))]
         public async Task<IActionResult> GetLabOrderById(Guid id)
         {
             var result = await labOrderService.GetLabOrderByIdAsync(id);
@@ -113,8 +141,9 @@ namespace Helix.API.Controllers
             };
             return NewResult(response);
         }
-        [Authorize(Roles = nameof(EnRoles.Admin))]
+
         [HttpGet("all")]
+        [Authorize(Roles = nameof(EnRoles.Admin))]
         public async Task<IActionResult> GetAllLabOrders()
         {
             var result = await labOrderService.GetAllLabOrdersAsync();
@@ -126,8 +155,9 @@ namespace Helix.API.Controllers
             };
             return NewResult(response);
         }
-        [Authorize(Roles = nameof(EnRoles.Admin))]
+
         [HttpPut("{id}/status/{newStatus}")]
+        [Authorize(Roles = nameof(EnRoles.Patient))]
         public async Task<IActionResult> UpdateOrderStatus(Guid id, string newStatus)
         {
             var result = await labOrderService.UpdateOrderStatusAsync(id, newStatus);
@@ -139,8 +169,9 @@ namespace Helix.API.Controllers
             };
             return NewResult(response);
         }
-        [Authorize(Roles = nameof(EnRoles.Admin))]
+
         [HttpDelete("{id}")]
+        [Authorize(Roles = nameof(EnRoles.Admin))]
         public async Task<IActionResult> DeleteLabOrder(Guid id)
         {
             var result = await labOrderService.DeleteLabOrderAsync(id);

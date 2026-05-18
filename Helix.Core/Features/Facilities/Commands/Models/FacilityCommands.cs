@@ -12,9 +12,9 @@ namespace Helix.Core.Features.Facilities.Commands.Models
 
     public class UpdateFacilityCommand : IRequest<Response<FacilitieDto>>
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
         public UpdateFacilitieDto Dto { get; set; }
-        public UpdateFacilityCommand(int id, UpdateFacilitieDto dto) { Id = id; Dto = dto; }
+        public UpdateFacilityCommand(Guid id, UpdateFacilitieDto dto) { Id = id; Dto = dto; }
     }
 
     public class DeleteFacilityCommand : IRequest<Response<bool>>

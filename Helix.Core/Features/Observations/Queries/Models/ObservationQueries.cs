@@ -8,7 +8,8 @@ namespace Helix.Core.Features.Observations.Queries.Models
 
     public class GetObservationByIdQuery : IRequest<Response<ObservationDto>>
     {
-        public int Id { get; set; }
-        public GetObservationByIdQuery(int id) => Id = id;
+        public Guid Id { get; set; }
+        public GetObservationByIdQuery(Guid id) => Id = id;
     }
+    
 }

@@ -50,10 +50,14 @@ namespace Helix.Service.Services.MedicationService
             _unitOfWork.Complete();
             return Task.FromResult(true);
         }
-
         public Task<IEnumerable<MedicationDto>> GetAllMedicationsAsync()
         {
             var medications = _unitOfWork.Repository<Medication>().GetALL();
+            return Task.FromResult(_mapper.Map<IEnumerable<MedicationDto>>(medications));
+        }
+        public Task<IEnumerable<MedicationDto>> GetPatientMedicationsAsync(Guid patientId)
+        {
+            var medications = _unitOfWork.Repository<Medication>().Find(m => m.Id == patientId).Result.ToList();
             return Task.FromResult(_mapper.Map<IEnumerable<MedicationDto>>(medications));
         }
 
@@ -62,7 +66,6 @@ namespace Helix.Service.Services.MedicationService
             var medication = _unitOfWork.Repository<Medication>().Find(m => m.Id == id).Result.FirstOrDefault();
             return Task.FromResult(_mapper.Map<MedicationDto>(medication));
         }
-
         public Task<MedicationDto> UpdateMedicationAsync(Guid id, UpdateMedicationDto updateMedicationDto)
         {
             var medication = _unitOfWork.Repository<Medication>().Find(m => m.Id == id).Result.FirstOrDefault();

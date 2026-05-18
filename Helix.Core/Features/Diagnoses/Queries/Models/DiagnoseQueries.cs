@@ -8,7 +8,12 @@ namespace Helix.Core.Features.Diagnoses.Queries.Models
 
     public class GetDiagnoseByIdQuery : IRequest<Response<DiagnoseDto>>
     {
-        public int Id { get; set; }
-        public GetDiagnoseByIdQuery(int id) => Id = id;
+        public Guid Id { get; set; }
+        public GetDiagnoseByIdQuery(Guid id) => Id = id;
+    }
+    public class GetDiagnoseListForPatientQuery : IRequest<Response<IEnumerable<DiagnoseDto>>>
+    {
+        public Guid PatiendId { get; set; }
+        public GetDiagnoseListForPatientQuery(Guid patiendId) => this.PatiendId= patiendId;
     }
 }

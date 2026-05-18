@@ -9,6 +9,7 @@ namespace Helix.Service.Interfaces
     {
         Task<ObservationDto> GetObservationByIdAsync(Guid id);
         Task<IEnumerable<ObservationDto>> GetAllObservationsAsync();
+        Task<IEnumerable<ObservationDto>> GetPatientObservationsAsync(Guid PatientId);
         Task<ObservationDto> CreateObservationAsync(CreateObservationDto createObservationDto);
         Task<ObservationDto> UpdateObservationAsync(Guid id, UpdateObservationDto updateObservationDto);
         Task<bool> DeleteObservationAsync(Guid id);
