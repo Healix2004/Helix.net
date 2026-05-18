@@ -100,6 +100,9 @@ namespace Helix.Infrastructure.Context
 
             builder.Entity<RadiologyImage>().Property(r=>r.FileName).HasMaxLength(255);
             builder.Entity<RadiologyImage>().Property(r=>r.FilePath).HasMaxLength(256);
+
+            builder.Entity<EmergencyOverrideLog>().HasOne(e => e.Patient).WithMany().OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<EmergencyOverrideLog>().HasOne(e => e.Doctor).WithMany().OnDelete(DeleteBehavior.Restrict);
         }
         public DbSet<AppUser> AppUsers { get; set; }
         public DbSet<Doctor> Doctors { get; set; }
@@ -115,5 +118,6 @@ namespace Helix.Infrastructure.Context
         public DbSet<Diagnose> Diagnoses { get; set; }
         public DbSet<RadiologyResult> RadiologyResults { get; set; }
         public DbSet<RadiologyOrder> RadiologyOrders { get; set; } 
+        public DbSet<EmergencyOverrideLog> emergencyOverrideLogs { get; set; }
     }
 }

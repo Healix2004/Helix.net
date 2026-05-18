@@ -16,7 +16,7 @@ namespace Helix.API.Controllers
     /// </summary>
     [Route("api/diagnoses")] // FIX 1: Explicit RESTful routing
     [ApiController]
-    public class DiagnoseController(IMediator mediator, IPatientService patientService) : AppControllerBase
+    public class DiagnoseController(IMediator mediator, IPatientService patientService, IDoctorService doctorService, IEmergencyAccessService emergencyAccessService) : AppControllerBase
     {
         // ==========================================
         // 1. PATIENT WORKFLOW
@@ -45,8 +45,14 @@ namespace Helix.API.Controllers
         [ProducesResponseType(typeof(IEnumerable<DiagnoseDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetPatientDiagnoses(Guid patientId)
         {
-            // THE CONSENT CHECK: Looking for the "Diagnoses" scope
-            if (!User.HasValidConsent(patientId, "Diagnoses"))
+            // 1. Check standard QR Consent
+            bool hasStandardConsent = User.HasValidConsent(patientId, "Diagnoses");
+
+            var doctorId = await User.GetDoctorIdAsync(doctorService);
+            // 2. Check Emergency "Break the Glass" Consent
+            bool hasEmergencyConsent = await emergencyAccessService.HasActiveEmergencyAccessAsync(doctorId, patientId);
+
+            if (!hasStandardConsent && !hasEmergencyConsent)
             {
                 var forbiddenResponse = new Helix.Core.Bases.Response<bool>(false)
                 {

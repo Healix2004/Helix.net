@@ -5,6 +5,8 @@ using Helix.Data.Enums;
 using Helix.Service.DTOs.PatientDTOs;
 using Helix.Service.Helper;
 using Helix.Service.Interfaces; // ADDED: Need this to inject IPatientService
+using Helix.Service.Services.DoctorService;
+using Helix.Service.Services.EmergencyAccessService;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,7 +18,7 @@ namespace Helix.API.Controllers
     /// </summary>
     [Route("api/patients")] // FIX 1: Explicit RESTful routing
     [ApiController]
-    public class PatientController(IMediator mediator, IPatientService patientService) : AppControllerBase
+    public class PatientController(IMediator mediator, IPatientService patientService,IDoctorService doctorService,IEmergencyAccessService emergencyAccessService) : AppControllerBase
     {
         // ==========================================================
         // 1. FOR THE PATIENT (Fetching their own profile)
@@ -38,13 +40,19 @@ namespace Helix.API.Controllers
         // 2. FOR DOCTORS & ADMINS (Fetching a specific patient)
         // ==========================================================
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,Doctor")] // FIX 2: Let Doctors in, but verify them below!
+        [Authorize(Roles = $"{nameof(EnRoles.Admin)},{nameof(EnRoles.Doctor)}")]
         [ProducesResponseType(typeof(PatientDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetById(Guid id)
         {
-            // If the user is a Doctor, they MUST have active consent to view the demographics!
-            if (User.IsInRole(nameof(EnRoles.Doctor)) && !User.HasValidConsent(id, "Demographics"))
+            // 1. Check standard QR Consent
+            bool hasStandardConsent = User.HasValidConsent(id, "Demographics");
+
+            var doctorId = await User.GetDoctorIdAsync(doctorService);
+            // 2. Check Emergency "Break the Glass" Consent
+            bool hasEmergencyConsent = await emergencyAccessService.HasActiveEmergencyAccessAsync(doctorId, id);
+
+            if (!hasStandardConsent && !hasEmergencyConsent)
             {
                 var forbiddenResponse = new Helix.Core.Bases.Response<bool>(false)
                 {

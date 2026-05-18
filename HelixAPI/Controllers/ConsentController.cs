@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
 namespace Helix.API.Controllers
@@ -26,7 +27,9 @@ namespace Helix.API.Controllers
         ITokenProvider jwtService,
         IMemoryCache cache,
         UserManager<AppUser> userManager,
-        IPatientService patientService) : AppControllerBase
+        IPatientService patientService,
+        IDoctorService doctorService,
+        IConsentService consentService) : AppControllerBase
     {
         // ==========================================
         // 1. PATIENT WORKFLOW (Generates the QR)
@@ -72,20 +75,50 @@ namespace Helix.API.Controllers
 
         [HttpPost("redeem-qr")]
         [Authorize(Roles = nameof(EnRoles.Doctor))]
-        public IActionResult RedeemQr([FromBody] string scannedQrToken)
+        public async Task<IActionResult> RedeemQr([FromBody] string scannedQrToken)
         {
             if (cache.TryGetValue(scannedQrToken, out string realJwt))
             {
                 // BURN THE TOKEN! A QR code can only be used once.
                 cache.Remove(scannedQrToken);
 
+                var handler = new JwtSecurityTokenHandler();
+                var token = handler.ReadJwtToken(realJwt);
+
+                // 1. Look for patientId (added a fallback just in case the case is different)
+                var patientIdClaim = token.Claims.FirstOrDefault(c =>
+                    c.Type == "patientId" ||
+                    c.Type.Equals("patientid", StringComparison.OrdinalIgnoreCase))?.Value;
+
+                // 2. We no longer check for expClaim here, because token.ValidTo handles it!
+                if (string.IsNullOrEmpty(patientIdClaim))
+                {
+                    var invalidResponse = new Response<string>(null)
+                    {
+                        Succeeded = false,
+                        StatusCode = System.Net.HttpStatusCode.BadRequest,
+                        Message = "The token does not contain the required patientId claim."
+                    };
+                    return NewResult(invalidResponse);
+                }
+
                 var successResponse = new Response<string>()
                 {
-                    Data = realJwt,
                     Succeeded = true,
                     StatusCode = System.Net.HttpStatusCode.OK,
-                    Message = "Token redeemed successfully."
+                    Message = "Token redeemed successfully.",
+                    Data= realJwt
                 };
+
+                var consent = new CreateConsentDto()
+                {
+                    ConsentGrantedAt = DateTime.UtcNow,
+                    DoctorId = await User.GetDoctorIdAsync(doctorService),
+                    PatientId = Guid.Parse(patientIdClaim),
+                    ConsentExpiresAt = token.ValidTo
+                };
+
+                await consentService.CreateConsentAsync(consent);
                 return NewResult(successResponse);
             }
 

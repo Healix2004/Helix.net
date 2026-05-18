@@ -5,6 +5,8 @@ using Helix.Data.Enums;
 using Helix.Service.DTOs.LabTestResultDTOs;
 using Helix.Service.Helper;
 using Helix.Service.Interfaces;
+using Helix.Service.Services.DoctorService;
+using Helix.Service.Services.EmergencyAccessService;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,7 +15,7 @@ namespace Helix.API.Controllers
 {
     [Route("api/lab-results")] // FIX 1: Explicit RESTful routing instead of [controller]
     [ApiController]
-    public class LabTestResultController(IMediator mediator, IPatientService patientService) : AppControllerBase
+    public class LabTestResultController(IMediator mediator, IPatientService patientService, IDoctorService doctorService, IEmergencyAccessService emergencyAccessService) : AppControllerBase
     {
         // ==========================================================
         // 1. FOR THE PATIENT (No Consent Needed)
@@ -37,8 +39,14 @@ namespace Helix.API.Controllers
         [Authorize(Roles = nameof(EnRoles.Doctor))]
         public async Task<IActionResult> GetPatientLabRecords(Guid patientId)
         {
-            // THE CONSENT CHECK: Looking for the "Labs" scope we defined earlier
-            if (!User.HasValidConsent(patientId, "Labs"))
+            // 1. Check standard QR Consent
+            bool hasStandardConsent = User.HasValidConsent(patientId, "Labs");
+
+            var doctorId = await User.GetDoctorIdAsync(doctorService);
+            // 2. Check Emergency "Break the Glass" Consent
+            bool hasEmergencyConsent = await emergencyAccessService.HasActiveEmergencyAccessAsync(doctorId, patientId);
+
+            if (!hasStandardConsent && !hasEmergencyConsent)
             {
                 var forbiddenResponse = new Helix.Core.Bases.Response<bool>(false)
                 {
@@ -49,7 +57,6 @@ namespace Helix.API.Controllers
                 return NewResult(forbiddenResponse);
             }
 
-            // Note: You may need to create this specific Query in your MediatR Features!
             var query = new GetLabTestResultListForPatientQuery(patientId);
             var response = await mediator.Send(query);
             return NewResult(response);

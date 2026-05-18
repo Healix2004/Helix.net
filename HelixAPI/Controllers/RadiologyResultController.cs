@@ -4,6 +4,7 @@ using Helix.Data.Enums;
 using Helix.Service.DTOs.RadiologyTestResultDto;
 using Helix.Service.Helper;
 using Helix.Service.Interfaces;
+using Helix.Service.Services.EmergencyAccessService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,7 +12,7 @@ namespace Helix.API.Controllers
 {
     [Route("api/radiology-results")]
     [ApiController]
-    public class RadiologyResultController(IRadiologyResultService radiologyResultService, IPatientService patientService) : AppControllerBase
+    public class RadiologyResultController(IRadiologyResultService radiologyResultService, IPatientService patientService,IDoctorService doctorService,IEmergencyAccessService emergencyAccessService) : AppControllerBase
     {
         // ==========================================
         // PATIENT & DOCTOR WORKFLOW (Retrieving)
@@ -60,8 +61,16 @@ namespace Helix.API.Controllers
         [Authorize(Roles = nameof(EnRoles.Doctor))]
         public async Task<IActionResult> GetPatientRadiologyRecords(Guid patientId)
         {
-            if (!User.HasValidConsent(patientId, "Radiology"))
+            // 1. Check standard QR Consent
+            bool hasStandardConsent = User.HasValidConsent(patientId, "Radiology");
+
+            var doctorId = await User.GetDoctorIdAsync(doctorService);
+            // 2. Check Emergency "Break the Glass" Consent
+            bool hasEmergencyConsent = await emergencyAccessService.HasActiveEmergencyAccessAsync(doctorId, patientId);
+
+            if (!hasStandardConsent && !hasEmergencyConsent)
             {
+
                 var forbiddenResponse = new Helix.Core.Bases.Response<bool>(false)
                 {
                     Succeeded = false,

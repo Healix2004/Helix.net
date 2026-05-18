@@ -14,7 +14,7 @@ namespace Helix.API.Controllers
 {
     [Route("api/allergies")] // FIX 1: Explicit RESTful routing
     [ApiController]
-    public class AllergyController(IMediator mediator, IPatientService patientService) : AppControllerBase
+    public class AllergyController(IMediator mediator, IPatientService patientService, IDoctorService doctorService, IEmergencyAccessService emergencyAccessService) : AppControllerBase
     {
         // ==========================================
         // 1. PATIENT WORKFLOW
@@ -43,10 +43,22 @@ namespace Helix.API.Controllers
         [ProducesResponseType(typeof(IEnumerable<AllergyDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetPatientAllergies(Guid patientId)
         {
-            // THE CONSENT CHECK: Looking for the "Allergies" scope
-            if (!User.HasValidConsent(patientId, "Allergies"))
+            // 1. Check standard QR Consent
+            bool hasStandardConsent = User.HasValidConsent(patientId, "Allergies");
+
+            var doctorId = await User.GetDoctorIdAsync(doctorService);
+            // 2. Check Emergency "Break the Glass" Consent
+            bool hasEmergencyConsent = await emergencyAccessService.HasActiveEmergencyAccessAsync(doctorId, patientId);
+
+            if (!hasStandardConsent && !hasEmergencyConsent)
             {
-                return Forbid("You do not have active consent to view this patient's allergy records.");
+                var forbiddenResponse = new Helix.Core.Bases.Response<bool>(false)
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.Forbidden,
+                    Message = "You do not have active consent to view this patient's allergy records."
+                };
+                return NewResult(forbiddenResponse);
             }
 
             var query = new GetAllergyListForPatientQuery(patientId);

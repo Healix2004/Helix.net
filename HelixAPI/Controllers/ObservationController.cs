@@ -18,7 +18,7 @@ namespace Helix.API.Controllers
     /// </summary>
     [Route("api/observations")] // FIX 1: Explicit RESTful routing
     [ApiController]
-    public class ObservationController(IMediator mediator, IPatientService patientService) : AppControllerBase
+    public class ObservationController(IMediator mediator, IPatientService patientService, IDoctorService doctorService, IEmergencyAccessService emergencyAccessService) : AppControllerBase
     {
         // ==========================================
         // 1. PATIENT WORKFLOW
@@ -43,12 +43,18 @@ namespace Helix.API.Controllers
         // ==========================================
 
         [HttpGet("patient/{patientId}")]
-        [Authorize(Roles = "Doctor,Nurse")] // If you have a Nurse role, they usually need to read vitals too!
+        [Authorize(Roles = nameof(EnRoles.Doctor))] 
         [ProducesResponseType(typeof(IEnumerable<ObservationDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetPatientObservations(Guid patientId)
         {
-            // THE CONSENT CHECK: Looking for the "Observations" (or "Vitals") scope
-            if (!User.HasValidConsent(patientId, "Observations"))
+            // 1. Check standard QR Consent
+            bool hasStandardConsent = User.HasValidConsent(patientId, "Observations");
+
+            var doctorId = await User.GetDoctorIdAsync(doctorService);
+            // 2. Check Emergency "Break the Glass" Consent
+            bool hasEmergencyConsent = await emergencyAccessService.HasActiveEmergencyAccessAsync(doctorId, patientId);
+
+            if (!hasStandardConsent && !hasEmergencyConsent)
             {
                 var forbiddenResponse = new Helix.Core.Bases.Response<bool>(false)
                 {

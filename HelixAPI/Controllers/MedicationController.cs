@@ -17,7 +17,7 @@ namespace Helix.API.Controllers
     /// </summary>
     [Route("api/medications")] // FIX 1: Explicit RESTful routing
     [ApiController]
-    public class MedicationController(IMediator mediator, IPatientService patientService) : AppControllerBase
+    public class MedicationController(IMediator mediator, IPatientService patientService, IDoctorService doctorService, IEmergencyAccessService emergencyAccessService) : AppControllerBase
     {
         // ==========================================
         // 1. PATIENT WORKFLOW
@@ -46,10 +46,22 @@ namespace Helix.API.Controllers
         [ProducesResponseType(typeof(IEnumerable<MedicationDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetPatientMedications(Guid patientId)
         {
-            // THE CONSENT CHECK: Looking for the "Medications" or "Prescriptions" scope
-            if (!User.HasValidConsent(patientId, "Medications"))
+            // 1. Check standard QR Consent
+            bool hasStandardConsent = User.HasValidConsent(patientId, "Medications");
+
+            var doctorId = await User.GetDoctorIdAsync(doctorService);
+            // 2. Check Emergency "Break the Glass" Consent
+            bool hasEmergencyConsent = await emergencyAccessService.HasActiveEmergencyAccessAsync(doctorId, patientId);
+
+            if (!hasStandardConsent && !hasEmergencyConsent)
             {
-                return Forbid("You do not have active consent to view this patient's medication history.");
+                var forbiddenResponse = new Helix.Core.Bases.Response<bool>(false)
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.Forbidden,
+                    Message = "You do not have active consent to view this patient's clinical Medications."
+                };
+                return NewResult(forbiddenResponse);
             }
 
             var query = new GetMedicationListForPatientQuery(patientId);

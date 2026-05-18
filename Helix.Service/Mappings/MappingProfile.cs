@@ -93,8 +93,8 @@ namespace Helix.Service.Mappings
 
             // Consent Mappings
             CreateMap<Consent, Helix.Service.DTOs.ConsentDTOs.ConsentDto>()
-                .ForMember(dest => dest.PatientId, opt => opt.MapFrom(src => src.Patient != null ? src.Patient.Id : default(System.Guid)))
-                .ForMember(dest => dest.DoctorId, opt => opt.MapFrom(src => src.Doctor != null ? src.Doctor.Id : default(System.Guid)));
+                .ForMember(dest => dest.PatientId, opt => opt.MapFrom(src => src.PatientId))
+                .ForMember(dest => dest.DoctorId, opt => opt.MapFrom(src => src.DoctorId));
 
             CreateMap<Helix.Service.DTOs.ConsentDTOs.CreateConsentDto, Consent>()
                 .ForMember(dest => dest.Patient, opt => opt.Ignore())

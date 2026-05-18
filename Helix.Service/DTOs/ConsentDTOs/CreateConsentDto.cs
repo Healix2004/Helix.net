@@ -8,6 +8,5 @@ namespace Helix.Service.DTOs.ConsentDTOs
         public Guid DoctorId { get; set; }
         public DateTime ConsentGrantedAt { get; set; } = DateTime.Now;
         public DateTime ConsentExpiresAt { get; set; }
-        public bool IsEmergencyOverride { get; set; }
     }
 }
