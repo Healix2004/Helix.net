@@ -41,22 +41,8 @@ else
         app.UseCors("AllowAll"); // Fallback to AllowAll if not configured  
     }
 }
- 
-// Only use HTTPS redirection if not behind a reverse proxy (IIS handles this)
-// Comment out if causing issues on monsterasp.net
-// app.UseHttpsRedirection();
-var uploadPath = Path.Combine(builder.Environment.ContentRootPath, "Uploads");
-if (!File.Exists(uploadPath))
-{
-    Directory.CreateDirectory(uploadPath);
-}
 
-// Enable static file serving for uploaded files
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(uploadPath),
-    RequestPath = "/Uploads"
-});
+app.UseStaticFiles();
 
 // Authentication & Authorization middleware (order matters!)
 app.UseAuthentication(); // Must be before UseAuthorization

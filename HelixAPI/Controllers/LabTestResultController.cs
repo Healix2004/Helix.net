@@ -3,34 +3,58 @@ using Helix.Core.Features.LabTestResults.Commands.Models;
 using Helix.Core.Features.LabTestResults.Queries.Models;
 using Helix.Data.Enums;
 using Helix.Service.DTOs.LabTestResultDTOs;
+using Helix.Service.Helper;
 using Helix.Service.Interfaces;
-using Helix.Service.Services.PatientService;
-using Hl7.Fhir.Model;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Helix.API.Controllers
 {
-    /// <summary>
-    /// Manages laboratory test result records in the Helix healthcare system.
-    /// </summary>
-    [Route("api/[controller]")]
+    [Route("api/lab-results")] // FIX 1: Explicit RESTful routing instead of [controller]
     [ApiController]
-    public class LabTestResultController(IMediator mediator,IPatientService patientService) : AppControllerBase
+    public class LabTestResultController(IMediator mediator, IPatientService patientService) : AppControllerBase
     {
+        // ==========================================================
+        // 1. FOR THE PATIENT (No Consent Needed)
+        // ==========================================================
+        [HttpGet("my-labs")] // FIX 2: Explicit path to prevent route collisions
         [Authorize(Roles = nameof(EnRoles.Patient))]
-        [HttpGet]
         public async Task<IActionResult> GetPatientLabResult()
         {
-            var query = new GetLabTestResultListForPatientQuery(GetPatientId());
+            // Safely extracting the patient ID without blocking threads!
+            var patientId = await User.GetPatientIdAsync(patientService);
+
+            var query = new GetLabTestResultListForPatientQuery(patientId);
             var response = await mediator.Send(query);
             return NewResult(response);
         }
 
+        // ==========================================================
+        // 2. FOR THE DOCTOR (Requires the 2-Hour Consent Token)
+        // ==========================================================
+        [HttpGet("patient/{patientId}")]
+        [Authorize(Roles = nameof(EnRoles.Doctor))]
+        public async Task<IActionResult> GetPatientLabRecords(Guid patientId)
+        {
+            // THE CONSENT CHECK: Looking for the "Labs" scope we defined earlier
+            if (!User.HasValidConsent(patientId, "Labs"))
+            {
+                return Forbid("You do not have active consent to view this patient's Lab records.");
+            }
+
+            // Note: You may need to create this specific Query in your MediatR Features!
+            var query = new GetLabTestResultListForPatientQuery(patientId);
+            var response = await mediator.Send(query);
+            return NewResult(response);
+        }
+
+        // ==========================================
+        // ADMIN & LAB TECH WORKFLOW (Management)
+        // ==========================================
+
+        [HttpGet("all")] // RESTful standard (changed from "Get-All")
         [Authorize(Roles = nameof(EnRoles.Admin))]
-        [HttpGet("Get-All")]
         [ProducesResponseType(typeof(IEnumerable<LabTestResultDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll()
         {
@@ -38,9 +62,9 @@ namespace Helix.API.Controllers
             var response = await mediator.Send(query);
             return NewResult(response);
         }
-        [Authorize(Roles = nameof(EnRoles.Admin))]
 
         [HttpGet("{id}")]
+        [Authorize(Roles = "Doctor,Admin")] // Allowed Doctors to look up specific IDs (if they know them)
         [ProducesResponseType(typeof(LabTestResultDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetById(int id)
@@ -51,6 +75,7 @@ namespace Helix.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")] // CRITICAL FIX 3: Locked down the Create endpoint
         [ProducesResponseType(typeof(LabTestResultDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Create([FromBody] CreateLabTestResultDto dto)
@@ -60,8 +85,8 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        [Authorize(Roles = nameof(EnRoles.Admin))]
         [HttpPut("{id}")]
+        [Authorize(Roles = nameof(EnRoles.Admin))]
         [ProducesResponseType(typeof(LabTestResultDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateLabTestResultDto dto)
@@ -70,8 +95,9 @@ namespace Helix.API.Controllers
             var response = await mediator.Send(command);
             return NewResult(response);
         }
-        [Authorize(Roles = nameof(EnRoles.Admin))]
+
         [HttpDelete("{id}")]
+        [Authorize(Roles = nameof(EnRoles.Admin))]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Delete(int id)
@@ -80,22 +106,5 @@ namespace Helix.API.Controllers
             var response = await mediator.Send(command);
             return NewResult(response);
         }
-
-        #region Help
-        private Guid GetPatientId()
-        {
-            // 1. Extract the user ID from the JWT Claims
-            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            // 2. get the patient record based on the user ID
-            var patient = patientService.GetPatientByUserIdAsync(userIdString).Result;
-            if (patient != null)
-            {
-                return patient.Id;
-            }
-
-            throw new UnauthorizedAccessException("Invalid patient ID.");
-        }
-
-        #endregion
     }
 }

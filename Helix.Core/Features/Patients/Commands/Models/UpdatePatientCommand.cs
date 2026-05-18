@@ -6,8 +6,8 @@ namespace Helix.Core.Features.Patients.Commands.Models
 {
     public class UpdatePatientCommand : IRequest<Response<PatientDto>>
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
         public UpdatePatientDto Dto { get; set; }
-        public UpdatePatientCommand(int id, UpdatePatientDto dto) { Id = id; Dto = dto; }
+        public UpdatePatientCommand(Guid id, UpdatePatientDto dto) { Id = id; Dto = dto; }
     }
 }

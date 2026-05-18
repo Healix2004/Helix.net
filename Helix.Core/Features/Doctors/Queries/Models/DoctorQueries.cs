@@ -8,7 +8,7 @@ namespace Helix.Core.Features.Doctors.Queries.Models
 
     public class GetDoctorByIdQuery : IRequest<Response<DoctorDto>>
     {
-        public int Id { get; set; }
-        public GetDoctorByIdQuery(int id) => Id = id;
+        public Guid Id { get; set; }
+        public GetDoctorByIdQuery(Guid id) => Id = id;
     }
 }

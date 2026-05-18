@@ -4,8 +4,10 @@ using Helix.Data.Enums;
 using Helix.Service.DTOs.LabTestResultDTOs;
 using Helix.Service.DTOs.RadiologyOrderDto;
 using Helix.Service.DTOs.RadiologyTestResultDto;
+using Helix.Service.Helper;
 using Helix.Service.Interfaces;
 using Helix.Service.Services.LabTestResultService;
+using Helix.Service.Services.PatientService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -23,7 +25,7 @@ namespace Helix.API.Controllers
         [HttpGet("patient/GetPendingOrders")]
         public async Task<IActionResult> GetPendingOrders()
         {
-            var patientId = GetPatientId();
+            var patientId = await User.GetPatientIdAsync(patientService);
             var result = await radiologyOrderService.GetPendingOrdersAsync(patientId);
             var response = new Response<List<PendingRadiologyOrderDto>>(result)
             {
@@ -68,7 +70,7 @@ namespace Helix.API.Controllers
         [HttpGet("doctor/all")]
         public async Task<IActionResult> GetOrdersByDoctor()
         {
-            var doctorId = GetDoctorId();
+            var doctorId = await User.GetDoctorIdAsync(doctorService);
             var result = await radiologyOrderService.GetOrdersByDoctorAsync(doctorId);
             var response = new Response<List<RadiologyOrderDto>>(result)
             {
@@ -83,7 +85,7 @@ namespace Helix.API.Controllers
         [HttpPost("create")]
         public async Task<IActionResult> CreateRadiologyOrder([FromBody] CreateRadiologyOrderDto dto)
         {
-            dto.DoctorId = GetDoctorId();
+            dto.DoctorId = await User.GetDoctorIdAsync(doctorService);
             var result = await radiologyOrderService.CreateRadiologyOrderAsync(dto);
             var response = new Response<Guid>(result.ToString())
             {
@@ -162,33 +164,5 @@ namespace Helix.API.Controllers
             };
             return NewResult(response);
         }
-
-        #region helper 
-        private Guid GetPatientId()
-        {
-            // 1. Extract the user ID from the JWT Claims
-            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            // 2. get the patient record based on the user ID
-            var patient = patientService.GetPatientByUserIdAsync(userIdString).Result;
-            if (patient != null)
-            {
-                return patient.Id;
-            }
-
-            throw new UnauthorizedAccessException("Invalid patient ID.");
-        }
-
-        private Guid GetDoctorId()
-        {
-            // 1. Extract the user ID from the JWT Claims
-            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var doctor = doctorService.GetDoctorByUserIdAsync(userIdString).Result;
-            if (doctor != null)
-            {
-                return doctor.Id;
-            }
-            throw new UnauthorizedAccessException("Invalid doctor ID.");
-        }
-        #endregion
     }
 }
