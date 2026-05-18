@@ -40,7 +40,13 @@ namespace Helix.API.Controllers
             // THE CONSENT CHECK: Looking for the "Labs" scope we defined earlier
             if (!User.HasValidConsent(patientId, "Labs"))
             {
-                return Forbid("You do not have active consent to view this patient's Lab records.");
+                var forbiddenResponse = new Helix.Core.Bases.Response<bool>(false)
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.Forbidden,
+                    Message = "You do not have active consent to view this patient's Lab records."
+                };
+                return NewResult(forbiddenResponse);
             }
 
             // Note: You may need to create this specific Query in your MediatR Features!

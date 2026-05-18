@@ -62,7 +62,13 @@ namespace Helix.API.Controllers
         {
             if (!User.HasValidConsent(patientId, "Radiology"))
             {
-                return Forbid("You do not have active consent to view these records.");
+                var forbiddenResponse = new Helix.Core.Bases.Response<bool>(false)
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.Forbidden,
+                    Message = "You do not have active consent to view these records."
+                };
+                return NewResult(forbiddenResponse);
             }
 
             var results = await radiologyResultService.GetRadiologyResultsByPatientIdAsync(patientId);

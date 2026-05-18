@@ -50,7 +50,13 @@ namespace Helix.API.Controllers
             // THE CONSENT CHECK: Looking for the "Observations" (or "Vitals") scope
             if (!User.HasValidConsent(patientId, "Observations"))
             {
-                return Forbid("You do not have active consent to view this patient's clinical observations.");
+                var forbiddenResponse = new Helix.Core.Bases.Response<bool>(false)
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.Forbidden,
+                    Message = "You do not have active consent to view this patient's clinical observations."
+                };
+                return NewResult(forbiddenResponse);
             }
 
             var query = new GetObservationListForPatientQuery(patientId);

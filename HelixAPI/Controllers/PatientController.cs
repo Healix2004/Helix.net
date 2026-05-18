@@ -46,7 +46,13 @@ namespace Helix.API.Controllers
             // If the user is a Doctor, they MUST have active consent to view the demographics!
             if (User.IsInRole(nameof(EnRoles.Doctor)) && !User.HasValidConsent(id, "Demographics"))
             {
-                return Forbid("You do not have active consent to view this patient's profile.");
+                var forbiddenResponse = new Helix.Core.Bases.Response<bool>(false)
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.Forbidden,
+                    Message = "You do not have active consent to view this patient's profile."
+                };
+                return NewResult(forbiddenResponse);
             }
 
             // Admins bypass the consent check automatically

@@ -48,7 +48,13 @@ namespace Helix.API.Controllers
             // THE CONSENT CHECK: Looking for the "Diagnoses" scope
             if (!User.HasValidConsent(patientId, "Diagnoses"))
             {
-                return Forbid("You do not have active consent to view this patient's medical diagnoses.");
+                var forbiddenResponse = new Helix.Core.Bases.Response<bool>(false)
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.Forbidden,
+                    Message = "You do not have active consent to view this patient's clinical diagnoses."
+                };
+                return NewResult(forbiddenResponse);
             }
 
             var query = new GetDiagnoseListForPatientQuery(patientId);

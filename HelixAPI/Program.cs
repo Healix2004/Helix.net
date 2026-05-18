@@ -24,6 +24,7 @@ if (app.Environment.IsDevelopment()||true)
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Helix API V1");
         c.RoutePrefix = "swagger"; // Swagger UI will be available at /swagger
         c.DisplayRequestDuration();
+        c.EnablePersistAuthorization();
     });
     app.UseCors("AllowAll"); // Allow all origins in development
 }
