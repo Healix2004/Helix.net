@@ -37,22 +37,22 @@ namespace Helix.Core.Features.Auth.Commands.Handler
             }
         }
     }
-    public class RegisterStep1CommandHandler : IRequestHandler<RegisterStep1Command, Response<AuthDto>>
+    public class RegisterPatientCommandHandler : IRequestHandler<RegisterPatientCommand, Response<AuthDto>>
     {
         private readonly IAuthService _authService;
         private readonly ResponseHandler _responseHandler;
 
-        public RegisterStep1CommandHandler(IAuthService authService, ResponseHandler responseHandler)
+        public RegisterPatientCommandHandler(IAuthService authService, ResponseHandler responseHandler)
         {
             _authService = authService;
             _responseHandler = responseHandler;
         }
 
-        public async Task<Response<AuthDto>> Handle(RegisterStep1Command request, CancellationToken cancellationToken)
+        public async Task<Response<AuthDto>> Handle(RegisterPatientCommand request, CancellationToken cancellationToken)
         {
             try
             {
-                var result = await _authService.RegisterStep1Async(request.RegisterStep1Dto);
+                var result = await _authService.RegisterPatientAsync(request.RegisterPatientDto);
                 
                 if (result == null || string.IsNullOrEmpty(result.AccessToken))
                 {

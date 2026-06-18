@@ -1,4 +1,7 @@
+using AutoMapper;
+using Helix.Data.Entities;
 using Helix.Service.DTOs.Terminology;
+using Helix.Service.Services.NotificationService;
 
 namespace Helix.Service.Interfaces
 {

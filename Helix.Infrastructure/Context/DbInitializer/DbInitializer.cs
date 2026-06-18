@@ -49,8 +49,6 @@ namespace Helix.Infrastructure.Context.DbInitializer
                     Email = adminEmail,
                     EmailConfirmed = true,
                     Address = "Admin Address",
-                    Gender = EnGenders.Male.ToString(),
-                    DataOfBrith = new DateTime(2004, 2, 18),  
                 };
 
                 var result = await _userManager.CreateAsync(user, "Admin#123");

@@ -13,18 +13,18 @@ namespace Helix.Core.Features.Auth.Commands.Validation
 
             When(x => x.RegisterDoctorDto != null, () =>
             {
-                RuleFor(x => x.RegisterDoctorDto.Username)
+                RuleFor(x => x.RegisterDoctorDto.AccountDetails.Username)
                     .NotEmpty()
                     .WithMessage("Username is required")
                     .MinimumLength(3)
                     .WithMessage("Username must be at least 3 characters long");
 
-                RuleFor(x => x.RegisterDoctorDto.Password)
+                RuleFor(x => x.RegisterDoctorDto.AccountDetails.Password)
                     .NotEmpty()
                     .WithMessage("Password is required")
                     .MinimumLength(6)
                     .WithMessage("Password must be at least 6 characters long");
-                RuleFor(x => x.RegisterDoctorDto.Email)
+                RuleFor(x => x.RegisterDoctorDto.AccountDetails.Email)
                     .NotEmpty()
                     .WithMessage("Email address is required")
                     .EmailAddress()

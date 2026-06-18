@@ -11,8 +11,9 @@ namespace Helix.Data.Entities
         public string FirstName { get; set; } = default!;
         public string MiddleName { get; set; } = default!;
         public string LastName { get; set; } = default!;
-        public string Gender { get; set; } = default!;
+        public string NationalId { get; set; } = default!;
         public string Address { get; set; } = default!;
-        public DateTime DataOfBrith { get; set; } 
+        public bool NotificationsEnabled { get; set; }
+        public string ProfilePictureUrl { get; set; } = default!;
     }
 }

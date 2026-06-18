@@ -1,24 +1,48 @@
-﻿using System;
+﻿using Helix.Data.Enums;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 
 namespace Helix.Data.Entities
 {
     public class Doctor : BaseEntity
     {
-        // Relation With AppUser
+        // --- 1. Identity Link ---
         public string AppUserId { get; set; }
         public virtual AppUser AppUser { get; set; }
+
+        // --- Step 2: Professional Information ---
         public string Specialty { get; set; } = default!;
-        public decimal ConsultationFee { get; set; } = 0;
-        public string Bio { get; set; }
         public string SyndicateNumber { get; set; }
-        public List<Encounter> Encounters { get; set; }
-        public List<Facilitie> Facilities { get; set; }
+        public string Country { get; set; }
+        public string State { get; set; }
+        public int YearsOfExperience { get; set; }
+        public string ClinicAddress { get; set; }
+        public string Bio { get; set; }
+
+        // --- Step 3: Availability & Practice ---
+        public EnConsultationType ConsultationType { get; set; } // e.g., "In-Person", "Video", "Both"
+        public decimal ConsultationFee { get; set; } = 0;
+
+        // --- Step 4: Verification ---
+        public string MedicalLicenseDocumentUrl { get; set; }
+        public string NationalIdDocumentUrl { get; set; }
+        public bool IsVerified { get; set; } = false;// This tracks if an admin has reviewed their uploaded documents
 
         //one to many ralations
+        public List<DoctorAvailability> Availabilities { get; set; } = new List<DoctorAvailability>();
+        public List<Facilitie> Facilities { get; set; } = new List<Facilitie>();
         public List<RadiologyOrder> RadiologyOrders { get; set; } = new List<RadiologyOrder>();
+        public List<Encounter> Encounters { get; set; } = new List<Encounter>();
         public List<LabOrder> LabOrders { get; set; } = new List<LabOrder>();
         public List<Consent> Consents { get; set; }= new List<Consent>();
+    }
+
+    public class DoctorAvailability : BaseEntity
+    {
+        public DayOfWeek Day { get; set; }
+        public TimeSpan StartTime { get; set; }
+        public TimeSpan EndTime { get; set; }
     }
 }

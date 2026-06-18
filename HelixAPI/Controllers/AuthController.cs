@@ -1,13 +1,16 @@
-using Azure.Core;
 using Helix.Api.Base;
 using Helix.Core.Bases;
 using Helix.Core.Features.Auth.Commands.Models;
 using Helix.Core.Features.Auth.Quieres.Models;
 using Helix.Service.DTOs.AuthDTOs;
+using Helix.Service.DTOs.DoctorDTOs;
+using Helix.Service.DTOs.PatientDTOs;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace Helix.API.Controllers
 {
@@ -24,49 +27,29 @@ namespace Helix.API.Controllers
             var command = new LoginCommand(dto);
             var result = await mediator.Send(command);
 
-            return StatusCode((int)(result.StatusCode), result);
+            return NewResult(result);
         }
 
-        [HttpPost("register")]
+        [HttpPost("register_patient")]
         [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> Register([FromForm] RegisterDto dto)
+        public async Task<IActionResult> RegisterPatient([FromForm] PatientRegistrationPayloadDto dto)
         {
-            var command = new RegisterCommand(dto);
+            var command = new RegisterPatientCommand(dto);
             var result = await mediator.Send(command);
 
-            if (!result.Succeeded)
-            {
-                return StatusCode((int)(result.StatusCode), result);
-            }
+            return NewResult(result);
+        }
 
-            return StatusCode((int)(result.StatusCode), result);
-        }
-        [HttpPost("register_step1")]
+        [HttpPost("register_doctor")]
         [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> RegisterStep1([FromForm] RegisterStep1Dto dto)
-        {
-            var command = new RegisterStep1Command(dto);
-            var result = await mediator.Send(command);
-            if(!result.Succeeded)
-            {
-                return StatusCode((int)(result.StatusCode), result);
-            }
-            return StatusCode((int)(result.StatusCode), result);
-        }
-        [HttpPost("registerDoctor")]
-        [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status201Created)]
-        [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> RegisterDoctor([FromForm] RegisterDoctorDto dto)
+        public async Task<IActionResult> RegisterDoctor([FromForm] DoctorRegistrationPayloadDto dto)
         {
             var command = new RegisterDoctorCommand(dto);
             var result = await mediator.Send(command);
-            if(!result.Succeeded)
-            {
-                return StatusCode((int)(result.StatusCode), result);
-            }
-            return StatusCode((int)(result.StatusCode), result);
+
+            return NewResult(result);
         }
 
         [HttpGet("profile/{userId}")]
@@ -78,7 +61,7 @@ namespace Helix.API.Controllers
             var query = new GetUserProfileQuery(userId);
             var result = await mediator.Send(query);
 
-            return StatusCode((int)(result.StatusCode), result);
+            return NewResult(result);
         }
 
         [HttpGet("user/{email}")]
@@ -90,7 +73,7 @@ namespace Helix.API.Controllers
             var query = new GetUserByEmailQuery(email);
             var result = await mediator.Send(query);
 
-            return StatusCode((int)(result.StatusCode), result);
+            return NewResult(result);
         }
 
         [HttpPost("forgot-password")]
@@ -101,7 +84,7 @@ namespace Helix.API.Controllers
             var command = new ForgetPasswordCommand(dto);
             var result = await mediator.Send(command);
 
-            return StatusCode((int)(result.StatusCode), result);
+            return NewResult(result);
         }
 
         [HttpPost("reset-password")]
@@ -112,7 +95,7 @@ namespace Helix.API.Controllers
             var command = new ResetPasswordCommand(dto);
             var result = await mediator.Send(command);
 
-            return StatusCode((int)(result.StatusCode), result);
+            return NewResult(result);
         }
 
         [HttpPost("change-password")]
@@ -122,7 +105,7 @@ namespace Helix.API.Controllers
         [ProducesResponseType(typeof(Response<string>), StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
         {
-            // Get user ID from claims
+            // Extract the user ID from the JWT token claims
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (string.IsNullOrEmpty(userId))
@@ -131,14 +114,14 @@ namespace Helix.API.Controllers
                 {
                     StatusCode = System.Net.HttpStatusCode.Unauthorized,
                     Succeeded = false,
-                    Message = "User ID not found in token"
+                    Message = "User ID not found in token."
                 });
             }
 
             var command = new ChangePasswordCommand(dto, userId);
             var result = await mediator.Send(command);
 
-            return StatusCode((int)(result.StatusCode), result);
+            return NewResult(result);
         }
 
         [HttpPost("confirm-email")]
@@ -149,7 +132,7 @@ namespace Helix.API.Controllers
             var command = new ConfirmEmailCommand(dto);
             var result = await mediator.Send(command);
 
-            return StatusCode((int)(result.StatusCode), result);
+            return NewResult(result);
         }
     }
 }

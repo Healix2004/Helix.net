@@ -51,7 +51,7 @@ namespace Helix.Core.Features.Auth.Commands.Validation
                     .MaximumLength(100)
                     .WithMessage("Last name must not exceed 100 characters");
 
-                RuleFor(x => x.RegisterDto.MobileNumber)
+                RuleFor(x => x.RegisterDto.PhoneNumber)
                     .NotEmpty()
                     .WithMessage("Mobile number is required");
 

@@ -67,6 +67,43 @@ namespace Helix.Service.Services.FileServices
                 };
             }
         }
+        public async Task<string> UploadFileAsync(IFormFile file)
+        {
+            try
+            {
+                if (file == null || file.Length == 0)
+                {
+                    return null;
+                }
+
+                // Validate file
+                var validationResult = ValidateFile(file);
+                if (!validationResult.IsValid)
+                {
+                    return null;
+                }
+
+                var (folderPath, savePath, fullPath, dbPath) = GenerateFilePaths(file.FileName);
+
+                // Ensure directory exists
+                Directory.CreateDirectory(savePath);
+
+                // Save file
+                await using (var stream = new FileStream(fullPath, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                logger.LogInformation("File uploaded successfully: {FilePath}", dbPath);
+
+                return dbPath;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error uploading single file: {FileName}", file?.FileName);
+                return null;
+            }
+        }
         public async Task<IEnumerable<RadiologyImage>> UploadMultipleFilesAsync(List<IFormFile> files , string PatientName, Guid PatientId)
         {
             try

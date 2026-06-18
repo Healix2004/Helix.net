@@ -1,4 +1,5 @@
 using Helix.API;
+using Helix.API.Hubs;
 using Helix.Infrastructure.Context.DbInitializer;
 using Helix.Service;
 using Microsoft.Extensions.FileProviders;
@@ -49,6 +50,7 @@ app.UseStaticFiles();
 app.UseAuthentication(); // Must be before UseAuthorization
 app.UseAuthorization();
 
+app.MapHub<NotificationHub>("/notification");
 app.MapControllers();
 
 #region Update and Initialize Database

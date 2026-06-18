@@ -10,6 +10,7 @@ using Helix.Service.Services.AuthServices;
 using Helix.Service.Services.DrugDataService;
 using Helix.Service.Services.FileServices;
 using Helix.Service.Services.LoincTerminology;
+using Helix.Service.Services.NotificationService;
 using Helix.Service.Services.RadiologyOrderService;
 using Helix.Service.Services.RxNavTerminology;
 using Helix.Service.Services.SnowstormTerminology;
@@ -57,6 +58,7 @@ namespace Helix.Service
             services.AddLabTestResultService();
             services.AddTerminologyCodeLookupService();
             services.AddUnitOfWork();
+            services.AddNotificationService();
             services.AddLoincService(configuration);
             services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
             services.AddMemoryCache();
@@ -261,6 +263,11 @@ namespace Helix.Service
         private static IServiceCollection AddLabOrderService (this IServiceCollection services)
         {
             services.AddScoped<ILabOrderService, Helix.Service.Services.LabOrderService.LabOrderService>();
+            return services;
+        }
+        private static IServiceCollection AddNotificationService(this IServiceCollection services)
+        {
+            services.AddScoped<INotificationService,NotificationService>();
             return services;
         }
         private static IServiceCollection AddLoincService(this IServiceCollection services, IConfiguration configuration)

@@ -1,4 +1,6 @@
-﻿using Helix.Core;
+﻿using Helix.API.Adapters;
+using Helix.Core;
+using Helix.Service.Interfaces;
 using Microsoft.OpenApi.Models;
 
 namespace Helix.API
@@ -11,6 +13,7 @@ namespace Helix.API
             services.AddCoreDependencies(); // Register MediatR, Validators, etc.
             services.AddSwagger();
             services.AddCors(configuration);
+            services.AddNotificationDispatcher();
             return services;
         }
 
@@ -72,6 +75,12 @@ namespace Helix.API
                     }
                 });
             });
+            return services;
+        }
+        private static IServiceCollection AddNotificationDispatcher(this IServiceCollection services)
+        {
+            services.AddTransient<INotificationDispatcher, SignalRNotificationDispatcher>();
+            services.AddSignalR();
             return services;
         }
     }

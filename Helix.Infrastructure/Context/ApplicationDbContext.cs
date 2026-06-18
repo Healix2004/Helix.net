@@ -119,5 +119,6 @@ namespace Helix.Infrastructure.Context
         public DbSet<RadiologyResult> RadiologyResults { get; set; }
         public DbSet<RadiologyOrder> RadiologyOrders { get; set; } 
         public DbSet<EmergencyOverrideLog> emergencyOverrideLogs { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
     }
 }
