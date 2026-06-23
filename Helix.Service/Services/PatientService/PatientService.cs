@@ -3,6 +3,7 @@ using Helix.Data.Entities;
 using Helix.Service.DTOs.PatientDTOs;
 using Helix.Service.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Helix.Service.Services.PatientService
 {
@@ -16,14 +17,20 @@ namespace Helix.Service.Services.PatientService
             {
                 throw new Exception($"Identity User with ID {createPatientDto.AppUserId} not found.");
             }
-
+            if(await unitOfWork.Repository<Patient>().FindAsync(p => p.AppUserId == createPatientDto.AppUserId) is { Count: > 0 })
+            {
+                throw new Exception($"A patient already exists for the Identity User with ID {createPatientDto.AppUserId}.");
+            }
             var patient = mapper.Map<Patient>(createPatientDto);
 
             // 2. EF Core Optimization: Just set the Foreign Key string
             patient.AppUserId = createPatientDto.AppUserId;
 
             await unitOfWork.Repository<Patient>().AddAsync(patient);
+
             await unitOfWork.CompleteAsync(); // Asynchronous database commit
+
+            patient = await unitOfWork.Repository<Patient>().GetByIdAsync(patient.Id); // Fetch the patient with the AppUser navigation property
 
             return mapper.Map<PatientDto>(patient);
         }
@@ -45,14 +52,16 @@ namespace Helix.Service.Services.PatientService
 
         public async Task<IEnumerable<PatientDto>> GetAllPatientsAsync()
         {
-            // 4. True asynchronous execution
-            var patients = await unitOfWork.Repository<Patient>().GetAllAsync();
+            var quary = await unitOfWork.Repository<Patient>().FindAsQueryable(p=>true);
+            var patients = await quary.Include(p=>p.AppUser).ToListAsync();
             return mapper.Map<IEnumerable<PatientDto>>(patients);
         }
 
         public async Task<PatientDto?> GetPatientByIdAsync(Guid id)
         {
-            var patient = await unitOfWork.Repository<Patient>().GetByIdAsync(id);
+            var quary = await unitOfWork.Repository<Patient>().FindAsQueryable(p => p.Id == id);
+            var patient = quary.Include(p => p.AppUser).FirstOrDefault();
+
             return patient == null ? null : mapper.Map<PatientDto>(patient);
         }
 

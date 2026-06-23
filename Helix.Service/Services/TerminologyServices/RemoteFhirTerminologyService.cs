@@ -3,6 +3,7 @@ using Helix.Service.Interfaces;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Rest;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,16 +16,29 @@ namespace Helix.Infrastructure.ExternalServices
     public class RemoteFhirTerminologyService : ITerminologyService
     {
         private readonly FhirClient _client;
+        private readonly ILogger<RemoteFhirTerminologyService> _logger;
 
-        public RemoteFhirTerminologyService(IConfiguration config)
+        public RemoteFhirTerminologyService(IConfiguration config, ILogger<RemoteFhirTerminologyService> logger)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
             var serverUrl = config["Fhir:ServerUrl"];
+
+            // IMPROVEMENT 1: Configuration Safety. 
+            // Fails immediately with a clear message if the URL is missing, rather than throwing a NullReferenceException later.
+            if (string.IsNullOrWhiteSpace(serverUrl))
+            {
+                throw new InvalidOperationException("FHIR Server URL is missing in the configuration (Fhir:ServerUrl).");
+            }
+
             var username = config["Fhir:Username"];
             var password = config["Fhir:Password"];
 
             var settings = new FhirClientSettings
             {
-                Timeout = 30000,
+                // IMPROVEMENT 2: Fail Fast. 
+                // Reduced from 30s to 10s. A UI search dropdown should never make a user wait 30 seconds.
+                Timeout = 10000,
                 PreferredFormat = ResourceFormat.Json
             };
 
@@ -45,6 +59,11 @@ namespace Helix.Infrastructure.ExternalServices
             var parameters = new Parameters();
             parameters.Add("filter", new FhirString(filterText));
 
+            // IMPROVEMENT 3: Added a result limit.
+            // Just like the issue you faced with Snowstorm, querying a FHIR server without a limit 
+            // will cause it to crash or timeout on broad searches.
+            parameters.Add("count", new Integer(20));
+
             if (!string.IsNullOrEmpty(systemUri))
             {
                 // SNOMED Fix: Append ?fhir_vs if missing
@@ -57,8 +76,6 @@ namespace Helix.Infrastructure.ExternalServices
 
             try
             {
-                // FIX: Combine Base Endpoint with Relative Path to create an ABSOLUTE URI.
-                // Resolves "Must be an absolute url" error.
                 var absoluteUri = new Uri(_client.Endpoint, "ValueSet/$expand");
 
                 var resource = await _client.OperationAsync(
@@ -77,9 +94,15 @@ namespace Helix.Infrastructure.ExternalServices
                     }).ToList();
                 }
             }
-            catch (FhirOperationException)
+            catch (FhirOperationException ex)
             {
-                return new List<CodingDto>();
+                // IMPROVEMENT 4: Structured Logging.
+                // Silently swallowing exceptions returns an empty list and hides the problem. Now you can check your logs.
+                _logger.LogWarning(ex, "FHIR Operation rejected by server during LookupCodesAsync for '{FilterText}'", filterText);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Network or unexpected error during LookupCodesAsync for '{FilterText}'", filterText);
             }
 
             return new List<CodingDto>();
@@ -93,7 +116,6 @@ namespace Helix.Infrastructure.ExternalServices
 
             try
             {
-                // FIX: Create Absolute URI for CodeSystem/$validate-code
                 var absoluteUri = new Uri(_client.Endpoint, "CodeSystem/$validate-code");
 
                 var resource = await _client.OperationAsync(
@@ -112,8 +134,9 @@ namespace Helix.Infrastructure.ExternalServices
                 }
                 return false;
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error validating code '{Code}' against system '{SystemUri}'", code, systemUri);
                 return false;
             }
         }
@@ -126,7 +149,6 @@ namespace Helix.Infrastructure.ExternalServices
 
             try
             {
-                // FIX: Create Absolute URI for CodeSystem/$lookup
                 var absoluteUri = new Uri(_client.Endpoint, "CodeSystem/$lookup");
 
                 var resource = await _client.OperationAsync(
@@ -145,8 +167,9 @@ namespace Helix.Infrastructure.ExternalServices
                 }
                 return null;
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error retrieving display text for code '{Code}' in system '{SystemUri}'", code, systemUri);
                 return null;
             }
         }

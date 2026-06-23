@@ -6,11 +6,16 @@ using Helix.Infrastructure.ExternalServices;
 using Helix.Service.Interfaces;
 using Helix.Service.Repositories;
 using Helix.Service.Services;
+using Helix.Service.Services.AllergenCatalogServices;
 using Helix.Service.Services.AuthServices;
+using Helix.Service.Services.ChronicDiseaseCatalogServices;
 using Helix.Service.Services.DrugDataService;
+using Helix.Service.Services.EmergencyAccessService;
 using Helix.Service.Services.FileServices;
 using Helix.Service.Services.LoincTerminology;
+using Helix.Service.Services.MedicationCatalogServices;
 using Helix.Service.Services.NotificationService;
+using Helix.Service.Services.ProcedureCatalogServices;
 using Helix.Service.Services.RadiologyOrderService;
 using Helix.Service.Services.RxNavTerminology;
 using Helix.Service.Services.SnowstormTerminology;
@@ -49,6 +54,7 @@ namespace Helix.Service
             services.AddAllergyService();
             services.AddDiagnoseService();
             services.AddEncounterService();
+            services.AddEmergencyAccessService();
             services.AddFacilitieService();
             services.AddMedicationService();
             services.AddObservationService();
@@ -62,6 +68,11 @@ namespace Helix.Service
             services.AddLoincService(configuration);
             services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
             services.AddMemoryCache();
+            services.AddAllergenCatalogService();
+            services.AddChronicDiseaseCatalogService();
+            services.AddChronicDiseaseCatalogService();
+            services.AddProcedureCatalogService();
+            services.AddMedicationCatalogService();
 
             services.AddScoped<ITerminologyService, RemoteFhirTerminologyService>();
             services.AddHttpClient<IRxNavTerminologyService, RxNavTerminologyService>(client =>
@@ -255,6 +266,26 @@ namespace Helix.Service
             services.AddScoped<IRadiologyResultService, Helix.Service.Services.RadiologyResultService.RadiologyResultService>();
             return services;
         }
+        private static IServiceCollection AddAllergenCatalogService(this IServiceCollection services)
+        {
+            services.AddScoped < IAllergenCatalogService, AllergenCatalogService>();
+            return services;
+        }
+        private static IServiceCollection AddChronicDiseaseCatalogService(this IServiceCollection services)
+        {
+            services.AddScoped<IChronicDiseaseCatalogService, ChronicDiseaseCatalogService>();
+            return services;
+        }
+        private static IServiceCollection AddProcedureCatalogService(this IServiceCollection services)
+        {
+            services.AddScoped<IProcedureCatalogService, ProcedureCatalogService>();
+            return services;
+        }
+        private static IServiceCollection AddMedicationCatalogService(this IServiceCollection services)
+        {
+            services.AddScoped<IMedicationCatalogService, MedicationCatalogService>();
+            return services;
+        }
         private static IServiceCollection AddLabTestResultService(this IServiceCollection services)
         {
             services.AddScoped<ILabTestResultService, Helix.Service.Services.LabTestResultService.LabTestResultService>();
@@ -268,6 +299,11 @@ namespace Helix.Service
         private static IServiceCollection AddNotificationService(this IServiceCollection services)
         {
             services.AddScoped<INotificationService,NotificationService>();
+            return services;
+        }
+        private static IServiceCollection AddEmergencyAccessService(this IServiceCollection services)
+        {
+            services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
             return services;
         }
         private static IServiceCollection AddLoincService(this IServiceCollection services, IConfiguration configuration)

@@ -1,7 +1,10 @@
 using Helix.Api.Base;
+using Helix.Core.Bases;
+using Helix.Core.Features.Auth.Commands.Models;
 using Helix.Core.Features.Patients.Commands.Models;
 using Helix.Core.Features.Patients.Queries.Models;
 using Helix.Data.Enums;
+using Helix.Service.DTOs.AuthDTOs;
 using Helix.Service.DTOs.PatientDTOs;
 using Helix.Service.Helper;
 using Helix.Service.Interfaces; // ADDED: Need this to inject IPatientService
@@ -18,8 +21,16 @@ namespace Helix.API.Controllers
     /// </summary>
     [Route("api/patients")] // FIX 1: Explicit RESTful routing
     [ApiController]
-    public class PatientController(IMediator mediator, IPatientService patientService,IDoctorService doctorService,IEmergencyAccessService emergencyAccessService) : AppControllerBase
+    public class PatientController(IMediator mediator, IPatientService patientService, IDoctorService doctorService, IEmergencyAccessService emergencyAccessService) : AppControllerBase
     {
+        [HttpPost("register-patient")]
+        public async Task<IActionResult> RegisterPatient([FromBody] CreatePatientDto dto)
+        {
+            var command = new CreatePatientCommand(dto);
+            var result = await mediator.Send(command);
+
+            return NewResult(result);
+        }
         // ==========================================================
         // 1. FOR THE PATIENT (Fetching their own profile)
         // ==========================================================
@@ -121,5 +132,5 @@ namespace Helix.API.Controllers
             var response = await mediator.Send(command);
             return NewResult(response);
         }
-    }
+    }    
 }

@@ -37,12 +37,13 @@ namespace Helix.Service.Services.AuthServices
             if (user.EmailConfirmed == false)
             {
                 // resend email confirmation code 
-                await ResendConfirmationEmailAsync(user);
+                await sendConfirmationEmailAsync(user.Id);
                 throw new InvalidOperationException("Email not confirmed. Please confirm your email before logging in.");
             }
 
             var token = await tokenProvider.GenerateAccessTokenAsync(user);
-            return new AuthDto { UserId = user.Id, AccessToken = token };
+            var roles = await userManager.GetRolesAsync(user);
+            return new AuthDto { UserId = user.Id, AccessToken = token, Roles = roles.ToList() };
         }
 
         public async Task<AuthDto> RegisterAsync(RegisterDto dto)
@@ -71,128 +72,11 @@ namespace Helix.Service.Services.AuthServices
             }
 
             // Send email confirmation code
-            await ResendConfirmationEmailAsync(user);
+            await sendConfirmationEmailAsync(user.Id);
 
             var token = await tokenProvider.GenerateAccessTokenAsync(user);
             return new AuthDto { UserId = user.Id, AccessToken = token };
         }
-
-        public async Task<AuthDto> RegisterPatientAsync(PatientRegistrationPayloadDto payload)
-        {
-            if (payload == null || payload.AccountDetails == null || payload.MedicalDetails == null)
-            {
-                throw new ArgumentNullException(nameof(payload), "Complete registration data is required.");
-            }
-
-            var dto = payload.AccountDetails;
-            await ValidateUserUniquenessAsync(dto.Email, dto.Username);
-
-            // 1. Map to AppUser 
-            var user = mapper.Map<AppUser>(dto);
-
-            if (dto.ProfileImage != null)
-            {
-                user.ProfilePictureUrl = await fileService.UploadFileAsync(dto.ProfileImage);
-            }
-
-            // 2. Create the Identity Login
-            var result = await userManager.CreateAsync(user, dto.Password);
-            if (!result.Succeeded)
-            {
-                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                throw new InvalidOperationException($"User creation failed: {errors}");
-            }
-
-            // 3. Compensating Transaction Block
-            // If the patient creation fails, we delete the identity user to prevent orphaned records
-            try
-            {
-                await userManager.AddToRoleAsync(user, "Patient");
-
-                var patient = mapper.Map<Patient>(payload.MedicalDetails);
-                patient.AppUserId = user.Id;
-
-                await unitOfWork.Repository<Patient>().AddAsync(patient);
-                await unitOfWork.CompleteAsync();
-            }
-            catch
-            {
-                // Rollback: Delete the Identity user if DB update fails
-                await userManager.DeleteAsync(user);
-                throw;
-            }
-
-            // 4. Send email and generate token
-            await ResendConfirmationEmailAsync(user);
-            var token = await tokenProvider.GenerateAccessTokenAsync(user);
-
-            return new AuthDto { UserId = user.Id, AccessToken = token };
-        }
-
-        public async Task<AuthDto> RegisterDoctorAsync(DoctorRegistrationPayloadDto payload)
-        {
-            if (payload == null || payload.AccountDetails == null || payload.ProfessionalDetails == null)
-            {
-                throw new ArgumentNullException(nameof(payload), "Complete registration data is required.");
-            }
-
-            var accountDto = payload.AccountDetails;
-            var doctorDto = payload.ProfessionalDetails;
-
-            await ValidateUserUniquenessAsync(accountDto.Email, accountDto.Username);
-
-            // 1. Map AccountDetails to Identity AppUser
-            var user = mapper.Map<AppUser>(accountDto);
-
-            if (accountDto.ProfileImage != null)
-            {
-                user.ProfilePictureUrl = await fileService.UploadFileAsync(accountDto.ProfileImage);
-            }
-
-            // 2. Create the Identity User account
-            var result = await userManager.CreateAsync(user, accountDto.Password);
-            if (!result.Succeeded)
-            {
-                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                throw new InvalidOperationException($"User creation failed: {errors}");
-            }
-
-            // 3. Compensating Transaction Block
-            try
-            {
-                await userManager.AddToRoleAsync(user, "Doctor");
-                var doctor = mapper.Map<Doctor>(doctorDto);
-
-                // Upload Verification Documents
-                if (doctorDto.MedicalLicenseDocument != null)
-                {
-                    doctor.MedicalLicenseDocumentUrl = await fileService.UploadFileAsync(doctorDto.MedicalLicenseDocument);
-                }
-
-                if (doctorDto.NationalIdDocument != null)
-                {
-                    doctor.NationalIdDocumentUrl = await fileService.UploadFileAsync(doctorDto.NationalIdDocument);
-                }
-
-                doctor.AppUserId = user.Id;
-
-                await unitOfWork.Repository<Doctor>().AddAsync(doctor);
-                await unitOfWork.CompleteAsync();
-            }
-            catch
-            {
-                // Rollback: Delete the Identity user if DB update fails
-                await userManager.DeleteAsync(user);
-                throw;
-            }
-
-            // 4. Send confirmation email and log in
-            await ResendConfirmationEmailAsync(user);
-            var token = await tokenProvider.GenerateAccessTokenAsync(user);
-
-            return new AuthDto { UserId = user.Id, AccessToken = token };
-        }
-
         public async Task<string> ConfirmEmailAsync(string email, string code)
         {
             var user = await userManager.FindByEmailAsync(email);
@@ -314,9 +198,32 @@ namespace Helix.Service.Services.AuthServices
 
             return "Password has been changed successfully.";
         }
-
-        public async Task<string> ResendConfirmationEmailAsync(AppUser user)
+        
+        public async Task<string> ResendConfirmationEmailAsync(string email)
         {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                throw new ArgumentException("Email address is required.");
+            }
+            var user = await userManager.FindByEmailAsync(email);
+            if (user == null)
+            {
+                throw new ArgumentException("Invalid email address.");
+            }
+            if (user.EmailConfirmed)
+            {
+                return "Email is already confirmed.";
+            }
+            return await sendConfirmationEmailAsync(user.Id);
+        }
+        private async Task<string> sendConfirmationEmailAsync(string userId)
+        {
+            var user = await userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                throw new ArgumentException("Invalid user ID.");
+            }
+
             try
             {
                 var confirmationCode = await userManager.GenerateEmailConfirmationTokenAsync(user);
@@ -410,9 +317,7 @@ namespace Helix.Service.Services.AuthServices
             if (string.IsNullOrEmpty(user.Address))
             {
                 user.Address = "Mansoura, Egypt";
-                user.FirstName = "Default1";
-                user.LastName = "Default2";
-                user.MiddleName = "Default3";
+                user.FullName = "Default1";
             }
 
             var result = await userManager.CreateAsync(user, dto.Password);

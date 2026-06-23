@@ -14,4 +14,3 @@ namespace Helix.Core.Features.Auth.Commands.Models
         }
     }
 }
-

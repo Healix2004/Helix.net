@@ -17,27 +17,34 @@ namespace Helix.Service.DTOs.DoctorDTOs
         [MaxLength(100)]
         public string Specialty { get; set; }
 
-        [Required(ErrorMessage = "Syndicate Number / Medical License is required.")]
+        [Required(ErrorMessage = "Medical License Number is required.")]
         [MaxLength(50)]
-        public string SyndicateNumber { get; set; }
-
+        public string MedicalLicenseNumber { get; set; }
         public string Country { get; set; }
         public string State { get; set; }
         public int YearsOfExperience { get; set; }
         public string ClinicAddress { get; set; }
-        public string Bio { get; set; }
+        public string? Bio { get; set; }
 
         // --- Step 3: Availability & Practice ---
         public EnConsultationType ConsultationType { get; set; } // e.g., "In-Person", "Video", "Both"
         public decimal ConsultationFee { get; set; }
 
-        // This accepts the list of days and times the doctor selected
-        public List<CreateDoctorAvailabilityDto> Availabilities { get; set; } = new List<CreateDoctorAvailabilityDto>();
+        // This replaces the old Availabilities object
+        public List<string> AvailabeDays { get; set; } = new List<string>();
+        public List<CreateAvailableTimeSlotDto> AvailableTimeSlots { get; set; } = new List<CreateAvailableTimeSlotDto>();
 
         // --- Step 4: Verification ---
         // Using IFormFile allows Angular to upload the actual PDF/Images via multipart/form-data
         public IFormFile? MedicalLicenseDocument { get; set; }
         public IFormFile? NationalIdDocument { get; set; }
-        public IFormFile? ProfilePicture { get; set; }
+    }
+    public class CreateAvailableTimeSlotDto
+    {
+        [Required]
+        public TimeSpan StartTime { get; set; }
+
+        [Required]
+        public TimeSpan EndTime { get; set; }
     }
 }

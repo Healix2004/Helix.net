@@ -15,7 +15,6 @@ namespace Helix.Infrastructure.Context.DbInitializer
         UserManager<AppUser> _userManager,
         RoleManager<IdentityRole> _roleManager,
         ApplicationDbContext _dbContext,
-        IHostEnvironment _env,
         ILogger<DbInitializer> _logger) : IDbInitializer
     {
         public async Task Initialize()
@@ -43,9 +42,7 @@ namespace Helix.Infrastructure.Context.DbInitializer
                 user = new AppUser
                 {
                     UserName = "admin",
-                    FirstName = "Admin",
-                    MiddleName = "Admin",
-                    LastName = "Admin",
+                    FullName = "Admin",
                     Email = adminEmail,
                     EmailConfirmed = true,
                     Address = "Admin Address",

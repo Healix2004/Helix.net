@@ -29,29 +29,16 @@ namespace Helix.API.Controllers
 
             return NewResult(result);
         }
-
-        [HttpPost("register_patient")]
+        [HttpPost("register")]
         [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> RegisterPatient([FromForm] PatientRegistrationPayloadDto dto)
+        public async Task<IActionResult> Register([FromForm] RegisterDto dto)
         {
-            var command = new RegisterPatientCommand(dto);
+            var command = new RegisterCommand(dto);
             var result = await mediator.Send(command);
 
             return NewResult(result);
         }
-
-        [HttpPost("register_doctor")]
-        [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status201Created)]
-        [ProducesResponseType(typeof(Response<AuthDto>), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> RegisterDoctor([FromForm] DoctorRegistrationPayloadDto dto)
-        {
-            var command = new RegisterDoctorCommand(dto);
-            var result = await mediator.Send(command);
-
-            return NewResult(result);
-        }
-
         [HttpGet("profile/{userId}")]
         [Authorize]
         [ProducesResponseType(typeof(Response<UserDto>), StatusCodes.Status200OK)]
@@ -130,6 +117,14 @@ namespace Helix.API.Controllers
         public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailDto dto)
         {
             var command = new ConfirmEmailCommand(dto);
+            var result = await mediator.Send(command);
+
+            return NewResult(result);
+        }
+        [HttpPost("resend-confirmation-email")]
+        public async Task<IActionResult> ResendConfirmationEmail(string Email)
+        {
+            var command = new ResendConfirmationEmailCommand(Email);
             var result = await mediator.Send(command);
 
             return NewResult(result);

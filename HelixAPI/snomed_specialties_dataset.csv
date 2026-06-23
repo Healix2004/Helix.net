@@ -1,0 +1,160 @@
+Code,DisplayName,CodeSystem
+1365982005,Acute pain management specialty,SNOMED
+24281000087101,Adult chronic pain management specialty,SNOMED
+408467006,Adult mental illness - speciality,SNOMED
+394577000,Anaesthetics,SNOMED
+1255732006,Anatomic pathology,SNOMED
+1259939000,Ayurveda medicine,SNOMED
+421661004,Blood banking and transfusion medicine (specialty),SNOMED
+408469009,Breast surgery,SNOMED
+24061000087104,Breast surgical oncology specialty,SNOMED
+408462000,Burns care,SNOMED
+408466002,Cardiac surgery,SNOMED
+394603008,Cardiothoracic surgery,SNOMED
+408471009,Cardiothoracic transplantation,SNOMED
+1306488000,Cardiovascular radiology,SNOMED
+422349000,Cataract surgery,SNOMED
+394596001,Chemical pathology,SNOMED
+394588006,Child and adolescent psychiatry,SNOMED
+1255684005,Chronic care nursing,SNOMED
+92231000087100,Chronic pain management specialty,SNOMED
+408454008,Clinical microbiology,SNOMED
+1351234002,Clinical neuropsychology,SNOMED
+1256115008,Clinical nutrition,SNOMED
+394592004,Clinical oncology,SNOMED
+1255736009,Clinical pathology,SNOMED
+1255918004,Clinical psychology,SNOMED
+394658006,Clinical speciality,SNOMED
+408464004,Colorectal surgery,SNOMED
+394581000,Community medicine,SNOMED
+1255685006,Community nursing,SNOMED
+1268907002,Community pharmacy,SNOMED
+421582004,Corneal surgery,SNOMED
+1336020004,Critical care nursing,SNOMED
+722163006,Dentistry,SNOMED
+418018006,Dermatologic surgery,SNOMED
+1251550008,Dermatopathology,SNOMED
+722164000,Dietetics and nutrition,SNOMED
+394604002,"Ear, nose and throat surgery",SNOMED
+1255916000,Educational psychology,SNOMED
+773568002,Emergency medicine,SNOMED
+408441001,Endodontics - speciality,SNOMED
+1255679004,Family planning nursing,SNOMED
+26011000087105,Forensic pathology,SNOMED
+394817002,Forensic psychiatry,SNOMED
+1284928005,Gastrointestinal surgery,SNOMED
+408444009,General dental practice,SNOMED
+408443003,General medical practice,SNOMED
+24241000087106,General orthopaedic specialty,SNOMED
+394915009,General pathology (specialty),SNOMED
+394814009,General practice (specialty),SNOMED
+394609007,General surgery,SNOMED
+1236877003,Genetic pathology,SNOMED
+24301000087100,Geriatric chronic pain management specialty,SNOMED
+394818007,Geriatric psychiatry,SNOMED
+421885009,Glaucoma surgery,SNOMED
+408446006,Gynaecological oncology,SNOMED
+394586005,Gynaecology,SNOMED
+394916005,Haematology (specialty),SNOMED
+1284930007,Hand surgery,SNOMED
+408474001,Hepatobiliary and pancreatic surgery,SNOMED
+1236878008,Histocompatibility and immunogenetics,SNOMED
+394597005,Histopathology,SNOMED
+24091000087107,HIV nursing specialty,SNOMED
+24111000087100,HIV social work specialty,SNOMED
+1259938008,Homeopathic medicine,SNOMED
+1258957008,Hospital pharmacy specialisation,SNOMED
+1259944007,Immunohaemotherapy,SNOMED
+394598000,Immunopathology,SNOMED
+1255913008,Industrial pharmacy,SNOMED
+1186677001,Intellectual disability specialty,SNOMED
+1255680001,Intensive therapy nursing,SNOMED
+1297184004,Interventional neuroradiology,SNOMED
+408455009,Interventional radiology - speciality,SNOMED
+408468001,Learning disability - speciality,SNOMED
+408457001,Maxillofacial surgery,SNOMED
+1251554004,Medical coding,SNOMED
+394820005,Medical microbiology,SNOMED
+394813003,Medical ophthalmology,SNOMED
+1255731004,Medical physics,SNOMED
+1255735008,Medical physics in nuclear medicine,SNOMED
+1255733001,Medical physics in radiology,SNOMED
+1255734007,Medical physics in radiotherapy,SNOMED
+1255686007,Medical surgery nursing,SNOMED
+1259940003,Medical yoga,SNOMED
+1255881004,Mental health nursing,SNOMED
+394816006,Mental illness (specialty),SNOMED
+1340249005,Military pharmacy specialisation,SNOMED
+1304214008,Musculoskeletal radiology,SNOMED
+24311000087103,Narcotic addiction medicine specialty with chronic pain management,SNOMED
+394599008,Neuropathology,SNOMED
+1251547005,Neuroradiology,SNOMED
+394610002,Neurosurgery,SNOMED
+1335904004,Neurourology,SNOMED
+722165004,Nursing,SNOMED
+1287784006,Obstetric nursing,SNOMED
+408470005,Obstetrics,SNOMED
+394585009,Obstetrics and gynaecology,SNOMED
+394821009,Occupational medicine,SNOMED
+422171003,Ophthalmic plastic surgery,SNOMED
+422191005,Ophthalmic surgery,SNOMED
+394594003,Ophthalmology,SNOMED
+357571000267100,Oral and maxillofacial pathology,SNOMED
+357541000267105,Oral and maxillofacial radiology,SNOMED
+408465003,Oral and maxillofacial surgery,SNOMED
+1303757005,Oral implantology,SNOMED
+1259957004,Oral medicine,SNOMED
+394605001,Oral surgery,SNOMED
+394608004,Orthodontics,SNOMED
+1345026002,Orthopaedic specialty,SNOMED
+418960008,Otolaryngology,SNOMED
+24361000087101,Paediatric chronic pain management specialty,SNOMED
+394607009,Paediatric dentistry,SNOMED
+419917007,Paediatric emergency medicine,SNOMED
+1251539005,Paediatric neurosurgery,SNOMED
+1255678007,Paediatric nursing,SNOMED
+419983000,Paediatric ophthalmology,SNOMED
+1251538002,Paediatric orthopaedic,SNOMED
+417887005,Paediatric otolaryngology,SNOMED
+23991000087105,Paediatric plastic surgery specialty,SNOMED
+26041000087106,Paediatric radiology,SNOMED
+394539006,Paediatric surgery,SNOMED
+394882004,Pain management (specialty),SNOMED
+1255681002,Palliative care nursing,SNOMED
+394595002,Pathology,SNOMED
+26051000087109,Perinatology,SNOMED
+408461007,Periodontics,SNOMED
+1255682009,Perioperative nursing,SNOMED
+394611003,Plastic surgery - speciality,SNOMED
+408460008,Prosthodontics,SNOMED
+394587001,Psychiatry,SNOMED
+722162001,Psychology,SNOMED
+721961006,Psychosomatic medicine,SNOMED
+394913002,Psychotherapy (specialty),SNOMED
+408473007,Public health dentistry,SNOMED
+1258859005,Public health nutrition,SNOMED
+419815003,Radiation oncology,SNOMED
+394734003,Radiological specialties,SNOMED
+394914008,Radiology - speciality,SNOMED
+420708009,Refractive surgery,SNOMED
+1255683004,Rehabilitation nursing,SNOMED
+394606000,Restorative dentistry,SNOMED
+1303758000,Skull base surgery,SNOMED
+24151000087101,Spine orthopaedic surgery specialty,SNOMED
+1251536003,Sport medicine,SNOMED
+420419008,Strabismus surgery,SNOMED
+408449004,Surgical dentistry,SNOMED
+419321007,Surgical oncology,SNOMED
+1345027006,Surgical orthopaedic specialty,SNOMED
+394732004,Surgical speciality,SNOMED
+1304212007,Thoracic radiology,SNOMED
+408456005,Thoracic surgery,SNOMED
+394819004,Transfusion medicine,SNOMED
+408477008,Transplantation surgery,SNOMED
+394801008,Trauma & orthopaedics,SNOMED
+408479006,Upper gastrointestinal surgery,SNOMED
+419043006,Urological oncology,SNOMED
+394612005,Urology,SNOMED
+24021000087109,Vascular imaging specialty,SNOMED
+408463005,Vascular surgery,SNOMED
+420985004,Vitreo-retinal surgery,SNOMED

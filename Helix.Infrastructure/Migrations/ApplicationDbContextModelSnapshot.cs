@@ -37,31 +37,60 @@ namespace Helix.Infrastructure.Migrations
                     b.ToTable("DoctorFacilitie");
                 });
 
+            modelBuilder.Entity("Helix.Data.Entities.AllergenCatalog", b =>
+                {
+                    b.Property<string>("Code")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("CodeSystem")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Code");
+
+                    b.ToTable("AllergenCatalogs");
+                });
+
             modelBuilder.Entity("Helix.Data.Entities.Allergy", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Category")
+                    b.Property<string>("AllergenCatalogCode")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("Category")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ClinicalStatus")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Criticality")
+                        .HasColumnType("int");
 
                     b.Property<Guid>("PatientId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int?>("Reaction")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("RecordedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("criticality")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int?>("Severity")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AllergenCatalogCode");
 
                     b.HasIndex("PatientId");
 
@@ -77,7 +106,6 @@ namespace Helix.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Address")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ConcurrencyStamp")
@@ -91,11 +119,7 @@ namespace Helix.Infrastructure.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
 
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("LastName")
+                    b.Property<string>("FullName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -104,10 +128,6 @@ namespace Helix.Infrastructure.Migrations
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("MiddleName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("NationalId")
                         .IsRequired()
@@ -134,7 +154,6 @@ namespace Helix.Infrastructure.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("ProfilePictureUrl")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SecurityStamp")
@@ -158,6 +177,52 @@ namespace Helix.Infrastructure.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("Helix.Data.Entities.ChronicDisease", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ChronicDiseaseCatalogCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("DiagnosisDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChronicDiseaseCatalogCode");
+
+                    b.HasIndex("PatientId");
+
+                    b.ToTable("ChronicDiseases");
+                });
+
+            modelBuilder.Entity("Helix.Data.Entities.ChronicDiseaseCatalog", b =>
+                {
+                    b.Property<string>("Code")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("CodeSystem")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Code");
+
+                    b.ToTable("ChronicDiseaseCatalogs");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.Consent", b =>
@@ -309,6 +374,30 @@ namespace Helix.Infrastructure.Migrations
                     b.HasIndex("DoctorId");
 
                     b.ToTable("DoctorAvailability");
+                });
+
+            modelBuilder.Entity("Helix.Data.Entities.EmergencyContact", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PatientId");
+
+                    b.ToTable("EmergencyContact");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.EmergencyOverrideLog", b =>
@@ -491,6 +580,63 @@ namespace Helix.Infrastructure.Migrations
                     b.ToTable("LabTestResults");
                 });
 
+            modelBuilder.Entity("Helix.Data.Entities.Medication", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Dosage")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateOnly?>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Frequency")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("medicationCatalogRxcui")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PatientId");
+
+                    b.HasIndex("medicationCatalogRxcui");
+
+                    b.ToTable("Medication");
+                });
+
+            modelBuilder.Entity("Helix.Data.Entities.MedicationCatalog", b =>
+                {
+                    b.Property<string>("Rxcui")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("DrugName")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("TermType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Rxcui");
+
+                    b.ToTable("MedicationCatalogs");
+                });
+
             modelBuilder.Entity("Helix.Data.Entities.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -565,32 +711,6 @@ namespace Helix.Infrastructure.Migrations
                     b.Property<int?>("BloodType")
                         .HasColumnType("int");
 
-                    b.Property<string>("ChronicDiseases")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("EmergencyContactName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("EmergencyContactRelation")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("EmergencyPhone")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("InsurancePolicyNumber")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("InsuranceProvider")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PastSurgeries")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int?>("PatientCategory")
                         .HasColumnType("int");
 
@@ -599,6 +719,27 @@ namespace Helix.Infrastructure.Migrations
                     b.HasIndex("AppUserId");
 
                     b.ToTable("Patients");
+                });
+
+            modelBuilder.Entity("Helix.Data.Entities.ProcedureCatalog", b =>
+                {
+                    b.Property<string>("Code")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("CodeSystem")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Code");
+
+                    b.ToTable("procedureCatalogs");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.RadiologyImage", b =>
@@ -704,6 +845,46 @@ namespace Helix.Infrastructure.Migrations
                     b.HasIndex("PatientId");
 
                     b.ToTable("RadiologyResults");
+                });
+
+            modelBuilder.Entity("Helix.Data.Entities.Surgery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("DateOfSurgery")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("HospitalOrClinicName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("MedicalNotes")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ProcedureCatalogCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("SurgeonName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PatientId");
+
+                    b.HasIndex("ProcedureCatalogCode");
+
+                    b.ToTable("Surgeries");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.TerminologyCodeLookup", b =>
@@ -922,11 +1103,38 @@ namespace Helix.Infrastructure.Migrations
 
             modelBuilder.Entity("Helix.Data.Entities.Allergy", b =>
                 {
+                    b.HasOne("Helix.Data.Entities.AllergenCatalog", "AllergenCatalog")
+                        .WithMany()
+                        .HasForeignKey("AllergenCatalogCode")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("Helix.Data.Entities.Patient", "Patient")
                         .WithMany("Allergies")
                         .HasForeignKey("PatientId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("AllergenCatalog");
+
+                    b.Navigation("Patient");
+                });
+
+            modelBuilder.Entity("Helix.Data.Entities.ChronicDisease", b =>
+                {
+                    b.HasOne("Helix.Data.Entities.ChronicDiseaseCatalog", "ChronicDiseaseCatalog")
+                        .WithMany()
+                        .HasForeignKey("ChronicDiseaseCatalogCode")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Helix.Data.Entities.Patient", "Patient")
+                        .WithMany("ChronicDiseases")
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ChronicDiseaseCatalog");
 
                     b.Navigation("Patient");
                 });
@@ -993,6 +1201,17 @@ namespace Helix.Infrastructure.Migrations
                     b.HasOne("Helix.Data.Entities.Doctor", null)
                         .WithMany("Availabilities")
                         .HasForeignKey("DoctorId");
+                });
+
+            modelBuilder.Entity("Helix.Data.Entities.EmergencyContact", b =>
+                {
+                    b.HasOne("Helix.Data.Entities.Patient", "Patient")
+                        .WithMany("EmergencyContacts")
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Patient");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.EmergencyOverrideLog", b =>
@@ -1092,6 +1311,23 @@ namespace Helix.Infrastructure.Migrations
                     b.Navigation("TerminologyCode");
                 });
 
+            modelBuilder.Entity("Helix.Data.Entities.Medication", b =>
+                {
+                    b.HasOne("Helix.Data.Entities.Patient", null)
+                        .WithMany("Medications")
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Helix.Data.Entities.MedicationCatalog", "medicationCatalog")
+                        .WithMany()
+                        .HasForeignKey("medicationCatalogRxcui")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("medicationCatalog");
+                });
+
             modelBuilder.Entity("Helix.Data.Entities.Notification", b =>
                 {
                     b.HasOne("Helix.Data.Entities.AppUser", "AppUser")
@@ -1130,7 +1366,28 @@ namespace Helix.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.OwnsOne("Helix.Data.Entities.Insurance", "Insurance", b1 =>
+                        {
+                            b1.Property<Guid>("PatientId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<string>("InsurancePolicyNumber")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("InsuranceProvider")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.HasKey("PatientId");
+
+                            b1.ToTable("Patients");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PatientId");
+                        });
+
                     b.Navigation("AppUser");
+
+                    b.Navigation("Insurance");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.RadiologyImage", b =>
@@ -1184,6 +1441,25 @@ namespace Helix.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("Helix.Data.Entities.Surgery", b =>
+                {
+                    b.HasOne("Helix.Data.Entities.Patient", "Patient")
+                        .WithMany("Surgeries")
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Helix.Data.Entities.ProcedureCatalog", "ProcedureCatalog")
+                        .WithMany()
+                        .HasForeignKey("ProcedureCatalogCode")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Patient");
+
+                    b.Navigation("ProcedureCatalog");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.condition", b =>
@@ -1278,9 +1554,13 @@ namespace Helix.Infrastructure.Migrations
                 {
                     b.Navigation("Allergies");
 
+                    b.Navigation("ChronicDiseases");
+
                     b.Navigation("Consents");
 
                     b.Navigation("Diagnose");
+
+                    b.Navigation("EmergencyContacts");
 
                     b.Navigation("Encounters");
 
@@ -1288,9 +1568,13 @@ namespace Helix.Infrastructure.Migrations
 
                     b.Navigation("LabTestResult");
 
+                    b.Navigation("Medications");
+
                     b.Navigation("RadioTestResult");
 
                     b.Navigation("RadiologyOrders");
+
+                    b.Navigation("Surgeries");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.RadiologyOrder", b =>

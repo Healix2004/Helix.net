@@ -1,6 +1,8 @@
 using Helix.API;
 using Helix.API.Hubs;
+using Helix.Infrastructure.Context;
 using Helix.Infrastructure.Context.DbInitializer;
+using Helix.Infrastructure.Seeding;
 using Helix.Service;
 using Microsoft.Extensions.FileProviders;
 
@@ -86,5 +88,14 @@ static async Task SeedDatabaseAsync(IHost app)
 // This ensures that the application doesn't start if the database migration or seeding fails.
 await SeedDatabaseAsync(app);
 #endregion
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await AllergenSeeder.SeedAsync(dbContext);
+    await ChronicDiseaseSeeder.SeedAsync(dbContext);
+    await ProcedureSeeder.SeedAsync(dbContext);
+    await MedicationSeeder.SeedAsync(dbContext);
+}
 
 app.Run();

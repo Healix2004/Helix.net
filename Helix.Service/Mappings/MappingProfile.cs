@@ -12,6 +12,7 @@ using Helix.Service.DTOs.MedicationDTOs;
 using Helix.Service.DTOs.ObservationDTOs;
 using Helix.Service.DTOs.PatientDTOs;
 using Helix.Service.DTOs.TerminologyCodeLookupDTOs;
+using Helix.Service.Helper;
 
 namespace Helix.Service.Mappings
 {
@@ -39,15 +40,12 @@ namespace Helix.Service.Mappings
                 .ForMember(dest => dest.LockoutEnabled, opt => opt.Ignore())
                 .ForMember(dest => dest.AccessFailedCount, opt => opt.Ignore());
 
-            // AutoMapper perfectly maps matching properties here without explicit ForMember calls
             CreateMap<AppUser, UserDto>();
 
             CreateMap<RegisterUserDto, AppUser>()
                 .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Username))
-                .ForMember(dest => dest.FirstName, opt => opt.Ignore())
-                .ForMember(dest => dest.LastName, opt => opt.Ignore())
+                .ForMember(dest => dest.FullName, opt => opt.Ignore())
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
-                .ForMember(dest => dest.MiddleName, opt => opt.Ignore())
                 .ForMember(dest => dest.PhoneNumber, opt => opt.Ignore())
                 .ForMember(dest => dest.Address, opt => opt.Ignore())
                 .ForMember(dest => dest.NormalizedUserName, opt => opt.Ignore())
@@ -66,18 +64,41 @@ namespace Helix.Service.Mappings
             // Patient Mappings
             // ==========================================
 
+            // Read (Entity -> Dto)
             CreateMap<Patient, PatientDto>()
-                // AutoMapper is null-safe natively! No need for: src.AppUser != null ? ... : null
                 .ForMember(dest => dest.AppUserId, opt => opt.MapFrom(src => src.AppUser.Id))
-                .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.AppUser.FirstName))
-                .ForMember(dest => dest.MiddleName, opt => opt.MapFrom(src => src.AppUser.MiddleName))
-                .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.AppUser.LastName))
+                .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.AppUser.FullName))
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.AppUser.Email))
                 .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.AppUser.PhoneNumber))
-                .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.AppUser.Address));
+                .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.AppUser.Address))
+                .ForMember(dest => dest.BloodType, opt => opt.MapFrom(src => src.BloodType))
+                .ForMember(dest => dest.PatientCategory, opt => opt.MapFrom(src => src.PatientCategory))
+                .ForMember(dest => dest.EgyptianNationalId, opt => opt.MapFrom(src => src.AppUser.NationalId));
 
-            CreateMap<CreatePatientDto, Patient>();
+            // Write (Create/Update Dto -> Entity)
+            CreateMap<CreatePatientDto, Patient>()
+                .ForMember(dest => dest.ChronicDiseases, opt => opt.MapFrom(src => src.ChronicDiseases))
+                .ForMember(dest => dest.Surgeries, opt => opt.MapFrom(src => src.Surgeries))
+                .ForMember(dest => dest.EmergencyContacts, opt => opt.MapFrom(src => src.EmergencyContacts))
+                .ForMember(dest => dest.Allergies, opt => opt.MapFrom(src => src.Allergies))
+                .ForMember(dest => dest.Medications, opt => opt.MapFrom(src => src.CurrentMedications));
+
             CreateMap<UpdatePatientDto, Patient>();
+
+            // --- Nested Patient Object Mappings (Read) ---
+            CreateMap<EmergencyContact, EmergencyContactDto>();
+            CreateMap<Insurance, InsuranceDto>();
+            CreateMap<ChronicDisease, ChronicDiseaseDto>();
+
+            // Flattens the SNOMED procedure name
+            CreateMap<Surgery, SurgeryDto>()
+                .ForMember(dest => dest.ProcedureName, opt => opt.MapFrom(src => src.ProcedureCatalog.DisplayName));
+
+            // --- Nested Patient Object Mappings (Write - Fixes the 500 error!) ---
+            CreateMap<CreateInsuranceDto, Insurance>();
+            CreateMap<CreateEmergencyContactDto, EmergencyContact>();
+            CreateMap<CreatePatientChronicDiseaseDto, ChronicDisease>();
+            CreateMap<CreateSurgeryDto, Surgery>();
 
             // ==========================================
             // Doctor Mappings
@@ -85,22 +106,38 @@ namespace Helix.Service.Mappings
 
             CreateMap<Doctor, DoctorDto>()
                 .ForMember(dest => dest.AppUserId, opt => opt.MapFrom(src => src.AppUser.Id))
-                .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.AppUser.FirstName))
-                .ForMember(dest => dest.MiddleName, opt => opt.MapFrom(src => src.AppUser.MiddleName))
-                .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.AppUser.LastName))
+                .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.AppUser.FullName))
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.AppUser.Email))
                 .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.AppUser.PhoneNumber))
                 .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.AppUser.Address));
-            // Bio maps automatically by name convention
 
-            CreateMap<UpdateDoctorDto, Doctor>().ReverseMap();
+            CreateMap<CreateDoctorDto, Doctor>();
+            CreateMap<UpdateDoctorDto, Doctor>();
+
+            // ==========================================
+            // Medication Mappings (Consolidated)
+            // ==========================================
+
+            CreateMap<Medication, MedicationDto>()
+                .ForMember(dest => dest.PatientId, opt => opt.MapFrom(src => src.PatientId))
+                // Flattens the RxNorm Drug Name for the frontend
+                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.medicationCatalog.DrugName));
+
+            CreateMap<CreatePatientMedicationDto, Medication>()
+                .ForMember(dest => dest.PatientId, opt => opt.Ignore())
+                .ForMember(dest => dest.medicationCatalog, opt => opt.Ignore());
+
+            CreateMap<CreateMedicationDto, Medication>()
+                .ForMember(dest => dest.medicationCatalog, opt => opt.Ignore());
+
+            CreateMap<UpdateMedicationDto, Medication>();
 
             // ==========================================
             // Clinical Domain Mappings
             // ==========================================
 
             // Consent Mappings
-            CreateMap<Consent, ConsentDto>(); // PatientId and DoctorId map automatically
+            CreateMap<Consent, ConsentDto>();
             CreateMap<CreateConsentDto, Consent>()
                 .ForMember(dest => dest.Patient, opt => opt.Ignore())
                 .ForMember(dest => dest.Doctor, opt => opt.Ignore());
@@ -108,9 +145,12 @@ namespace Helix.Service.Mappings
 
             // Allergy Mappings
             CreateMap<Allergy, AllergyDto>()
-                .ForMember(dest => dest.PatientId, opt => opt.MapFrom(src => src.Patient.Id));
+                .ForMember(dest => dest.PatientId, opt => opt.MapFrom(src => src.PatientId))
+                .ForMember(dest => dest.AllergenName, opt => opt.MapFrom(src => src.AllergenCatalog.DisplayName));
+
             CreateMap<CreateAllergyDto, Allergy>()
-                .ForMember(dest => dest.Patient, opt => opt.Ignore());
+                .ForMember(dest => dest.Patient, opt => opt.Ignore())
+                .ForMember(dest => dest.AllergenCatalog, opt => opt.Ignore());
             CreateMap<UpdateAllergyDto, Allergy>();
 
             // Diagnose Mappings
@@ -143,7 +183,7 @@ namespace Helix.Service.Mappings
             // LabTestResult Mappings
             CreateMap<LabTestResult, LabTestResultDto>()
                 .ForMember(dest => dest.TerminologyName, opt => opt.MapFrom(src => src.TerminologyCode.Display))
-                .ForMember(dest => dest.PatientName, opt => opt.MapFrom(src => $"{src.Patient.AppUser.FirstName} {src.Patient.AppUser.LastName}"))
+                .ForMember(dest => dest.PatientName, opt => opt.MapFrom(src => src.Patient.AppUser.FullName))
                 .ForMember(dest => dest.CreateDate, opt => opt.MapFrom(src => src.ResultDate))
                 .ForMember(dest => dest.status, opt => opt.MapFrom(src => src.Status.ToString()));
 
@@ -152,16 +192,6 @@ namespace Helix.Service.Mappings
                 .ForMember(dest => dest.Patient, opt => opt.Ignore())
                 .ForMember(dest => dest.Encounter, opt => opt.Ignore());
             CreateMap<UpdateLabTestResultDto, LabTestResult>();
-
-            // Medication Mappings
-            CreateMap<Medication, MedicationDto>()
-                .ForMember(dest => dest.TerminologyCodeId, opt => opt.MapFrom(src => src.TerminologyCode.Id))
-                .ForMember(dest => dest.PatientId, opt => opt.MapFrom(src => src.Patient.Id));
-
-            CreateMap<CreateMedicationDto, Medication>()
-                .ForMember(dest => dest.TerminologyCode, opt => opt.Ignore())
-                .ForMember(dest => dest.Patient, opt => opt.Ignore());
-            CreateMap<UpdateMedicationDto, Medication>();
 
             // Observation Mappings
             CreateMap<Observation, ObservationDto>()

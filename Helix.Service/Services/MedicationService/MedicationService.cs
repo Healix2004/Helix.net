@@ -22,7 +22,6 @@ namespace Helix.Service.Services.MedicationService
 
             // 2. Optimize: Set Foreign Keys directly to avoid unnecessary EF Core object tracking
             medication.PatientId = patient.Id;
-            medication.TerminologyCodeId = terminology.Id;
 
             await unitOfWork.Repository<Medication>().AddAsync(medication);
             await unitOfWork.CompleteAsync(); // Asynchronous database commit

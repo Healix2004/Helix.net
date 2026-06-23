@@ -23,5 +23,4 @@ namespace Helix.Core.Features.Auth.Commands.Validation
             });
         }
     }
-}
-
+} 

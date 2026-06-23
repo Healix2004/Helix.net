@@ -1,8 +1,11 @@
 ﻿using Helix.Data.Enums;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
+using System.Timers;
 
 namespace Helix.Data.Entities
 {
@@ -14,12 +17,12 @@ namespace Helix.Data.Entities
 
         // --- Step 2: Professional Information ---
         public string Specialty { get; set; } = default!;
-        public string SyndicateNumber { get; set; }
+        public string MedicalLicenseNumber { get; set; }
         public string Country { get; set; }
         public string State { get; set; }
         public int YearsOfExperience { get; set; }
         public string ClinicAddress { get; set; }
-        public string Bio { get; set; }
+        public string? Bio { get; set; }
 
         // --- Step 3: Availability & Practice ---
         public EnConsultationType ConsultationType { get; set; } // e.g., "In-Person", "Video", "Both"
@@ -31,17 +34,16 @@ namespace Helix.Data.Entities
         public bool IsVerified { get; set; } = false;// This tracks if an admin has reviewed their uploaded documents
 
         //one to many ralations
-        public List<DoctorAvailability> Availabilities { get; set; } = new List<DoctorAvailability>();
+        public List<AvailableTimeSlot> AvailableTimeSlots { get; set; } = new List<AvailableTimeSlot>();
+        public List<string> AvailabeDays { get; set; } = new List<string>();
         public List<Facilitie> Facilities { get; set; } = new List<Facilitie>();
         public List<RadiologyOrder> RadiologyOrders { get; set; } = new List<RadiologyOrder>();
-        public List<Encounter> Encounters { get; set; } = new List<Encounter>();
         public List<LabOrder> LabOrders { get; set; } = new List<LabOrder>();
         public List<Consent> Consents { get; set; }= new List<Consent>();
     }
-
-    public class DoctorAvailability : BaseEntity
+    [Owned]
+    public class AvailableTimeSlot
     {
-        public DayOfWeek Day { get; set; }
         public TimeSpan StartTime { get; set; }
         public TimeSpan EndTime { get; set; }
     }

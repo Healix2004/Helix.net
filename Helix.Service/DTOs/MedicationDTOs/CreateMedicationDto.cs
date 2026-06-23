@@ -9,6 +9,6 @@ namespace Helix.Service.DTOs.MedicationDTOs
         public string Dosage { get; set; }
         public string Frequency { get; set; }
         public DateOnly StartDate { get; set; }
-        public DateTime EndDate { get; set; }
+        public DateOnly EndDate { get; set; }
     }
 }

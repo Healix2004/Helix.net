@@ -56,7 +56,7 @@ namespace Helix.Service.Services.LabOrderService
                 .Select(o => new LabOrderDto
                 {
                     OrderId = o.Id,
-                    PatientName = $"{o.Patient.AppUser.FirstName} {o.Patient.AppUser.LastName}",
+                    PatientName = o.Patient.AppUser.FullName,
                     TestCode = o.TerminologyCode.Code,
                     TestName = o.TerminologyCode.Display
                 })
@@ -79,7 +79,7 @@ namespace Helix.Service.Services.LabOrderService
             return new LabOrderDto
             {
                 OrderId = order.Id,
-                PatientName = $"{order.Patient.AppUser.FirstName} {order.Patient.AppUser.LastName}",
+                PatientName = order.Patient.AppUser.FullName,
                 TestCode = order.TerminologyCode.Code,
                 TestName = order.TerminologyCode.Display
             };
@@ -95,7 +95,7 @@ namespace Helix.Service.Services.LabOrderService
                 .Select(o => new LabOrderDto
                 {
                     OrderId = o.Id,
-                    PatientName = $"{o.Patient.AppUser.FirstName} {o.Patient.AppUser.LastName}",
+                    PatientName = o.Patient.AppUser.FullName,
                     TestCode = o.TerminologyCode.Code,
                     TestName = o.TerminologyCode.Display
                 })
@@ -135,7 +135,7 @@ namespace Helix.Service.Services.LabOrderService
             return new LabOrderDto
             {
                 OrderId = order.Id,
-                PatientName = $"{order.Patient.AppUser.FirstName} {order.Patient.AppUser.LastName}",
+                PatientName = order.Patient.AppUser.FullName,
                 TestCode = order.TerminologyCode.Code,
                 TestName = order.TerminologyCode.Display
             };

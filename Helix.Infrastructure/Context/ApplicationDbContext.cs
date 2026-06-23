@@ -33,15 +33,7 @@ namespace Helix.Infrastructure.Context
             builder.Entity<Patient>().HasMany(p => p.RadioTestResult).WithOne().OnDelete(DeleteBehavior.Cascade);
             builder.Entity<Patient>().HasMany(p => p.RadiologyOrders).WithOne().HasForeignKey(r => r.PatientId).OnDelete(DeleteBehavior.Cascade);
             builder.Entity<Patient>().HasMany(p => p.LabTestResult).WithOne().OnDelete(DeleteBehavior.Cascade);
-            builder.Entity<Patient>().HasMany(p => p.LabOrders).WithOne().OnDelete(DeleteBehavior.Cascade);
-
-            //Encounter doctor relationship
-            builder.Entity<Encounter>()
-                .HasOne(e => e.Doctor)
-                .WithMany(d => d.Encounters)
-                .HasPrincipalKey(d => d.Id)
-                .HasForeignKey(e => e.DoctorId)
-                .OnDelete(DeleteBehavior.Restrict); 
+            builder.Entity<Patient>().HasMany(p => p.LabOrders).WithOne().OnDelete(DeleteBehavior.Cascade); 
 
             //Encounter patient relationship
             builder.Entity<Encounter>()
@@ -103,7 +95,13 @@ namespace Helix.Infrastructure.Context
 
             builder.Entity<EmergencyOverrideLog>().HasOne(e => e.Patient).WithMany().OnDelete(DeleteBehavior.Restrict);
             builder.Entity<EmergencyOverrideLog>().HasOne(e => e.Doctor).WithMany().OnDelete(DeleteBehavior.Restrict);
+
+
+            // Configure the Foreign Key Relationship
+            builder.Entity<Allergy>().HasOne(a => a.Patient).WithMany(p => p.Allergies).HasForeignKey(a => a.PatientId)
+                   .OnDelete(DeleteBehavior.Cascade); // Deletes allergies if the patient is deleted
         }
+
         public DbSet<AppUser> AppUsers { get; set; }
         public DbSet<Doctor> Doctors { get; set; }
         public DbSet<Patient> Patients { get; set; }
@@ -120,5 +118,11 @@ namespace Helix.Infrastructure.Context
         public DbSet<RadiologyOrder> RadiologyOrders { get; set; } 
         public DbSet<EmergencyOverrideLog> emergencyOverrideLogs { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<AllergenCatalog> AllergenCatalogs { get; set; }
+        public DbSet<ChronicDisease> ChronicDiseases { get; set; }
+        public DbSet<ChronicDiseaseCatalog> ChronicDiseaseCatalogs { get; set; }
+        public DbSet<Surgery> Surgeries { get; set; }
+        public DbSet<ProcedureCatalog> procedureCatalogs { get; set; }
+        public DbSet<MedicationCatalog> MedicationCatalogs { get; set; }
     }
 }

@@ -16,10 +16,6 @@ namespace Helix.Service.DTOs.AuthDTOs
         [EmailAddress(ErrorMessage = "Invalid email address")]
         public string Email { get; set; }
 
-        [Required(ErrorMessage = "Email confirmation is required")]
-        [Compare("Email", ErrorMessage = "The email and confirmation email do not match.")]
-        public string ConfirmEmail { get; set; }
-
         [EmailAddress(ErrorMessage = "Invalid alternative email address")]
         public string? AlternativeEmailAddress { get; set; }
 
@@ -33,16 +29,9 @@ namespace Helix.Service.DTOs.AuthDTOs
         // Added IFormFile to handle the profile picture upload from the UI
         public IFormFile? ProfileImage { get; set; }
 
-        [Required(ErrorMessage = "First name is required")]
+        [Required(ErrorMessage = "Full name is required")]
         [StringLength(100)]
-        public string FirstName { get; set; }
-
-        [StringLength(100)]
-        public string? MiddleName { get; set; }
-
-        [Required(ErrorMessage = "Last name is required")]
-        [StringLength(100)]
-        public string LastName { get; set; }
+        public string FullName { get; set; }
 
         [Required(ErrorMessage = "National ID is required")]
         [StringLength(20, ErrorMessage = "National ID cannot exceed 20 characters")]
@@ -54,7 +43,7 @@ namespace Helix.Service.DTOs.AuthDTOs
         [Phone(ErrorMessage = "Invalid phone number")]
         public string PhoneNumber { get; set; } // For the IdentityUser.PhoneNumber
 
-        [Required(ErrorMessage = "Address is required")]
-        public string Address { get; set; }
+        [StringLength(200, ErrorMessage = "Address cannot exceed 200 characters")]
+        public string? Address { get; set; }
     }
 }

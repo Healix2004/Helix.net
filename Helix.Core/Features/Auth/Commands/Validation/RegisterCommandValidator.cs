@@ -26,12 +26,6 @@ namespace Helix.Core.Features.Auth.Commands.Validation
                     .EmailAddress()
                     .WithMessage("Invalid email address format");
 
-                RuleFor(x => x.RegisterDto.ConfirmEmail)
-                    .NotEmpty()
-                    .WithMessage("Email confirmation is required")
-                    .Equal(x => x.RegisterDto.Email)
-                    .WithMessage("The email and confirmation email do not match");
-
                 RuleFor(x => x.RegisterDto.Password)
                     .NotEmpty()
                     .WithMessage("Password is required")
@@ -39,17 +33,11 @@ namespace Helix.Core.Features.Auth.Commands.Validation
                     .WithMessage("Password must be at least 6 characters long");
 
 
-                RuleFor(x => x.RegisterDto.FirstName)
+                RuleFor(x => x.RegisterDto.FullName)
                     .NotEmpty()
-                    .WithMessage("First name is required")
+                    .WithMessage("Full name is required")
                     .MaximumLength(100)
-                    .WithMessage("First name must not exceed 100 characters");
-
-                RuleFor(x => x.RegisterDto.LastName)
-                    .NotEmpty()
-                    .WithMessage("Last name is required")
-                    .MaximumLength(100)
-                    .WithMessage("Last name must not exceed 100 characters");
+                    .WithMessage("Full name must not exceed 100 characters");
 
                 RuleFor(x => x.RegisterDto.PhoneNumber)
                     .NotEmpty()

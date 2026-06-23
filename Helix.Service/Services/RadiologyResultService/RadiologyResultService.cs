@@ -26,7 +26,7 @@ namespace Helix.Service.Services.RadiologyResultService
                     Id = r.Id,
                     OrderId = r.OrderId,
                     PatientId = r.PatientId,
-                    PatientName = $"{r.Order.Patient.AppUser.FirstName} {r.Order.Patient.AppUser.LastName}",
+                    PatientName = r.Order.Patient.AppUser.FullName,
                     TerminologyDisplay = r.Order.TerminologyCode.Display,
                     Findings = r.Findings,
                     Impression = r.Impression,
@@ -135,7 +135,7 @@ namespace Helix.Service.Services.RadiologyResultService
                 {
                     Id = r.Id,
                     OrderId = r.OrderId,
-                    PatientName = $"{r.Order.Patient.AppUser.FirstName} {r.Order.Patient.AppUser.LastName}",
+                    PatientName = r.Order.Patient.AppUser.FullName,
                     TerminologyDisplay = r.Order.TerminologyCode.Display,
                     PerformedDate = r.PerformedDate,
                 })

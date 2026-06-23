@@ -37,67 +37,6 @@ namespace Helix.Core.Features.Auth.Commands.Handler
             }
         }
     }
-    public class RegisterPatientCommandHandler : IRequestHandler<RegisterPatientCommand, Response<AuthDto>>
-    {
-        private readonly IAuthService _authService;
-        private readonly ResponseHandler _responseHandler;
-
-        public RegisterPatientCommandHandler(IAuthService authService, ResponseHandler responseHandler)
-        {
-            _authService = authService;
-            _responseHandler = responseHandler;
-        }
-
-        public async Task<Response<AuthDto>> Handle(RegisterPatientCommand request, CancellationToken cancellationToken)
-        {
-            try
-            {
-                var result = await _authService.RegisterPatientAsync(request.RegisterPatientDto);
-                
-                if (result == null || string.IsNullOrEmpty(result.AccessToken))
-                {
-                    return _responseHandler.BadRequest<AuthDto>("Registration failed. Please check your information and try again.");
-                }
-
-                return _responseHandler.Created(result);
-            }
-            catch (Exception ex)
-            {
-                return _responseHandler.BadRequest<AuthDto>($"An error occurred during registration: {ex.Message}");
-            }
-        }
-    }
-    public class RegisterDoctorCommandHandler : IRequestHandler<RegisterDoctorCommand, Response<AuthDto>>
-    {
-        private readonly IAuthService _authService;
-        private readonly ResponseHandler _responseHandler;
-
-        public RegisterDoctorCommandHandler(IAuthService authService, ResponseHandler responseHandler)
-        {
-            _authService = authService;
-            _responseHandler = responseHandler;
-        }
-
-        public async Task<Response<AuthDto>> Handle(RegisterDoctorCommand request, CancellationToken cancellationToken)
-        {
-            try
-            {
-                var result = await _authService.RegisterDoctorAsync(request.RegisterDoctorDto);
-                
-                if (result == null || string.IsNullOrEmpty(result.AccessToken))
-                {
-                    return _responseHandler.BadRequest<AuthDto>("Registration failed. Please check your information and try again.");
-                }
-
-                return _responseHandler.Created(result);
-            }
-            catch (Exception ex)
-            {
-                return _responseHandler.BadRequest<AuthDto>($"An error occurred during registration: {ex.Message}");
-            }
-        }
-    }
-
     public class LoginCommandHandler : IRequestHandler<LoginCommand, Response<AuthDto>>
     {
         private readonly IAuthService _authService;
@@ -132,7 +71,6 @@ namespace Helix.Core.Features.Auth.Commands.Handler
             }
         }
     }
-
     public class ForgetPasswordCommandHandler : IRequestHandler<ForgetPasswordCommand, Response<string>>
     {
         private readonly IAuthService _authService;
@@ -161,7 +99,6 @@ namespace Helix.Core.Features.Auth.Commands.Handler
             }
         }
     }
-
     public class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordCommand, Response<string>>
     {
         private readonly IAuthService _authService;
@@ -194,7 +131,6 @@ namespace Helix.Core.Features.Auth.Commands.Handler
             }
         }
     }
-
     public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordCommand, Response<string>>
     {
         private readonly IAuthService _authService;
@@ -230,7 +166,39 @@ namespace Helix.Core.Features.Auth.Commands.Handler
             }
         }
     }
+    public class ResendConfirmationEmailCommandHandler : IRequestHandler<ResendConfirmationEmailCommand, Response<string>>
+    {
+        private readonly IAuthService _authService;
+        private readonly ResponseHandler _responseHandler;
 
+        public ResendConfirmationEmailCommandHandler(IAuthService authService, ResponseHandler responseHandler)
+        {
+            _authService = authService;
+            _responseHandler = responseHandler;
+        }
+
+        public async Task<Response<string>> Handle(ResendConfirmationEmailCommand request, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var result = await _authService.ResendConfirmationEmailAsync(
+                    request.Email);
+                return _responseHandler.Success(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return _responseHandler.BadRequest<string>(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return _responseHandler.BadRequest<string>(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return _responseHandler.BadRequest<string>($"An error occurred: {ex.Message}");
+            }
+        }
+    }
     public class ConfirmEmailCommandHandler : IRequestHandler<ConfirmEmailCommand, Response<string>>
     {
         private readonly IAuthService _authService;
