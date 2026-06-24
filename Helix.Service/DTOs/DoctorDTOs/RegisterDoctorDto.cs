@@ -1,13 +1,10 @@
 using Helix.Data.Enums;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace Helix.Service.DTOs.DoctorDTOs
 {
-    public class CreateDoctorDto
+    public class RegisterDoctorDto
     {
         // --- 1. Identity Link ---
         [Required]
@@ -33,18 +30,10 @@ namespace Helix.Service.DTOs.DoctorDTOs
 
         // This replaces the old Availabilities object
         public List<string> AvailabeDays { get; set; } = new List<string>();
-        public List<CreateAvailableTimeSlotDto> AvailableTimeSlots { get; set; } = new List<CreateAvailableTimeSlotDto>();
+        public List<string> AvailableTimeSlotsJson { get; set; } 
 
         // --- Step 4: Verification ---
         public IFormFile MedicalLicenseDocument { get; set; }
         public IFormFile NationalIdDocument { get; set; }
-    }
-    public class CreateAvailableTimeSlotDto
-    {
-        [Required]
-        public TimeSpan StartTime { get; set; }
-
-        [Required]
-        public TimeSpan EndTime { get; set; }
     }
 }

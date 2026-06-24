@@ -4,6 +4,7 @@ using Helix.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Helix.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260624100020_update doctore table Specialty Nullable")]
+    partial class updatedoctoretableSpecialtyNullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -337,7 +340,6 @@ namespace Helix.Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SpecialtyCatalogCode")
-                        .IsRequired()
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("State")
@@ -1192,8 +1194,7 @@ namespace Helix.Infrastructure.Migrations
                     b.HasOne("Helix.Data.Entities.SpecialtyCatalog", "SpecialtyCatalog")
                         .WithMany()
                         .HasForeignKey("SpecialtyCatalogCode")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.OwnsMany("Helix.Data.Entities.AvailableTimeSlot", "AvailableTimeSlots", b1 =>
                         {

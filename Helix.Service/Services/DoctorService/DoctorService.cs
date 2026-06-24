@@ -1,12 +1,13 @@
 using AutoMapper;
 using Helix.Data.Entities;
 using Helix.Service.DTOs.DoctorDTOs;
+using Helix.Service.DTOs.PatientDTOs;
 using Helix.Service.Interfaces;
 using Microsoft.AspNetCore.Identity;
 
 namespace Helix.Service.Services.DoctorService
 {
-    public class DoctorService(IUnitOfWork unitOfWork, IMapper mapper, UserManager<AppUser> userManager) : IDoctorService
+    public class DoctorService(IUnitOfWork unitOfWork, IMapper mapper, UserManager<AppUser> userManager, IFileService fileService) : IDoctorService
     {
         public async Task<DoctorDto> CreateDoctorAsync(CreateDoctorDto createDoctorDto)
         {
@@ -16,11 +17,18 @@ namespace Helix.Service.Services.DoctorService
             {
                 throw new Exception($"Identity User with ID {createDoctorDto.AppUserId} not found.");
             }
+            if (await unitOfWork.Repository<Doctor>().FindAsync(p => p.AppUserId == createDoctorDto.AppUserId) is { Count: > 0 })
+            {
+                throw new Exception($"A patient already exists for the Identity User with ID {createDoctorDto.AppUserId}.");
+            }
 
             var doctor = mapper.Map<Doctor>(createDoctorDto);
 
             // 2. EF Core Optimization: Just set the Foreign Key string
             doctor.AppUserId = createDoctorDto.AppUserId;
+
+            doctor.MedicalLicenseDocumentUrl = await fileService.UploadFileAsync(createDoctorDto.MedicalLicenseDocument);
+            doctor.NationalIdDocumentUrl = await fileService.UploadFileAsync(createDoctorDto.NationalIdDocument);
 
             await unitOfWork.Repository<Doctor>().AddAsync(doctor);
             await unitOfWork.CompleteAsync(); // Using our new asynchronous commit!

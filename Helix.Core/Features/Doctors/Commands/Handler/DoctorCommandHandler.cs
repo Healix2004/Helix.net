@@ -6,10 +6,6 @@ using MediatR;
 
 namespace Helix.Core.Features.Doctors.Commands.Handler
 {
-    /// <summary>
-    /// Handles the <see cref="CreateDoctorCommand"/> and creates a new doctor record.
-    /// Returns <see cref="System.Net.HttpStatusCode.Created"/> on success.
-    /// </summary>
     public class CreateDoctorCommandHandler : IRequestHandler<CreateDoctorCommand, Response<DoctorDto>>
     {
         private readonly IDoctorService _doctorService;
@@ -28,11 +24,6 @@ namespace Helix.Core.Features.Doctors.Commands.Handler
             return _responseHandler.Created(result);
         }
     }
-
-    /// <summary>
-    /// Handles the <see cref="UpdateDoctorCommand"/> and updates an existing doctor record.
-    /// Returns <see cref="System.Net.HttpStatusCode.NotFound"/> if the doctor does not exist.
-    /// </summary>
     public class UpdateDoctorCommandHandler : IRequestHandler<UpdateDoctorCommand, Response<DoctorDto>>
     {
         private readonly IDoctorService _doctorService;
@@ -53,11 +44,6 @@ namespace Helix.Core.Features.Doctors.Commands.Handler
             return _responseHandler.Success(result);
         }
     }
-
-    /// <summary>
-    /// Handles the <see cref="DeleteDoctorCommand"/> and removes a doctor record.
-    /// Returns <see cref="System.Net.HttpStatusCode.NotFound"/> if the doctor does not exist.
-    /// </summary>
     public class DeleteDoctorCommandHandler : IRequestHandler<DeleteDoctorCommand, Response<bool>>
     {
         private readonly IDoctorService _doctorService;

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Timers;
 
@@ -15,7 +16,8 @@ namespace Helix.Data.Entities
         public virtual AppUser AppUser { get; set; }
 
         // --- Step 2: Professional Information ---
-        public string Specialty { get; set; } = default!;
+        public string SpecialtyCatalogCode { get; set; }
+        public SpecialtyCatalog SpecialtyCatalog { get; set; }
         public string MedicalLicenseNumber { get; set; }
         public string Country { get; set; }
         public string State { get; set; }

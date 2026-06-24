@@ -111,9 +111,14 @@ namespace Helix.Service.Mappings
                 .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.AppUser.PhoneNumber))
                 .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.AppUser.Address));
 
-            CreateMap<CreateDoctorDto, Doctor>();
+            CreateMap<CreateDoctorDto, Doctor>()
+                .ForMember(dest => dest.AvailabeDays, opt => opt.MapFrom(src => src.AvailabeDays))
+                .ForMember(dest => dest.AvailableTimeSlots, opt => opt.MapFrom(src => src.AvailableTimeSlots));
             CreateMap<UpdateDoctorDto, Doctor>();
 
+            CreateMap<CreateAvailableTimeSlotDto, AvailableTimeSlot>()
+                .ForMember(dest=> dest.StartTime, opt => opt.MapFrom(src => src.StartTime))
+                .ForMember(dest=> dest.EndTime,opt=> opt.MapFrom(src => src.EndTime));
             // ==========================================
             // Medication Mappings (Consolidated)
             // ==========================================

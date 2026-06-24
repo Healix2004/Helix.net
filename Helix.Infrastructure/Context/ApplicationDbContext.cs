@@ -22,6 +22,7 @@ namespace Helix.Infrastructure.Context
             base.OnModelCreating(builder);
 
             builder.Entity<Doctor>().Property(Doctor => Doctor.Bio).HasMaxLength(500);
+            builder.Entity<Doctor>().HasOne(d => d.SpecialtyCatalog).WithMany().OnDelete(DeleteBehavior.Restrict);
 
             // facilities doctor relationship 
             builder.Entity<Doctor>().HasMany(Doctor => Doctor.Facilities).WithMany(Facilitie => Facilitie.Doctors);
@@ -95,6 +96,11 @@ namespace Helix.Infrastructure.Context
 
             builder.Entity<EmergencyOverrideLog>().HasOne(e => e.Patient).WithMany().OnDelete(DeleteBehavior.Restrict);
             builder.Entity<EmergencyOverrideLog>().HasOne(e => e.Doctor).WithMany().OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<SpecialtyCatalog>().HasKey(s=>s.Code);
+            builder.Entity<SpecialtyCatalog>().Property(s => s.Code).HasMaxLength(50);
+            builder.Entity<SpecialtyCatalog>().Property(s => s.DisplayName).HasMaxLength(200);
+            builder.Entity<SpecialtyCatalog>().Property(s => s.CodeSystem).HasMaxLength(50);
 
 
             // Configure the Foreign Key Relationship

@@ -8,6 +8,7 @@ using Helix.Service.Interfaces; // ADDED: Need this to inject IDoctorService
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace Helix.API.Controllers
 {
@@ -18,6 +19,38 @@ namespace Helix.API.Controllers
     [ApiController]
     public class DoctorController(IMediator mediator, IDoctorService doctorService) : AppControllerBase
     {
+        [HttpPost("register-doctor")]
+        public async Task<IActionResult> RegisterDoctor([FromForm] RegisterDoctorDto dto)
+        {
+            // 1. Manually deserialize the JSON strings back into C# Lists
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            var timeSlotsList = dto.AvailableTimeSlotsJson.Select(t => JsonSerializer.Deserialize<CreateAvailableTimeSlotDto>(t,options)).ToList();
+
+            // 2. Combine into your actual command DTO
+            var createDoctorDto = new CreateDoctorDto
+            {
+                AppUserId = dto.AppUserId,
+                SpecialtyCatalogCode = dto.SpecialtyCatalogCode,
+                MedicalLicenseNumber = dto.MedicalLicenseNumber,
+                MedicalLicenseDocument= dto.MedicalLicenseDocument,
+                NationalIdDocument = dto.NationalIdDocument,
+                Country = dto.Country,
+                State = dto.State,
+                YearsOfExperience = dto.YearsOfExperience,
+                ClinicAddress = dto.ClinicAddress,
+                Bio = dto.Bio,
+                ConsultationType = dto.ConsultationType,
+                ConsultationFee = dto.ConsultationFee,
+                AvailabeDays = dto.AvailabeDays,
+                AvailableTimeSlots = timeSlotsList
+            };
+            var command = new CreateDoctorCommand(createDoctorDto);
+            var result = await mediator.Send(command);
+            return NewResult(result);
+        }
         // ==========================================================
         // 1. FOR THE DOCTOR (Fetching their own profile)
         // ==========================================================
