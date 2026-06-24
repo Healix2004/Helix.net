@@ -16,6 +16,8 @@ namespace Helix.Data.Entities
         public virtual AppUser AppUser { get; set; }
 
         // --- Step 2: Professional Information ---
+        public string FullName { get; set; } = default!;
+        public string NationalId { get; set; } = default!;
         public string SpecialtyCatalogCode { get; set; }
         public SpecialtyCatalog SpecialtyCatalog { get; set; }
         public string MedicalLicenseNumber { get; set; }
@@ -32,6 +34,7 @@ namespace Helix.Data.Entities
         // --- Step 4: Verification ---
         public string MedicalLicenseDocumentUrl { get; set; }
         public string NationalIdDocumentUrl { get; set; }
+        public string? ProfileImageUrl { get; set; }
         public bool IsVerified { get; set; } = false;// This tracks if an admin has reviewed their uploaded documents
 
         //one to many ralations

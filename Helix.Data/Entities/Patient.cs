@@ -10,7 +10,10 @@ namespace Helix.Data.Entities
         // --- 1. Identity Link ---
         public string AppUserId { get; set; }
         public virtual AppUser AppUser { get; set; }
+        public string FullName { get; set; } = default!;
+        public string NationalId { get; set; } = default!; 
         public EnPatientCategories? PatientCategory { get; set; }
+        public string? ProfileImageUrl { get; set; }
 
         // --- Step 2: Medical Information ---
         public EnBloodTypes? BloodType { get; set; }

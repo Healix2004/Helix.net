@@ -42,10 +42,8 @@ namespace Helix.Infrastructure.Context.DbInitializer
                 user = new AppUser
                 {
                     UserName = "admin",
-                    FullName = "Admin",
                     Email = adminEmail,
                     EmailConfirmed = true,
-                    Address = "Admin Address",
                 };
 
                 var result = await _userManager.CreateAsync(user, "Admin#123");

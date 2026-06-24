@@ -31,23 +31,7 @@ namespace Helix.Core.Features.Auth.Commands.Validation
                     .WithMessage("Password is required")
                     .MinimumLength(6)
                     .WithMessage("Password must be at least 6 characters long");
-
-
-                RuleFor(x => x.RegisterDto.FullName)
-                    .NotEmpty()
-                    .WithMessage("Full name is required")
-                    .MaximumLength(100)
-                    .WithMessage("Full name must not exceed 100 characters");
-
-                RuleFor(x => x.RegisterDto.PhoneNumber)
-                    .NotEmpty()
-                    .WithMessage("Mobile number is required");
-
-                RuleFor(x => x.RegisterDto.PhoneNumber)
-                    .NotEmpty()
-                    .WithMessage("Phone number is required");
-
-                            });
+            }); 
         }
     }
 }

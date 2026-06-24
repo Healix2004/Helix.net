@@ -4,6 +4,7 @@ using Helix.Service.DTOs.DoctorDTOs;
 using Helix.Service.DTOs.PatientDTOs;
 using Helix.Service.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Helix.Service.Services.DoctorService
 {
@@ -29,10 +30,13 @@ namespace Helix.Service.Services.DoctorService
 
             doctor.MedicalLicenseDocumentUrl = await fileService.UploadFileAsync(createDoctorDto.MedicalLicenseDocument);
             doctor.NationalIdDocumentUrl = await fileService.UploadFileAsync(createDoctorDto.NationalIdDocument);
+            doctor.ProfileImageUrl = await fileService.UploadFileAsync(createDoctorDto.ProfileImage);
 
             await unitOfWork.Repository<Doctor>().AddAsync(doctor);
             await unitOfWork.CompleteAsync(); // Using our new asynchronous commit!
 
+            user.PhoneNumber = createDoctorDto.PhoneNumber;
+            await userManager.UpdateAsync(user);
             return mapper.Map<DoctorDto>(doctor);
         }
 
@@ -60,7 +64,8 @@ namespace Helix.Service.Services.DoctorService
         public async Task<DoctorDto?> GetDoctorByIdAsync(Guid id)
         {
             // 4. Memory-optimized lookup using GetByIdAsync instead of Find().FirstOrDefault()
-            var doctor = await unitOfWork.Repository<Doctor>().GetByIdAsync(id);
+            var quary = await unitOfWork.Repository<Doctor>().FindAsQueryable(d => d.Id == id);
+            var doctor = await quary.Include(d => d.SpecialtyCatalog).Include(d=> d.AppUser).FirstOrDefaultAsync();
 
             return doctor == null ? null : mapper.Map<DoctorDto>(doctor);
         }

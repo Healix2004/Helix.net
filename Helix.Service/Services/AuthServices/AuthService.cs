@@ -57,12 +57,6 @@ namespace Helix.Service.Services.AuthServices
 
             // Map RegisterDto to AppUser using AutoMapper
             var user = mapper.Map<AppUser>(dto);
-
-            if (dto.ProfileImage != null)
-            {
-                user.ProfilePictureUrl = await fileService.UploadFileAsync(dto.ProfileImage);
-            }
-
             var result = await userManager.CreateAsync(user, dto.Password);
 
             if (!result.Succeeded)
@@ -302,33 +296,6 @@ namespace Helix.Service.Services.AuthServices
                 // Not a Base64Url-encoded string — return original value.
                 return input;
             }
-        }
-
-        // Note: Kept the CreateUser helper method in case it is utilized by other partial class files.
-        // Cleaned up default value spelling.
-        private async Task<AppUser> CreateUser(RegisterUserDto dto)
-        {
-            if (dto == null) throw new ArgumentNullException(nameof(dto));
-
-            await ValidateUserUniquenessAsync(dto.Email, dto.Username);
-
-            var user = mapper.Map<AppUser>(dto);
-
-            if (string.IsNullOrEmpty(user.Address))
-            {
-                user.Address = "Mansoura, Egypt";
-                user.FullName = "Default1";
-            }
-
-            var result = await userManager.CreateAsync(user, dto.Password);
-
-            if (!result.Succeeded)
-            {
-                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                throw new InvalidOperationException($"User creation failed: {errors}");
-            }
-
-            return user;
         }
     }
 }

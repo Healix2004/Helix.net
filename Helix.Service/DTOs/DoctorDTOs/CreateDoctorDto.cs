@@ -14,6 +14,10 @@ namespace Helix.Service.DTOs.DoctorDTOs
         public string AppUserId { get; set; }
 
         // --- Step 2: Professional Information ---
+        public string FullName { get; set; } = default!;
+        public string NationalId { get; set; } = default!;
+        public string PhoneNumber { get; set; } = default!;
+
         [Required(ErrorMessage = "Specialty code is required.")]
         [MaxLength(50)]
         public string SpecialtyCatalogCode { get; set; } // E.g., "394579002" from the frontend dropdown
@@ -38,6 +42,7 @@ namespace Helix.Service.DTOs.DoctorDTOs
         // --- Step 4: Verification ---
         public IFormFile MedicalLicenseDocument { get; set; }
         public IFormFile NationalIdDocument { get; set; }
+        public IFormFile? ProfileImage { get; set; }
     }
     public class CreateAvailableTimeSlotDto
     {

@@ -1,5 +1,6 @@
 using AutoMapper;
 using Helix.Data.Entities;
+using Helix.Service.DTOs.DoctorDTOs;
 using Helix.Service.DTOs.PatientDTOs;
 using Helix.Service.Interfaces;
 using Microsoft.AspNetCore.Identity;
@@ -7,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Helix.Service.Services.PatientService
 {
-    public class PatientService(IUnitOfWork unitOfWork, IMapper mapper, UserManager<AppUser> userManager) : IPatientService
+    public class PatientService(IUnitOfWork unitOfWork, IMapper mapper, UserManager<AppUser> userManager, IFileService fileService) : IPatientService
     {
         public async Task<PatientDto> CreatePatientAsync(CreatePatientDto createPatientDto)
         {
@@ -26,12 +27,26 @@ namespace Helix.Service.Services.PatientService
             // 2. EF Core Optimization: Just set the Foreign Key string
             patient.AppUserId = createPatientDto.AppUserId;
 
+            patient.EmergencyContacts = new List<EmergencyContact>{
+                    new EmergencyContact
+                    {
+                        Name = createPatientDto.EmergencyContactName,
+                        PhoneNumber = createPatientDto.EmergencyContactPhoneNumber
+                    }};
+            patient.Allergies = createPatientDto.AllergiesCode.Select(a => new Allergy() { AllergenCatalogCode = a }).ToList();
+            patient.ChronicDiseases = createPatientDto.ChronicDiseasesCode.Select(c => new ChronicDisease() { ChronicDiseaseCatalogCode = c }).ToList();
+            patient.Surgeries = createPatientDto.SurgeriesCode.Select(s => new Surgery() { ProcedureCatalogCode = s }).ToList();
+            patient.Medications = createPatientDto.CurrentMedicationsCode.Select(m => new Medication() { medicationCatalogRxcui = m }).ToList();
+            patient.ProfileImageUrl = await fileService.UploadFileAsync(createPatientDto.ProfileImage);
+
             await unitOfWork.Repository<Patient>().AddAsync(patient);
 
             await unitOfWork.CompleteAsync(); // Asynchronous database commit
 
-            patient = await unitOfWork.Repository<Patient>().GetByIdAsync(patient.Id); // Fetch the patient with the AppUser navigation property
+            patient = await unitOfWork.Repository<Patient>().GetByIdAsync(patient.Id); 
 
+            user.PhoneNumber = createPatientDto.PhoneNumber;
+            await userManager.UpdateAsync(user);
             return mapper.Map<PatientDto>(patient);
         }
 
@@ -60,7 +75,12 @@ namespace Helix.Service.Services.PatientService
         public async Task<PatientDto?> GetPatientByIdAsync(Guid id)
         {
             var quary = await unitOfWork.Repository<Patient>().FindAsQueryable(p => p.Id == id);
-            var patient = quary.Include(p => p.AppUser).FirstOrDefault();
+            var patient = quary.Include(p => p.AppUser)
+                .Include(p => p.Surgeries).ThenInclude(s => s.ProcedureCatalog)
+                .Include(p => p.Medications).ThenInclude(m => m.medicationCatalog)
+                .Include(p => p.Allergies).ThenInclude(a => a.AllergenCatalog)
+                .Include(p => p.ChronicDiseases).ThenInclude(c => c.ChronicDiseaseCatalog)
+                .FirstOrDefault();
 
             return patient == null ? null : mapper.Map<PatientDto>(patient);
         }

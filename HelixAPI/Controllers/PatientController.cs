@@ -24,7 +24,7 @@ namespace Helix.API.Controllers
     public class PatientController(IMediator mediator, IPatientService patientService, IDoctorService doctorService, IEmergencyAccessService emergencyAccessService) : AppControllerBase
     {
         [HttpPost("register-patient")]
-        public async Task<IActionResult> RegisterPatient([FromBody] CreatePatientDto dto)
+        public async Task<IActionResult> RegisterPatient([FromForm] CreatePatientDto dto)
         {
             var command = new CreatePatientCommand(dto);
             var result = await mediator.Send(command);

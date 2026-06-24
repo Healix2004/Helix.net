@@ -54,7 +54,7 @@ namespace Helix.Service.Services.RadiologyOrderService // Fixed typo in namespac
                     Id = o.Id,
                     PatientId = o.PatientId,
                     DoctorId = o.DoctorId,
-                    DoctorName = o.Doctor.AppUser.FullName,
+                    DoctorName = o.Doctor.FullName,
                     TerminologyCodeId = o.TerminologyCodeId,
                     TerminologyDisplay = o.TerminologyCode.Display,
                     TerminologyCode = o.TerminologyCode.Code,
@@ -77,9 +77,9 @@ namespace Helix.Service.Services.RadiologyOrderService // Fixed typo in namespac
                 {
                     Id = o.Id,
                     PatientId = o.PatientId,
-                    PatientName = o.Patient.AppUser.FullName,
+                    PatientName = o.Patient.FullName,
                     DoctorId = o.DoctorId,
-                    DoctorName = o.Doctor.AppUser.FullName,
+                    DoctorName = o.Doctor.FullName,
                     TerminologyCodeId = o.TerminologyCodeId,
                     TerminologyDisplay = o.TerminologyCode.Display,
                     TerminologyCode = o.TerminologyCode.Code,
@@ -100,11 +100,11 @@ namespace Helix.Service.Services.RadiologyOrderService // Fixed typo in namespac
                 .Select(o => new PendingRadiologyOrderDto
                 {
                     Id = o.Id,
-                    PatientName = o.Patient.AppUser.FullName,
+                    PatientName = o.Patient.FullName,
                     TerminologyDisplay = o.TerminologyCode.Display,
                     QrToken = o.QrToken,
                     CreatedAt = o.CreateDate,
-                    RequestingDoctorName = o.Doctor.AppUser.FullName,
+                    RequestingDoctorName = o.Doctor.FullName,
                 })
                 .ToListAsync();
         }
@@ -126,9 +126,9 @@ namespace Helix.Service.Services.RadiologyOrderService // Fixed typo in namespac
             {
                 Id = order.Id,
                 PatientId = order.PatientId,
-                PatientName = order.Patient.AppUser.FullName,
+                PatientName = order.Patient.FullName,
                 DoctorId = order.DoctorId,
-                DoctorName = order.Doctor.AppUser.FullName,
+                DoctorName = order.Doctor.FullName,
                 TerminologyCodeId = order.TerminologyCodeId,
                 QrToken = order.QrToken,
                 Status = order.Status,
@@ -153,7 +153,7 @@ namespace Helix.Service.Services.RadiologyOrderService // Fixed typo in namespac
             return new RadiologyOrderDto
             {
                 Id = order.Id,
-                PatientName = order.Patient.AppUser.FullName,
+                PatientName = order.Patient.FullName,
                 TerminologyCode = order.TerminologyCode.Code,
                 TerminologyDisplay = order.TerminologyCode.Display,
                 CreatedAt = order.CreateDate
@@ -206,7 +206,7 @@ namespace Helix.Service.Services.RadiologyOrderService // Fixed typo in namespac
             }
 
             // The patient is already guaranteed to be loaded here thanks to the .Include() above
-            var patientName = order.Patient.AppUser.FullName;
+            var patientName = order.Patient.FullName;
 
             // 3. Upload files using your FileService
             var uploadedImages = await fileService.UploadMultipleFilesAsync(dto.UploadedFilePaths, patientName, order.PatientId);
