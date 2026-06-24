@@ -9,10 +9,6 @@ namespace Helix.Data.Entities
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public string status { get; set; }
-
-        // doctor relation
-        public Guid DoctorId { get; set; }
-        public Doctor Doctor { get; set; }
         
         //patient relation
         public Guid PatientId { get; set; }

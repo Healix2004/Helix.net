@@ -8,3 +8,4 @@ namespace Helix.Service.Interfaces
         Task<IEnumerable<AllergenCatalog>> GetTopAllergiesAsync(int count = 10);
     }
 }
+

@@ -96,6 +96,7 @@ using (var scope = app.Services.CreateScope())
     await ChronicDiseaseSeeder.SeedAsync(dbContext);
     await ProcedureSeeder.SeedAsync(dbContext);
     await MedicationSeeder.SeedAsync(dbContext);
+    await SpecialtySeeder.SeedAsync(dbContext);
 }
 
 app.Run();

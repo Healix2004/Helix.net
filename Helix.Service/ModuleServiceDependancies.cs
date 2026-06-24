@@ -19,6 +19,7 @@ using Helix.Service.Services.ProcedureCatalogServices;
 using Helix.Service.Services.RadiologyOrderService;
 using Helix.Service.Services.RxNavTerminology;
 using Helix.Service.Services.SnowstormTerminology;
+using Helix.Service.Services.SpecialtyCatalogServices;
 using Helix.Service.Services.TokenProvider;
 using Helix.Service.Settings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -73,6 +74,7 @@ namespace Helix.Service
             services.AddChronicDiseaseCatalogService();
             services.AddProcedureCatalogService();
             services.AddMedicationCatalogService();
+            services.AddSpecialtyCatalogService();
 
             services.AddScoped<ITerminologyService, RemoteFhirTerminologyService>();
             services.AddHttpClient<IRxNavTerminologyService, RxNavTerminologyService>(client =>
@@ -284,6 +286,11 @@ namespace Helix.Service
         private static IServiceCollection AddMedicationCatalogService(this IServiceCollection services)
         {
             services.AddScoped<IMedicationCatalogService, MedicationCatalogService>();
+            return services;
+        }
+        private static IServiceCollection AddSpecialtyCatalogService(this IServiceCollection services)
+        {
+            services.AddScoped<ISpecialtyCatalogService, SpecialtyCatalogService>();
             return services;
         }
         private static IServiceCollection AddLabTestResultService(this IServiceCollection services)

@@ -124,5 +124,6 @@ namespace Helix.Infrastructure.Context
         public DbSet<Surgery> Surgeries { get; set; }
         public DbSet<ProcedureCatalog> procedureCatalogs { get; set; }
         public DbSet<MedicationCatalog> MedicationCatalogs { get; set; }
+        public DbSet<SpecialtyCatalog> SpecialtyCatalogs { get; set; }
     }
 }

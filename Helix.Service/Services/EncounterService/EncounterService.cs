@@ -23,7 +23,6 @@ namespace Helix.Service.Services.EncounterService
             // 2. Optimize: You only need to set the Foreign Keys! 
             // Attaching the full objects is unnecessary overhead.
             encounter.PatientId = patient.Id;
-            encounter.DoctorId = doctor.Id;
 
             await unitOfWork.Repository<Encounter>().AddAsync(encounter);
             await unitOfWork.CompleteAsync(); // Using the async commit method!

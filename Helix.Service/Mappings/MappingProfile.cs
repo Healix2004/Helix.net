@@ -165,14 +165,9 @@ namespace Helix.Service.Mappings
                 .ForMember(dest => dest.doctor, opt => opt.Ignore());
             CreateMap<UpdateDiagnoseDto, Diagnose>();
 
-            // Encounter Mappings
-            CreateMap<Encounter, EncounterDto>()
-                .ForMember(dest => dest.PatientId, opt => opt.MapFrom(src => src.patient.Id))
-                .ForMember(dest => dest.DoctorId, opt => opt.MapFrom(src => src.Doctor.Id));
 
             CreateMap<CreateEncounterDto, Encounter>()
-                .ForMember(dest => dest.patient, opt => opt.Ignore())
-                .ForMember(dest => dest.Doctor, opt => opt.Ignore());
+                .ForMember(dest => dest.patient, opt => opt.Ignore());
             CreateMap<UpdateEncounterDto, Encounter>();
 
             // Facility Mappings
