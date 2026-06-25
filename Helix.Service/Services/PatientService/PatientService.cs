@@ -1,5 +1,6 @@
 using AutoMapper;
 using Helix.Data.Entities;
+using Helix.Data.Enums;
 using Helix.Service.DTOs.DoctorDTOs;
 using Helix.Service.DTOs.PatientDTOs;
 using Helix.Service.Interfaces;
@@ -43,7 +44,12 @@ namespace Helix.Service.Services.PatientService
 
             await unitOfWork.CompleteAsync(); // Asynchronous database commit
 
-            patient = await unitOfWork.Repository<Patient>().GetByIdAsync(patient.Id); 
+            patient = await unitOfWork.Repository<Patient>().GetByIdAsync(patient.Id);
+
+            string roleName = EnRoles.Patient.ToString();
+
+            if (!await userManager.IsInRoleAsync(user, roleName))
+                await userManager.AddToRoleAsync(user, roleName);
 
             user.PhoneNumber = createPatientDto.PhoneNumber;
             await userManager.UpdateAsync(user);

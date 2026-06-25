@@ -1,5 +1,6 @@
 using AutoMapper;
 using Helix.Data.Entities;
+using Helix.Data.Enums;
 using Helix.Service.DTOs.DoctorDTOs;
 using Helix.Service.DTOs.PatientDTOs;
 using Helix.Service.Interfaces;
@@ -8,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Helix.Service.Services.DoctorService
 {
-    public class DoctorService(IUnitOfWork unitOfWork, IMapper mapper, UserManager<AppUser> userManager, IFileService fileService) : IDoctorService
+    public class DoctorService(IUnitOfWork unitOfWork, IMapper mapper, UserManager<AppUser> userManager, IFileService fileService , RoleManager<IdentityRole>  roleManager) : IDoctorService
     {
         public async Task<DoctorDto> CreateDoctorAsync(CreateDoctorDto createDoctorDto)
         {
@@ -35,6 +36,11 @@ namespace Helix.Service.Services.DoctorService
             await unitOfWork.Repository<Doctor>().AddAsync(doctor);
             await unitOfWork.CompleteAsync(); // Using our new asynchronous commit!
 
+            string roleName = EnRoles.Doctor.ToString();
+
+            if (!await userManager.IsInRoleAsync(user, roleName))
+                await userManager.AddToRoleAsync(user, roleName);
+            
             user.PhoneNumber = createDoctorDto.PhoneNumber;
             await userManager.UpdateAsync(user);
             return mapper.Map<DoctorDto>(doctor);
