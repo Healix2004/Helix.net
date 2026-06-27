@@ -10,6 +10,7 @@ using Helix.Service.Services;
 using Helix.Service.Services.AllergenCatalogServices;
 using Helix.Service.Services.AuthServices;
 using Helix.Service.Services.ChronicDiseaseCatalogServices;
+using Helix.Service.Services.ConsentService;
 using Helix.Service.Services.DrugDataService;
 using Helix.Service.Services.EmergencyAccessService;
 using Helix.Service.Services.FileServices;
@@ -56,6 +57,7 @@ namespace Helix.Service
             services.AddPatientService();
             services.AddDoctorService();
             services.AddConsentService();
+            services.AddConsentValidationService();
             services.AddAllergyService();
             services.AddDiagnoseService();
             services.AddEncounterService();
@@ -240,7 +242,11 @@ namespace Helix.Service
             services.AddScoped<IConsentService, Helix.Service.Services.ConsentService.ConsentService>();
             return services;
         }
-
+        private static IServiceCollection AddConsentValidationService(this IServiceCollection services)
+        {
+            services.AddScoped<IConsentValidationService, ConsentValidationService>();
+            return services;
+        }
         private static IServiceCollection AddAllergyService(this IServiceCollection services)
         {
             services.AddScoped<IAllergyService, Helix.Service.Services.AllergyService.AllergyService>();

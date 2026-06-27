@@ -1,10 +1,15 @@
 ﻿using Helix.Api.Base;
 using Helix.Core.Bases;
+using Helix.Core.Features.LabTestResults.Queries.Models;
 using Helix.Data.Enums;
 using Helix.Service.DTOs.LabOrderDTOs;
 using Helix.Service.DTOs.LabTestResultDTOs;
 using Helix.Service.Helper;
 using Helix.Service.Interfaces;
+using Helix.Service.Services.ConsentService;
+using Helix.Service.Services.DoctorService;
+using Helix.Service.Services.EmergencyAccessService;
+using Helix.Service.Services.LabOrderService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -15,7 +20,7 @@ namespace Helix.API.Controllers
 {
     [Route("api/lab-orders")]
     [ApiController]
-    public class LabOrderController(ILabOrderService labOrderService, IPatientService patientService, IDoctorService doctorService) : AppControllerBase
+    public class LabOrderController(ILabOrderService labOrderService, IPatientService patientService, IDoctorService doctorService, IConsentValidationService consentValidationService, IEmergencyAccessService emergencyAccessService) : AppControllerBase
     {
         // ==========================================
         // PATIENT WORKFLOW
@@ -89,9 +94,50 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        // ==========================================
-        // DOCTOR WORKFLOW
-        // ==========================================
+        // ==========================================================
+        // 2. FOR THE DOCTOR (Requires the 2-Hour Consent Token)
+        // ==========================================================
+        [HttpGet("patient/{patientId}")]
+        [Authorize(Roles = nameof(EnRoles.Doctor))]
+        public async Task<IActionResult> GetPatientLabRecords(Guid patientId)
+        {
+            bool hasStandardConsent = false;
+            var doctorId = await User.GetDoctorIdAsync(doctorService); // Get logged-in doctor
+
+            // 1. Extract the Custom Header
+            if (Request.Headers.TryGetValue("X-Consent-Token", out var consentTokenString))
+            {
+                // 2. Validate the Cryptographic Signature
+                var consentPrincipal = consentValidationService.GetPrincipalFromConsentToken(consentTokenString);
+
+                if (consentPrincipal != null)
+                {
+                    hasStandardConsent = consentPrincipal.HasValidConsent(patientId, "Labs");
+                }
+            }
+
+            // The Gateway Check
+            if (!hasStandardConsent)
+            {
+                return NewResult(new Response<bool>(false)
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.Forbidden,
+                    Message = "You do not have a valid, active consent token to view this patient's Lab records."
+                });
+            }
+
+            // 4. Fetch the data if authorized
+            var result = await labOrderService.GetOrdersByPatientAsync(patientId);
+
+            return NewResult(new Response<List<LabOrderDto>>(result)
+            {
+                Succeeded = true,
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Message = result.Count > 0 ? "Order history retrieved successfully." : "No orders found for this patient."
+            });
+        }
+
 
         [HttpGet("my-orders")]
         [Authorize(Roles = nameof(EnRoles.Doctor))]

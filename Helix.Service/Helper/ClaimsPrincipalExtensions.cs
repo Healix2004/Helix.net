@@ -59,5 +59,29 @@ namespace Helix.Service.Helper
 
             return true;
         }
+        public static bool HasValidConsent(this ClaimsPrincipal consentPrincipal, Guid requestedPatientId, string requiredScope, Guid? requestingDoctorId = null)
+        {
+            // 1. Verify this is actually a consent token, not a standard login token
+            var tokenType = consentPrincipal.FindFirst("TokenType")?.Value;
+            if (tokenType != "PatientConsent") return false;
+
+            // 2. Verify the token belongs to the requested patient
+            var allowedPatientId = consentPrincipal.FindFirst("PatientId")?.Value;
+            if (string.IsNullOrEmpty(allowedPatientId) || allowedPatientId != requestedPatientId.ToString())
+                return false;
+
+            // 3. Verify the token includes the required scope (e.g., "Labs")
+            var grantedScopes = consentPrincipal.FindAll("GrantedScope").Select(c => c.Value).ToList();
+            if (!grantedScopes.Contains(requiredScope)) return false;
+
+            // 4. (Optional but Secure) If the token was generated for a specific doctor, enforce it
+            var targetDoctorId = consentPrincipal.FindFirst("TargetDoctorId")?.Value;
+            if (!string.IsNullOrEmpty(targetDoctorId) && requestingDoctorId.HasValue)
+            {
+                if (targetDoctorId != requestingDoctorId.Value.ToString()) return false;
+            }
+
+            return true;
+        }
     }
 }
