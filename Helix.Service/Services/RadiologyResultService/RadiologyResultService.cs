@@ -27,7 +27,7 @@ namespace Helix.Service.Services.RadiologyResultService
                     OrderId = r.OrderId,
                     PatientId = r.PatientId,
                     PatientName = r.Order.Patient.FullName,
-                    TerminologyDisplay = r.Order.TerminologyCode.Display,
+                    TerminologyDisplay = r.Order.MedicalConcept.Display,
                     Findings = r.Findings,
                     Impression = r.Impression,
                     PerformedDate = r.PerformedDate,
@@ -57,7 +57,7 @@ namespace Helix.Service.Services.RadiologyResultService
                 {
                     Id = r.Id,
                     OrderId = r.OrderId,
-                    TerminologyDisplay = r.Order.TerminologyCode.Display,
+                    TerminologyDisplay = r.Order.MedicalConcept.Display,
                     Findings = r.Findings,
                     Impression = r.Impression,
                     PerformedDate = r.PerformedDate,
@@ -136,7 +136,7 @@ namespace Helix.Service.Services.RadiologyResultService
                     Id = r.Id,
                     OrderId = r.OrderId,
                     PatientName = r.Order.Patient.FullName,
-                    TerminologyDisplay = r.Order.TerminologyCode.Display,
+                    TerminologyDisplay = r.Order.MedicalConcept.Display,
                     PerformedDate = r.PerformedDate,
                 })
                 .OrderByDescending(r => r.PerformedDate)

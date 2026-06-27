@@ -1,20 +1,25 @@
 ﻿using Helix.Data.Enums;
+using System;
 
 namespace Helix.Data.Entities
 {
     public class RadiologyOrder : BaseEntity
     {
+        // --- Core Data ---
+        public string QrToken { get; set; } = default!;
+        public EnRadiologyOrderStatus Status { get; set; } = EnRadiologyOrderStatus.Pending;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public string? ReasonForExam { get; set; }
+
+        // --- Foreign Keys ---
         public Guid PatientId { get; set; }
         public Guid DoctorId { get; set; }
-        public Guid TerminologyCodeId { get; set; } // The specific scan requested (e.g., Code 70551 for "MRI Brain")
-        public string QrToken { get; set; } = string.Empty;
-        public EnLabOrderStatus Status { get; set; }
-        public DateTime CreateDate { get; set; } = DateTime.Now;
+        public Guid MedicalConceptId { get; set; }
 
-        // 3. Navigation Properties (Linking to the rest of HELIX)
-        public virtual Patient? Patient { get; set; }
-        public virtual Doctor? Doctor { get; set; }
-        public virtual TerminologyCodeLookup? TerminologyCode { get; set; }
-        public virtual RadiologyResult? Result { get; set; }
+        // --- Navigation Properties ---
+        public virtual Patient Patient { get; set; } = null!;
+        public virtual Doctor Doctor { get; set; } = null!;
+        public virtual MedicalConcept MedicalConcept { get; set; } = null!;
+        public virtual RadiologyReport? Report { get; set; }
     }
 }

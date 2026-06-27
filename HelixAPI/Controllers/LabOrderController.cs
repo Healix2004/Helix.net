@@ -1,20 +1,12 @@
 ﻿using Helix.Api.Base;
 using Helix.Core.Bases;
-using Helix.Core.Features.LabTestResults.Queries.Models;
 using Helix.Data.Enums;
 using Helix.Service.DTOs.LabOrderDTOs;
 using Helix.Service.DTOs.LabTestResultDTOs;
 using Helix.Service.Helper;
 using Helix.Service.Interfaces;
-using Helix.Service.Services.ConsentService;
-using Helix.Service.Services.DoctorService;
-using Helix.Service.Services.EmergencyAccessService;
-using Helix.Service.Services.LabOrderService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace Helix.API.Controllers
 {

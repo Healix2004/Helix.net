@@ -111,8 +111,6 @@ namespace Helix.Infrastructure.Context
             builder.Entity<RadiologyOrder>().HasOne(r => r.Patient).WithMany(p => p.RadiologyOrders).OnDelete(DeleteBehavior.Restrict);
             builder.Entity<RadiologyOrder>().HasOne(r => r.Doctor).WithMany(d => d.RadiologyOrders).HasForeignKey(r => r.DoctorId).OnDelete(DeleteBehavior.Restrict);
 
-            builder.Entity<RadiologyResult>().HasOne(r => r.Order).WithOne(o => o.Result).HasForeignKey<RadiologyResult>(r => r.OrderId) // The foreign key is in the Result table
-            .OnDelete(DeleteBehavior.Cascade);
             builder.Entity<RadiologyResult>().HasMany(r => r.Images).WithOne().OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<RadiologyImage>().Property(r=>r.FileName).HasMaxLength(255);

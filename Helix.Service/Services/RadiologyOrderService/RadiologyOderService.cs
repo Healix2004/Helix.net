@@ -19,10 +19,10 @@ namespace Helix.Service.Services.RadiologyOrderService // Fixed typo in namespac
             {
                 PatientId = dto.PatientId,
                 DoctorId = dto.DoctorId,
-                TerminologyCodeId = terminologyLookup.Id,
+                MedicalConceptId = terminologyLookup.Id,
                 QrToken = qrToken,
-                Status = EnLabOrderStatus.Pending,
-                CreateDate = DateTime.UtcNow
+                Status = EnRadiologyOrderStatus.Pending,
+                CreatedAt = DateTime.UtcNow
             };
 
             await unitOfWork.Repository<RadiologyOrder>().AddAsync(radioOrder);
@@ -46,22 +46,22 @@ namespace Helix.Service.Services.RadiologyOrderService // Fixed typo in namespac
             var query = await unitOfWork.Repository<RadiologyOrder>().FindAsQueryable(r => true);
 
             return await query
-                .Include(o => o.TerminologyCode)
+                .Include(o => o.MedicalConcept)
                 .Include(t => t.Doctor).ThenInclude(d => d.AppUser)
-                .Include(r => r.Result)
+                .Include(r => r.Report)
                 .Select(o => new RadiologyOrderDto
                 {
                     Id = o.Id,
                     PatientId = o.PatientId,
                     DoctorId = o.DoctorId,
                     DoctorName = o.Doctor.FullName,
-                    TerminologyCodeId = o.TerminologyCodeId,
-                    TerminologyDisplay = o.TerminologyCode.Display,
-                    TerminologyCode = o.TerminologyCode.Code,
+                    TerminologyCodeId = o.MedicalConceptId,
+                    TerminologyDisplay = o.MedicalConcept.Display,
+                    TerminologyCode = o.MedicalConcept.Code,
                     QrToken = o.QrToken,
                     Status = o.Status,
-                    RadiologyResultId = o.Result.Id,
-                    CreatedAt = o.CreateDate
+                    RadiologyResultId = o.Report.Id,
+                    CreatedAt = o.CreatedAt
                 })
                 .ToListAsync();
         }
@@ -72,7 +72,7 @@ namespace Helix.Service.Services.RadiologyOrderService // Fixed typo in namespac
 
             return await query
                 .Include(o => o.Patient).ThenInclude(p => p.AppUser)
-                .Include(o => o.TerminologyCode)
+                .Include(o => o.MedicalConcept)
                 .Select(o => new RadiologyOrderDto
                 {
                     Id = o.Id,
@@ -80,30 +80,30 @@ namespace Helix.Service.Services.RadiologyOrderService // Fixed typo in namespac
                     PatientName = o.Patient.FullName,
                     DoctorId = o.DoctorId,
                     DoctorName = o.Doctor.FullName,
-                    TerminologyCodeId = o.TerminologyCodeId,
-                    TerminologyDisplay = o.TerminologyCode.Display,
-                    TerminologyCode = o.TerminologyCode.Code,
+                    TerminologyCodeId = o.MedicalConceptId,
+                    TerminologyDisplay = o.MedicalConcept.Display,
+                    TerminologyCode = o.MedicalConcept.Code,
                     QrToken = o.QrToken,
                     Status = o.Status,
-                    CreatedAt = o.CreateDate
+                    CreatedAt = o.CreatedAt
                 })
                 .ToListAsync();
         }
 
         public async Task<List<PendingRadiologyOrderDto>> GetPendingOrdersAsync(Guid patientId)
         {
-            var query = await unitOfWork.Repository<RadiologyOrder>().FindAsQueryable(o => o.PatientId == patientId && o.Status == EnLabOrderStatus.Pending);
+            var query = await unitOfWork.Repository<RadiologyOrder>().FindAsQueryable(o => o.PatientId == patientId && o.Status == EnRadiologyOrderStatus.Pending);
 
             return await query
                 .Include(o => o.Patient).ThenInclude(p => p.AppUser)
-                .Include(o => o.TerminologyCode)
+                .Include(o => o.MedicalConcept)
                 .Select(o => new PendingRadiologyOrderDto
                 {
                     Id = o.Id,
                     PatientName = o.Patient.FullName,
-                    TerminologyDisplay = o.TerminologyCode.Display,
+                    TerminologyDisplay = o.MedicalConcept.Display,
                     QrToken = o.QrToken,
-                    CreatedAt = o.CreateDate,
+                    CreatedAt = o.CreatedAt,
                     RequestingDoctorName = o.Doctor.FullName,
                 })
                 .ToListAsync();
@@ -111,12 +111,12 @@ namespace Helix.Service.Services.RadiologyOrderService // Fixed typo in namespac
 
         public async Task<RadiologyOrderDto> GetRadiologyOrderByIdAsync(Guid id)
         {
-            var query = await unitOfWork.Repository<RadiologyOrder>().FindAsQueryable(o => o.Id == id && o.Status == EnLabOrderStatus.Pending);
+            var query = await unitOfWork.Repository<RadiologyOrder>().FindAsQueryable(o => o.Id == id && o.Status == EnRadiologyOrderStatus.Pending);
 
             var order = await query
                 .Include(o => o.Patient).ThenInclude(p => p.AppUser)
                 .Include(o => o.Doctor).ThenInclude(d => d.AppUser) // Added Doctor Include to prevent null refs on DoctorName
-                .Include(o => o.TerminologyCode)
+                .Include(o => o.MedicalConcept)
                 .FirstOrDefaultAsync();
 
             if (order == null)
@@ -129,20 +129,20 @@ namespace Helix.Service.Services.RadiologyOrderService // Fixed typo in namespac
                 PatientName = order.Patient.FullName,
                 DoctorId = order.DoctorId,
                 DoctorName = order.Doctor.FullName,
-                TerminologyCodeId = order.TerminologyCodeId,
+                TerminologyCodeId = order.MedicalConceptId,
                 QrToken = order.QrToken,
                 Status = order.Status,
-                CreatedAt = order.CreateDate
+                CreatedAt = order.CreatedAt
             };
         }
 
         public async Task<RadiologyOrderDto> ScanRadiologyOrderAsync(string qrToken)
         {
-            var query = await unitOfWork.Repository<RadiologyOrder>().FindAsQueryable(o => o.QrToken == qrToken && o.Status == EnLabOrderStatus.Pending);
+            var query = await unitOfWork.Repository<RadiologyOrder>().FindAsQueryable(o => o.QrToken == qrToken && o.Status == EnRadiologyOrderStatus.Pending);
 
             var order = await query
                 .Include(o => o.Patient).ThenInclude(p => p.AppUser)
-                .Include(o => o.TerminologyCode)
+                .Include(o => o.MedicalConcept)
                 .FirstOrDefaultAsync();
 
             if (order == null)
@@ -154,9 +154,9 @@ namespace Helix.Service.Services.RadiologyOrderService // Fixed typo in namespac
             {
                 Id = order.Id,
                 PatientName = order.Patient.FullName,
-                TerminologyCode = order.TerminologyCode.Code,
-                TerminologyDisplay = order.TerminologyCode.Display,
-                CreatedAt = order.CreateDate
+                TerminologyCode = order.MedicalConcept.Code,
+                TerminologyDisplay = order.MedicalConcept.Display,
+                CreatedAt = order.CreatedAt
             };
         }
 
@@ -167,7 +167,7 @@ namespace Helix.Service.Services.RadiologyOrderService // Fixed typo in namespac
             if (order == null)
                 throw new KeyNotFoundException($"RadiologyOrder with ID '{id}' was not found.");
 
-            if (Enum.TryParse<EnLabOrderStatus>(newStatus, true, out var parsedStatus))
+            if (Enum.TryParse<EnRadiologyOrderStatus>(newStatus, true, out var parsedStatus))
             {
                 order.Status = parsedStatus;
                 await unitOfWork.Repository<RadiologyOrder>().UpdateAsync(order);
@@ -182,10 +182,10 @@ namespace Helix.Service.Services.RadiologyOrderService // Fixed typo in namespac
             if (order == null)
                 throw new KeyNotFoundException($"RadiologyOrder with ID '{id}' was not found.");
 
-            if (order.Status != EnLabOrderStatus.Pending)
+            if (order.Status != EnRadiologyOrderStatus.Pending)
                 throw new InvalidOperationException("Only pending orders can be updated.");
 
-            order.TerminologyCodeId = (Guid)dto.TerminologyCodeId;
+            order.MedicalConceptId = (Guid)dto.TerminologyCodeId;
 
             await unitOfWork.Repository<RadiologyOrder>().UpdateAsync(order);
             return await unitOfWork.CompleteAsync() > 0;
@@ -200,7 +200,7 @@ namespace Helix.Service.Services.RadiologyOrderService // Fixed typo in namespac
                     .ThenInclude(p => p.AppUser)
                 .FirstOrDefaultAsync();
 
-            if (order == null || order.Status != EnLabOrderStatus.Pending)
+            if (order == null || order.Status != EnRadiologyOrderStatus.Pending)
             {
                 throw new KeyNotFoundException($"Pending RadiologyOrder with ID '{dto.OrderId}' was not found.");
             }
@@ -209,26 +209,25 @@ namespace Helix.Service.Services.RadiologyOrderService // Fixed typo in namespac
             var patientName = order.Patient.FullName;
 
             // 3. Upload files using your FileService
-            var uploadedImages = await fileService.UploadMultipleFilesAsync(dto.UploadedFilePaths, patientName, order.PatientId);
+            var uploadedImages = await fileService.UploadMultipleFilesAsync(dto.Images, patientName, order.PatientId);
 
-            var result = new RadiologyResult
+            var result = new RadiologyReport
             {
-                PatientId = order.PatientId,
-                OrderId = order.Id,
+                RadiologyOrderId = order.Id,
+                ExternalRadiologistName = dto.ExternalRadiologistName, // If the DTO includes the name of the external doctor
                 Findings = dto.Findings,
-                Impression = dto.Impression,
-                PerformedDate = DateTime.UtcNow,
-                StudyType = "Some Study Type", // Note: Consider passing this in from the DTO!
-                Images = new List<RadiologyImage>(uploadedImages)
+                Conclusion = dto.Impression, // Mapped from your DTO's "Impression" or "Conclusion"
+                ReportDate = DateTime.UtcNow,
+                //ImageUrls = uploadedImages // Assuming uploadedImages is a List<string> of URLs from Azure/S3/Local storage
             };
 
-            await unitOfWork.Repository<RadiologyResult>().AddAsync(result);
+            await unitOfWork.Repository<RadiologyReport>().AddAsync(result);
 
             // 4. Double Await Strategy: Generate the Result ID first
             await unitOfWork.CompleteAsync();
 
-            order.Status = EnLabOrderStatus.Completed;
-            order.Result = result;
+            order.Status = EnRadiologyOrderStatus.Completed;
+            order.Report = result;
 
             await unitOfWork.Repository<RadiologyOrder>().UpdateAsync(order);
 

@@ -14,7 +14,7 @@ namespace Helix.Service.DTOs.RadiologyOrderDto
         public string TerminologyDisplay { get; set; } = string.Empty;
         public string TerminologyCode { get; set; } = string.Empty; // e.g., "70551"
         public string QrToken { get; set; } = string.Empty;
-        public EnLabOrderStatus Status { get; set; } = EnLabOrderStatus.Pending;
+        public EnRadiologyOrderStatus Status { get; set; } = EnRadiologyOrderStatus.Pending;
         public string StatusName => Status.ToString();
         public Guid? RadiologyResultId { get; set; }
         public DateTime CreatedAt { get; set; }
