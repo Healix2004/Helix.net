@@ -1,9 +1,6 @@
 ﻿using Helix.Service.DTOs.RadiologyOrderDto;
 using Helix.Service.DTOs.RadiologyTestResultDto;
 
-// Note: You will likely need to add a using statement for your LabOrder DTOs
-// using Helix.Service.DTOs.LabOrderDTOs;
-
 namespace Helix.Service.Interfaces
 {
     public interface IRadiologyOrderService
@@ -12,6 +9,10 @@ namespace Helix.Service.Interfaces
         // PATIENT & RADIOLOGY SPECIALIST WORKFLOW (QR)
         // ==========================================
         Task<List<PendingRadiologyOrderDto>> GetPendingOrdersAsync(Guid patientId);
+
+        // Added to sync with the service implementation
+        Task<List<RadiologyOrderDto>> GetOrdersByPatientAsync(Guid patientId);
+
         Task<RadiologyOrderDto> ScanRadiologyOrderAsync(string qrToken);
         Task<bool> UploadResultAsync(CreateRadiologyTestResultDto dto);
 

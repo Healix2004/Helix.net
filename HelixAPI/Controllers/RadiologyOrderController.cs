@@ -5,20 +5,28 @@ using Helix.Service.DTOs.RadiologyOrderDto;
 using Helix.Service.DTOs.RadiologyTestResultDto;
 using Helix.Service.Helper;
 using Helix.Service.Interfaces;
+using Helix.Service.Services; // Ensure this is imported for IConsentValidationService
+using Helix.Service.Services.EmergencyAccessService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Helix.API.Controllers
 {
-    [Route("api/radiology-orders")] // FIX 1: Explicit RESTful routing
+    [Route("api/radiology-orders")]
     [ApiController]
-    public class RadiologyOrderController(IRadiologyOrderService radiologyOrderService, IPatientService patientService, IDoctorService doctorService) : AppControllerBase
+    public class RadiologyOrderController(
+        IRadiologyOrderService radiologyOrderService,
+        IPatientService patientService,
+        IDoctorService doctorService,
+        IConsentValidationService consentValidationService, // FIXED: Added missing injection
+        IEmergencyAccessService emergencyAccessService // FIXED: Added for emergency access
+        ) : AppControllerBase
     {
         // ==========================================
         // PATIENT WORKFLOW
         // ==========================================
 
-        [HttpGet("my-pending")] // FIX 2: Cleaner RESTful route
+        [HttpGet("my-pending")]
         [Authorize(Roles = nameof(EnRoles.Patient))]
         public async Task<IActionResult> GetPendingOrders()
         {
@@ -39,7 +47,7 @@ namespace Helix.API.Controllers
         // ==========================================
 
         [HttpGet("scan/{qrToken}")]
-        [Authorize(Roles = "Admin,Radiologist")] // FIX 3: CRITICAL SECURITY LOCK
+        [Authorize(Roles = "Admin,Radiologist")]
         public async Task<IActionResult> ScanRadiologyOrder(string qrToken)
         {
             var result = await radiologyOrderService.ScanRadiologyOrderAsync(qrToken);
@@ -54,8 +62,7 @@ namespace Helix.API.Controllers
         }
 
         [HttpPost("{orderId}/results")]
-        [Authorize(Roles = "Admin,Radiologist")] // FIX 3: CRITICAL SECURITY LOCK
-        // Note: [FromForm] is correct here since we are handling file uploads!
+        [Authorize(Roles = "Admin,Radiologist")]
         public async Task<IActionResult> UploadRadiologyResult(Guid orderId, [FromForm] CreateRadiologyTestResultDto dto)
         {
             dto.OrderId = orderId;
@@ -74,7 +81,52 @@ namespace Helix.API.Controllers
         // DOCTOR WORKFLOW
         // ==========================================
 
-        [HttpGet("my-orders")] // FIX 2: Cleaner RESTful route
+        [HttpGet("patient/{patientId}")]
+        [Authorize(Roles = nameof(EnRoles.Doctor))]
+        public async Task<IActionResult> GetPatientRadiologyOrders(Guid patientId) // FIXED: Renamed method
+        {
+            bool hasStandardConsent = false;
+            var doctorId = await User.GetDoctorIdAsync(doctorService);
+
+            // 1. Extract the Custom Header
+            if (Request.Headers.TryGetValue("X-Consent-Token", out var consentTokenString))
+            {
+                // 2. Validate the Cryptographic Signature
+                var consentPrincipal = consentValidationService.GetPrincipalFromConsentToken(consentTokenString);
+
+                if (consentPrincipal != null)
+                {
+                    // FIXED: Checked for "Radiology" scope instead of "Labs", and enforced doctorId
+                    hasStandardConsent = consentPrincipal.HasValidConsent(patientId, "Radiology", doctorId);
+                }
+            }
+
+            // 3. Check Emergency "Break the Glass" Consent
+            bool hasEmergencyConsent = await emergencyAccessService.HasActiveEmergencyAccessAsync(doctorId, patientId);
+
+            // The Gateway Check
+            if (!hasStandardConsent && !hasEmergencyConsent)
+            {
+                return NewResult(new Response<bool>(false)
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.Forbidden,
+                    Message = "You do not have a valid, active consent token to view this patient's Radiology orders."
+                });
+            }
+
+            // 4. Fetch the data if authorized
+            var result = await radiologyOrderService.GetOrdersByPatientAsync(patientId); // FIXED: Uses correct service
+
+            return NewResult(new Response<List<RadiologyOrderDto>>(result) // FIXED: Uses correct DTO
+            {
+                Succeeded = true,
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Message = result.Count > 0 ? "Order history retrieved successfully." : "No orders found for this patient."
+            });
+        }
+
+        [HttpGet("my-orders")]
         [Authorize(Roles = nameof(EnRoles.Doctor))]
         public async Task<IActionResult> GetOrdersByDoctor()
         {
@@ -90,7 +142,7 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        [HttpPost] // Changed from "create" to standard POST route
+        [HttpPost]
         [Authorize(Roles = nameof(EnRoles.Doctor))]
         public async Task<IActionResult> CreateRadiologyOrder([FromBody] CreateRadiologyOrderDto dto)
         {
@@ -110,7 +162,6 @@ namespace Helix.API.Controllers
         [Authorize(Roles = nameof(EnRoles.Doctor))]
         public async Task<IActionResult> UpdateRadiologyOrder(Guid id, [FromBody] UpdateRadiologyOrderDto dto)
         {
-            // FIX 4: Prevent ID Spoofing!
             if (id != dto.Id)
             {
                 return BadRequest("The ID in the URL does not match the ID in the body.");
@@ -160,7 +211,7 @@ namespace Helix.API.Controllers
         }
 
         [HttpPut("{id}/status/{newStatus}")]
-        [Authorize(Roles = "Admin,Radiologist")] // Radiologists likely need to update status too
+        [Authorize(Roles = "Admin,Radiologist")]
         public async Task<IActionResult> UpdateOrderStatus(Guid id, string newStatus)
         {
             var result = await radiologyOrderService.UpdateOrderStatusAsync(id, newStatus);

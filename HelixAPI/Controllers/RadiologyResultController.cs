@@ -12,7 +12,7 @@ namespace Helix.API.Controllers
 {
     [Route("api/radiology-results")]
     [ApiController]
-    public class RadiologyResultController(IRadiologyResultService radiologyResultService, IPatientService patientService,IDoctorService doctorService,IEmergencyAccessService emergencyAccessService) : AppControllerBase
+    public class RadiologyResultController(IRadiologyResultService radiologyResultService, IPatientService patientService, IDoctorService doctorService, IEmergencyAccessService emergencyAccessService) : AppControllerBase
     {
         // ==========================================
         // PATIENT & DOCTOR WORKFLOW (Retrieving)
