@@ -36,11 +36,15 @@ namespace Helix.Service.Services.DoctorService
             await unitOfWork.Repository<Doctor>().AddAsync(doctor);
             await unitOfWork.CompleteAsync(); // Using our new asynchronous commit!
 
+            
             string roleName = EnRoles.Doctor.ToString();
-
             if (!await userManager.IsInRoleAsync(user, roleName))
                 await userManager.AddToRoleAsync(user, roleName);
-            
+
+            roleName= EnRoles.RegisterAsDoctor.ToString();
+            if (await userManager.IsInRoleAsync(user, roleName))
+                await userManager.RemoveFromRoleAsync(user,roleName);
+
             user.PhoneNumber = createDoctorDto.PhoneNumber;
             await userManager.UpdateAsync(user);
             return mapper.Map<DoctorDto>(doctor);

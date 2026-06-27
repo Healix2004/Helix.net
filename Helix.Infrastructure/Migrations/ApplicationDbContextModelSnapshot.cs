@@ -518,17 +518,29 @@ namespace Helix.Infrastructure.Migrations
                     b.Property<Guid?>("EncounterId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("InterpretationFlag")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("NumericValue")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("PatientId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("ReferenceRange")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime?>("ResultDate")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
+
+                    b.Property<string>("StringValue")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("TerminologyCodeId")
                         .HasColumnType("uniqueidentifier");
@@ -537,9 +549,6 @@ namespace Helix.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
-
-                    b.Property<decimal>("Value")
-                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 
@@ -550,6 +559,118 @@ namespace Helix.Infrastructure.Migrations
                     b.HasIndex("TerminologyCodeId");
 
                     b.ToTable("LabTestResults");
+                });
+
+            modelBuilder.Entity("Helix.Data.Entities.LoincPanelComponent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ChildLoincConceptId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Conditionality")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<DateTime>("LastUpdated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("ParentLoincConceptId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChildLoincConceptId");
+
+                    b.HasIndex("ParentLoincConceptId", "ChildLoincConceptId")
+                        .IsUnique();
+
+                    b.ToTable("LoincPanelComponents");
+                });
+
+            modelBuilder.Entity("Helix.Data.Entities.MedicalConcept", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Class")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Component")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Display")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsRadiology")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("LastUpdated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MethodType")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Property")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("ScaleType")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("System")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("SystemUri")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("TimeAspect")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Class");
+
+                    b.HasIndex("Display");
+
+                    b.HasIndex("IsRadiology");
+
+                    b.HasIndex("SystemUri", "Code")
+                        .IsUnique();
+
+                    b.ToTable("MedicalConceptCatalogs");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.Medication", b =>
@@ -1335,6 +1456,25 @@ namespace Helix.Infrastructure.Migrations
                     b.Navigation("TerminologyCode");
                 });
 
+            modelBuilder.Entity("Helix.Data.Entities.LoincPanelComponent", b =>
+                {
+                    b.HasOne("Helix.Data.Entities.MedicalConcept", "ChildLoincConcept")
+                        .WithMany("ParentPanels")
+                        .HasForeignKey("ChildLoincConceptId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Helix.Data.Entities.MedicalConcept", "ParentLoincConcept")
+                        .WithMany("ChildComponents")
+                        .HasForeignKey("ParentLoincConceptId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ChildLoincConcept");
+
+                    b.Navigation("ParentLoincConcept");
+                });
+
             modelBuilder.Entity("Helix.Data.Entities.Medication", b =>
                 {
                     b.HasOne("Helix.Data.Entities.Patient", null)
@@ -1568,6 +1708,13 @@ namespace Helix.Infrastructure.Migrations
                 {
                     b.Navigation("LabOrder")
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Helix.Data.Entities.MedicalConcept", b =>
+                {
+                    b.Navigation("ChildComponents");
+
+                    b.Navigation("ParentPanels");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.Patient", b =>

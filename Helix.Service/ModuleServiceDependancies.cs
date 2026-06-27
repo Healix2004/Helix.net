@@ -3,6 +3,7 @@ using Helix.Data.Entities;
 using Helix.Infrastructure.Context;
 using Helix.Infrastructure.Context.DbInitializer;
 using Helix.Infrastructure.ExternalServices;
+using Helix.Infrastructure.Seeding;
 using Helix.Service.Interfaces;
 using Helix.Service.Repositories;
 using Helix.Service.Services;
@@ -41,6 +42,8 @@ namespace Helix.Service
         {
             services.AddDbContext(configuration, env);
             services.AddDbInitializer();
+            services.AddLoincSeeder();
+            services.AddLoincPanelSeeder();
             services.AddIdentity();
             services.AddJWT(configuration, env);
             services.AddAutoMapper(cfg => { }, AppDomain.CurrentDomain.GetAssemblies());
@@ -97,14 +100,33 @@ namespace Helix.Service
             {
                 connectionString = configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection String Not Found");
             }
-
             services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(connectionString));
+            options.UseSqlServer(connectionString,sqlServerOptionsAction: sqlOptions =>
+            {
+                // 1. Tell EF Core to automatically retry if the connection drops!
+                sqlOptions.EnableRetryOnFailure(
+                    maxRetryCount: 5,
+                    maxRetryDelay: TimeSpan.FromSeconds(30),
+                    errorNumbersToAdd: null);
+
+                // 2. Give SQL Server more time to think during massive data seeds (e.g., 3 minutes)
+                sqlOptions.CommandTimeout(180);
+            }));
             return services;
         }
         private static IServiceCollection AddDbInitializer(this IServiceCollection services)
         {
             services.AddScoped<IDbInitializer, DbInitializer>();
+            return services;
+        }
+        private static IServiceCollection AddLoincSeeder(this IServiceCollection services)
+        {
+            services.AddScoped<LoincSeeder>();
+            return services;
+        }
+        private static IServiceCollection AddLoincPanelSeeder(this IServiceCollection services)
+        {
+            services.AddScoped<LoincPanelSeeder>();
             return services;
         }
         private static IServiceCollection AddIdentity(this IServiceCollection services)

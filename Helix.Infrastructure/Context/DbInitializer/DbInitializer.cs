@@ -59,7 +59,6 @@ namespace Helix.Infrastructure.Context.DbInitializer
             foreach (var roleValue in Enum.GetValues(typeof(EnRoles)))
             {
                 string roleName = roleValue.ToString();
-
                 // This is the correct check: check for the *current* role in the loop
                 if (!await _roleManager.RoleExistsAsync(roleName))
                 {
@@ -67,7 +66,7 @@ namespace Helix.Infrastructure.Context.DbInitializer
                     await _roleManager.CreateAsync(new IdentityRole(roleName));
                 }
                 // Check if the user is *already* in the role before adding
-                if (!await _userManager.IsInRoleAsync(user, roleName))
+                if (!roleName.Contains("Register") && !await _userManager.IsInRoleAsync(user, roleName))
                 {
                     // Await the async call
                     await _userManager.AddToRoleAsync(user, roleName);

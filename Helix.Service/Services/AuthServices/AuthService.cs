@@ -12,7 +12,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json.Linq;
 using System;
+using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -68,8 +70,20 @@ namespace Helix.Service.Services.AuthServices
             // Send email confirmation code
             await sendConfirmationEmailAsync(user.Id);
 
+            string roleName = dto.RegisterAs.ToString();
+
+            if (roleName.Contains("Register") && !await userManager.IsInRoleAsync(user, roleName))
+            {
+                await userManager.AddToRoleAsync(user, roleName);
+            }
+            else
+            {
+                var errors = "invlaid User Role selection";
+                throw new InvalidOperationException($"User creation failed: {errors}");
+            }
             var token = await tokenProvider.GenerateAccessTokenAsync(user);
-            return new AuthDto { UserId = user.Id, AccessToken = token };
+
+            return new AuthDto { UserId = user.Id, AccessToken = token};
         }
         public async Task<string> ConfirmEmailAsync(string email, string code)
         {

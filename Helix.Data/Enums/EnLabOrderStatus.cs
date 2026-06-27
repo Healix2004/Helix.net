@@ -8,6 +8,7 @@ namespace Helix.Data.Enums
     {
         Pending,
         InProgress,
+        Abnormal,
         Completed
     }
 }

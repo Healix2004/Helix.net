@@ -186,7 +186,7 @@ namespace Helix.Service.Services.LabOrderService
                 TerminologyCodeId = order.TerminologyCodeId,
                 ResultDate = DateTime.UtcNow,
                 Status = EnLabOrderStatus.Completed,
-                Value = dto.Value,
+                NumericValue = dto.Value,
                 Unit = dto.Unit
             };
 

@@ -1,7 +1,9 @@
 using Helix.Core.Bases;
 using Helix.Core.Features.Patients.Commands.Models;
+using Helix.Service.DTOs.AuthDTOs;
 using Helix.Service.DTOs.PatientDTOs;
 using Helix.Service.Interfaces;
+using Helix.Service.Services.AuthServices;
 using MediatR;
 
 namespace Helix.Core.Features.Patients.Commands.Handler
@@ -24,8 +26,21 @@ namespace Helix.Core.Features.Patients.Commands.Handler
         /// <inheritdoc />
         public async Task<Response<PatientDto>> Handle(CreatePatientCommand request, CancellationToken cancellationToken)
         {
-            var result = await _patientService.CreatePatientAsync(request.Dto);
-            return _responseHandler.Created(result);
+            try
+            {
+                var result = await _patientService.CreatePatientAsync(request.Dto);
+
+                if (result == null)
+                {
+                    return _responseHandler.BadRequest<PatientDto>("Registration failed. Please check your information and try again.");
+                }
+
+                return _responseHandler.Created(result);
+            }
+            catch (Exception ex)
+            {
+                return _responseHandler.BadRequest<PatientDto>($"An error occurred during registration: {ex.Message}");
+            }
         }
     }
 

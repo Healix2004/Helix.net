@@ -1,7 +1,9 @@
 using Helix.Core.Bases;
 using Helix.Core.Features.Doctors.Commands.Models;
 using Helix.Service.DTOs.DoctorDTOs;
+using Helix.Service.DTOs.PatientDTOs;
 using Helix.Service.Interfaces;
+using Helix.Service.Services.PatientService;
 using MediatR;
 
 namespace Helix.Core.Features.Doctors.Commands.Handler
@@ -20,8 +22,21 @@ namespace Helix.Core.Features.Doctors.Commands.Handler
         /// <inheritdoc />
         public async Task<Response<DoctorDto>> Handle(CreateDoctorCommand request, CancellationToken cancellationToken)
         {
-            var result = await _doctorService.CreateDoctorAsync(request.Dto);
-            return _responseHandler.Created(result);
+            try
+            {
+                var result = await _doctorService.CreateDoctorAsync(request.Dto);
+
+                if (result == null)
+                {
+                    return _responseHandler.BadRequest<DoctorDto>("Registration failed. Please check your information and try again.");
+                }
+
+                return _responseHandler.Created(result);
+            }
+            catch (Exception ex)
+            {
+                return _responseHandler.BadRequest<DoctorDto>($"An error occurred during registration: {ex.Message}");
+            }
         }
     }
     public class UpdateDoctorCommandHandler : IRequestHandler<UpdateDoctorCommand, Response<DoctorDto>>

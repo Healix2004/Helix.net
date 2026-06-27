@@ -4,6 +4,7 @@ using Helix.Infrastructure.Context;
 using Helix.Infrastructure.Context.DbInitializer;
 using Helix.Infrastructure.Seeding;
 using Helix.Service;
+using Hl7.Fhir.Model.CdsHooks;
 using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -73,6 +74,14 @@ static async Task SeedDatabaseAsync(IHost app)
             await dbInitializer.Initialize();
 
             logger.LogInformation("Database initialization completed successfully.");
+
+            var loincSeider = serviceProvider.GetRequiredService<LoincSeeder>();
+            var loincCsvPath = Path.Combine(Directory.GetCurrentDirectory(), "Data", "Loinc", "Loinc.csv");
+            await loincSeider.SeedLoincDataAsync(loincCsvPath);
+
+            var loincPanelSeeder = serviceProvider.GetRequiredService<LoincPanelSeeder>();
+            var panelsAndFormsCsvPath = Path.Combine(Directory.GetCurrentDirectory(), "Data", "Loinc", "PanelsAndForms.csv"); 
+            await loincPanelSeeder.SeedPanelsAndFormsDataAsync(panelsAndFormsCsvPath);
         }
         catch (Exception ex)
         {

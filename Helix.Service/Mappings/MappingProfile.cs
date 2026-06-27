@@ -13,6 +13,7 @@ using Helix.Service.DTOs.ObservationDTOs;
 using Helix.Service.DTOs.PatientDTOs;
 using Helix.Service.DTOs.TerminologyCodeLookupDTOs;
 using Helix.Service.Helper;
+using System.Linq;
 
 namespace Helix.Service.Mappings
 {
@@ -68,12 +69,9 @@ namespace Helix.Service.Mappings
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.AppUser.Email))
                 .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.AppUser.PhoneNumber))
                 .ForMember(dest => dest.BloodType, opt => opt.MapFrom(src => src.BloodType.ToString()))
-                .ForMember(dest => dest.PatientCategory, opt => opt.MapFrom(src => src.PatientCategory.ToString()))
-                .ForMember(dest => dest.Surgeries, opt => opt.MapFrom(src => src.Surgeries.Select(s=> s.ProcedureCatalog.DisplayName)))
-                .ForMember(dest => dest.Allergies, opt => opt.MapFrom(src => src.Allergies.Select(s=> s.AllergenCatalog.DisplayName)))
-                .ForMember(dest => dest.Medication, opt => opt.MapFrom(src => src.Medications.Select(s=> s.medicationCatalog.DrugName)))
-                .ForMember(dest => dest.ChronicDiseases, opt => opt.MapFrom(src => src.ChronicDiseases.Select(s=> s.ChronicDiseaseCatalog.DisplayName))) 
-                .ForMember(dest => dest.PatientCategory, opt => opt.MapFrom(src => src.PatientCategory));
+                .ForMember(dest => dest.PatientCategory, opt => opt.MapFrom(src => src.PatientCategory.ToString()));
+            // THE FIX: Removed the .Select() chains. AutoMapper will automatically map the lists
+            // of Surgeries, Allergies, Medications, and ChronicDiseases using the child mappings below!
 
             // Write (Create/Update Dto -> Entity)
             CreateMap<CreatePatientDto, Patient>();
@@ -82,13 +80,17 @@ namespace Helix.Service.Mappings
             // --- Nested Patient Object Mappings (Read) ---
             CreateMap<EmergencyContact, EmergencyContactDto>();
             CreateMap<Insurance, InsuranceDto>();
-            CreateMap<ChronicDisease, ChronicDiseaseDto>();
+
+            // THE FIX: Move the catalog display name extraction here!
+            // Note: Change 'DiseaseName' to match whatever string property is inside your ChronicDiseaseDto
+            CreateMap<ChronicDisease, ChronicDiseaseDto>()
+                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.ChronicDiseaseCatalog.DisplayName));
 
             // Flattens the SNOMED procedure name
             CreateMap<Surgery, SurgeryDto>()
                 .ForMember(dest => dest.ProcedureName, opt => opt.MapFrom(src => src.ProcedureCatalog.DisplayName));
 
-            // --- Nested Patient Object Mappings (Write - Fixes the 500 error!) ---
+            // --- Nested Patient Object Mappings (Write) ---
             CreateMap<CreateInsuranceDto, Insurance>();
             CreateMap<CreateEmergencyContactDto, EmergencyContact>();
             CreateMap<CreatePatientChronicDiseaseDto, ChronicDisease>();
@@ -111,10 +113,11 @@ namespace Helix.Service.Mappings
             CreateMap<UpdateDoctorDto, Doctor>();
 
             CreateMap<CreateAvailableTimeSlotDto, AvailableTimeSlot>()
-                .ForMember(dest=> dest.StartTime, opt => opt.MapFrom(src => src.StartTime))
-                .ForMember(dest=> dest.EndTime,opt=> opt.MapFrom(src => src.EndTime));
+                .ForMember(dest => dest.StartTime, opt => opt.MapFrom(src => src.StartTime))
+                .ForMember(dest => dest.EndTime, opt => opt.MapFrom(src => src.EndTime));
+
             // ==========================================
-            // Medication Mappings (Consolidated)
+            // Medication Mappings
             // ==========================================
 
             CreateMap<Medication, MedicationDto>()
@@ -163,7 +166,6 @@ namespace Helix.Service.Mappings
                 .ForMember(dest => dest.Patient, opt => opt.Ignore())
                 .ForMember(dest => dest.doctor, opt => opt.Ignore());
             CreateMap<UpdateDiagnoseDto, Diagnose>();
-
 
             CreateMap<CreateEncounterDto, Encounter>()
                 .ForMember(dest => dest.patient, opt => opt.Ignore());

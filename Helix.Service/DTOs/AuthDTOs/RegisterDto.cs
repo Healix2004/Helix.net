@@ -1,4 +1,5 @@
 ﻿using Helix.Data.Enums;
+using Hl7.Fhir.Utility;
 using Microsoft.AspNetCore.Http;
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -20,5 +21,8 @@ namespace Helix.Service.DTOs.AuthDTOs
         [DataType(DataType.Password)]
         [StringLength(100, ErrorMessage = "The {0} must be at least {2} characters long.", MinimumLength = 6)]
         public string Password { get; set; }
+
+        [Required(ErrorMessage ="Register As is Required")]
+        public EnRoles RegisterAs { get; set; }
     }
 }

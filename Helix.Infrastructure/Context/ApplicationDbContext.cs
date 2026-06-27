@@ -59,6 +59,33 @@ namespace Helix.Infrastructure.Context
                 .HasPrincipalKey(e => e.Id)
                 .HasForeignKey(o => o.EncounterId);
 
+            // MedicalConcept 
+            builder.Entity<MedicalConcept>(entity =>
+            {
+                entity.HasIndex(e => new { e.SystemUri, e.Code }).IsUnique();
+                entity.HasIndex(e => e.Display);
+                entity.HasIndex(e => e.IsRadiology);
+                entity.HasIndex(e => e.Class);
+            });
+
+            // LoincPanelComponent configurations
+            builder.Entity<LoincPanelComponent>(entity =>
+            {
+                // Composite primary key for uniqueness of panel-component relationship
+                entity.HasIndex(e => new { e.ParentLoincConceptId, e.ChildLoincConceptId }).IsUnique();
+
+                // Define the many-to-many relationship via LoincPanelComponent
+                entity.HasOne(d => d.ParentLoincConcept)
+                      .WithMany(p => p.ChildComponents)
+                      .HasForeignKey(d => d.ParentLoincConceptId)
+                      .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete of concepts
+
+                entity.HasOne(d => d.ChildLoincConcept)
+                      .WithMany(p => p.ParentPanels)
+                      .HasForeignKey(d => d.ChildLoincConceptId)
+                      .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete of concepts
+            });
+
             builder.Entity<LabTestResult>().Property(lab => lab.Unit).HasMaxLength(50);
             builder.Entity<LabTestResult>().HasOne(lab => lab.Patient).WithMany(p => p.LabTestResult).OnDelete(DeleteBehavior.Restrict);
 
@@ -131,5 +158,7 @@ namespace Helix.Infrastructure.Context
         public DbSet<ProcedureCatalog> procedureCatalogs { get; set; }
         public DbSet<MedicationCatalog> MedicationCatalogs { get; set; }
         public DbSet<SpecialtyCatalog> SpecialtyCatalogs { get; set; }
+        public DbSet<MedicalConcept> MedicalConceptCatalogs { get; set; }
+        public DbSet<LoincPanelComponent> LoincPanelComponents { get; set; }
     }
 }

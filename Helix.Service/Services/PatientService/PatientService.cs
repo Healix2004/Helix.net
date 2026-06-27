@@ -51,6 +51,10 @@ namespace Helix.Service.Services.PatientService
             if (!await userManager.IsInRoleAsync(user, roleName))
                 await userManager.AddToRoleAsync(user, roleName);
 
+            roleName = EnRoles.RegisterAsPatient.ToString();
+            if (await userManager.IsInRoleAsync(user, roleName))
+                await userManager.RemoveFromRoleAsync(user, roleName);
+
             user.PhoneNumber = createPatientDto.PhoneNumber;
             await userManager.UpdateAsync(user);
             return mapper.Map<PatientDto>(patient);
