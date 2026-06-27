@@ -178,13 +178,12 @@ namespace Helix.Service.Mappings
 
             // LabTestResult Mappings
             CreateMap<LabTestResult, LabTestResultDto>()
-                .ForMember(dest => dest.TerminologyName, opt => opt.MapFrom(src => src.TerminologyCode.Display))
-                .ForMember(dest => dest.PatientName, opt => opt.MapFrom(src => src.Patient.FullName))
-                .ForMember(dest => dest.CreateDate, opt => opt.MapFrom(src => src.ResultDate))
-                .ForMember(dest => dest.status, opt => opt.MapFrom(src => src.Status.ToString()));
+                .ForMember(dest => dest.ResultId, opt => opt.MapFrom(src => src.Id))
+                .ForMember(dest => dest.TestName, opt => opt.MapFrom(src => src.MedicalConcept.Display))
+                .ForMember(dest => dest.TestCode, opt => opt.MapFrom(src => src.MedicalConcept.Code));
 
             CreateMap<CreateLabTestResultDto, LabTestResult>()
-                .ForMember(dest => dest.TerminologyCode, opt => opt.Ignore())
+                .ForMember(dest => dest.MedicalConcept, opt => opt.Ignore())
                 .ForMember(dest => dest.Patient, opt => opt.Ignore())
                 .ForMember(dest => dest.Encounter, opt => opt.Ignore());
             CreateMap<UpdateLabTestResultDto, LabTestResult>();

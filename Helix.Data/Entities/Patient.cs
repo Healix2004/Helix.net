@@ -31,8 +31,6 @@ namespace Helix.Data.Entities
         public List<Allergy> Allergies { get; set; } = new List<Allergy>();
         public List<Encounter> Encounters { get; set; } = new List<Encounter>();
         public List<Diagnose> Diagnose { get; set; } = new List<Diagnose>();
-        public List<LabTestResult> LabTestResult { get; set; } = new List<LabTestResult>();
-        public List<RadiologyResult> RadioTestResult { get; set; } = new List<RadiologyResult>();
         public List<RadiologyOrder> RadiologyOrders { get; set; } = new List<RadiologyOrder>();
         public List<LabOrder> LabOrders { get; set; } = new List<LabOrder>();
         public List<Consent> Consents { get; set; } = new List<Consent>();

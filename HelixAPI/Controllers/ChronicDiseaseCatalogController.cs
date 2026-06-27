@@ -31,5 +31,4 @@ namespace Helix.API.Controllers
                 return Ok(topDiseases);
             }
         }
-    
 }

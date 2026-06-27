@@ -14,6 +14,7 @@ using Helix.Service.Services.DrugDataService;
 using Helix.Service.Services.EmergencyAccessService;
 using Helix.Service.Services.FileServices;
 using Helix.Service.Services.LoincTerminology;
+using Helix.Service.Services.MedicalConceptCatalogServices;
 using Helix.Service.Services.MedicationCatalogServices;
 using Helix.Service.Services.NotificationService;
 using Helix.Service.Services.ProcedureCatalogServices;
@@ -78,6 +79,7 @@ namespace Helix.Service
             services.AddProcedureCatalogService();
             services.AddMedicationCatalogService();
             services.AddSpecialtyCatalogService();
+            services.AddMedicalConceptCatalogService();
 
             services.AddScoped<ITerminologyService, RemoteFhirTerminologyService>();
             services.AddHttpClient<IRxNavTerminologyService, RxNavTerminologyService>(client =>
@@ -313,6 +315,11 @@ namespace Helix.Service
         private static IServiceCollection AddSpecialtyCatalogService(this IServiceCollection services)
         {
             services.AddScoped<ISpecialtyCatalogService, SpecialtyCatalogService>();
+            return services;
+        }
+        private static IServiceCollection AddMedicalConceptCatalogService(this IServiceCollection services)
+        {
+            services.AddScoped<IMedicalConceptCatalogService, MedicalConceptCatalogService>();
             return services;
         }
         private static IServiceCollection AddLabTestResultService(this IServiceCollection services)

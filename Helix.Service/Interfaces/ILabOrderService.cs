@@ -12,6 +12,7 @@ namespace Helix.Service.Interfaces
         // ==========================================
         // PATIENT & LAB SPECIALIST WORKFLOW (QR)
         // ==========================================
+        Task<List<LabOrderDto>> GetOrdersByPatientAsync(Guid patientId);
         Task<List<PendingLabOrderDto>> GetPendingOrdersAsync(Guid patientId);
         Task<LabOrderDto> ScanLabOrderAsync(string qrToken);
         Task<bool> UploadLabResultAsync(UploadLabResultDto dto);

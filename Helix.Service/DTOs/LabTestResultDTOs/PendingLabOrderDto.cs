@@ -6,5 +6,6 @@ namespace Helix.Service.DTOs.LabTestResultDTOs
         public string TestName { get; set; }
         public string QrToken { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string Status { get; set; } // ADDED
     }
 }

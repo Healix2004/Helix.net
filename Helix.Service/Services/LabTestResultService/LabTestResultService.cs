@@ -28,7 +28,7 @@ namespace Helix.Service.Services.LabTestResultService
 
             // 2. Attach includes and execute asynchronously with ToListAsync()
             var labTestResults = await query
-                .Include(l => l.TerminologyCode)
+                .Include(l => l.MedicalConcept)
                 .Include(l => l.Patient)
                     .ThenInclude(p => p.AppUser)
                 .ToListAsync();
@@ -42,7 +42,7 @@ namespace Helix.Service.Services.LabTestResultService
             var query = await unitOfWork.Repository<LabTestResult>().FindAsQueryable(l => l.PatientId == patientId);
 
             var labTestResults = await query
-                .Include(l => l.TerminologyCode)
+                .Include(l => l.MedicalConcept)
                 .Include(l => l.Patient)
                     .ThenInclude(p => p.AppUser)
                 .ToListAsync();

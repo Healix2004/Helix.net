@@ -1,24 +1,32 @@
 ﻿using Helix.Data.Enums;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Helix.Data.Entities
 {
-    public class LabOrder :BaseEntity
+    public class LabOrder : BaseEntity
     {
-        public string QrToken { get; set; } // Unique string e.g., Guid
-        public EnLabOrderStatus Status { get; set; } // "Pending", "InProgress", "Completed"
-        public DateTime CreatedAt { get; set; }
-        public Guid? LabResultId { get; set; }
-        public Guid PatientId { get; set; }= Guid.Empty;
-        public Guid DoctorId { get; set; } = Guid.Empty;
-        public Guid TerminologyCodeId { get; set; } = Guid.Empty;
+        public LabOrder()
+        {
+            Results = new HashSet<LabTestResult>();
+        }
 
-        // Navigation properties
+        public string QrToken { get; set; }
+        public EnLabOrderStatus Status { get; set; }
+        public DateTime CreatedAt { get; set; }
+
+        public Guid PatientId { get; set; } = Guid.Empty;
+        public Guid DoctorId { get; set; } = Guid.Empty;
+
+        // Renamed to 'Id' because it holds a Guid, not the string code
+        public Guid MedicalConceptId { get; set; } = Guid.Empty;
+
         public Patient Patient { get; set; }
         public Doctor Doctor { get; set; }
-        public TerminologyCodeLookup TerminologyCode { get; set; }
-        public LabTestResult Result { get; set; }
+
+        // PascalCase for public C# properties
+        public MedicalConcept MedicalConcept { get; set; }
+
+        public ICollection<LabTestResult> Results { get; set; }
     }
 }

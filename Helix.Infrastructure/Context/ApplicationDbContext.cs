@@ -31,9 +31,7 @@ namespace Helix.Infrastructure.Context
 
             // patient allergy relationship 
             builder.Entity<Patient>().HasMany(p => p.Allergies).WithOne(a => a.Patient).HasPrincipalKey(p => p.Id).HasForeignKey(a => a.PatientId);
-            builder.Entity<Patient>().HasMany(p => p.RadioTestResult).WithOne().OnDelete(DeleteBehavior.Cascade);
             builder.Entity<Patient>().HasMany(p => p.RadiologyOrders).WithOne().HasForeignKey(r => r.PatientId).OnDelete(DeleteBehavior.Cascade);
-            builder.Entity<Patient>().HasMany(p => p.LabTestResult).WithOne().OnDelete(DeleteBehavior.Cascade);
             builder.Entity<Patient>().HasMany(p => p.LabOrders).WithOne().OnDelete(DeleteBehavior.Cascade); 
 
             //Encounter patient relationship
@@ -87,7 +85,7 @@ namespace Helix.Infrastructure.Context
             });
 
             builder.Entity<LabTestResult>().Property(lab => lab.Unit).HasMaxLength(50);
-            builder.Entity<LabTestResult>().HasOne(lab => lab.Patient).WithMany(p => p.LabTestResult).OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<LabTestResult>().HasOne(lab => lab.MedicalConcept).WithMany().OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<TerminologyCodeLookup>().Property(term=>term.Display).HasMaxLength(850);
             builder.Entity<TerminologyCodeLookup>().Property(term=>term.SystemUrl).HasMaxLength(50);
@@ -107,7 +105,6 @@ namespace Helix.Infrastructure.Context
             builder.Entity<Consent>().HasOne(c => c.Patient).WithMany(p => p.Consents).HasPrincipalKey(p => p.Id).OnDelete(DeleteBehavior.Restrict);
             builder.Entity<Consent>().HasOne(c => c.Doctor).WithMany(d => d.Consents).HasPrincipalKey(d => d.Id).OnDelete(DeleteBehavior.Restrict);
 
-            builder.Entity<LabOrder>().HasOne(l => l.Result).WithOne(p => p.LabOrder).HasForeignKey<LabOrder>(l => l.LabResultId).OnDelete(DeleteBehavior.Restrict);
             builder.Entity<LabOrder>().HasOne(l=> l.Patient).WithMany(p=>p.LabOrders).OnDelete(DeleteBehavior.Restrict);
             builder.Entity<LabOrder>().HasOne(l => l.Doctor).WithMany(d => d.LabOrders).HasForeignKey(l => l.DoctorId).OnDelete(DeleteBehavior.Restrict);
 
