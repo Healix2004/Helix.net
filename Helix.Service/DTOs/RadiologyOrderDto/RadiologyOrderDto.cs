@@ -1,4 +1,5 @@
 ﻿using Helix.Data.Enums;
+using System;
 
 namespace Helix.Service.DTOs.RadiologyOrderDto
 {
@@ -8,7 +9,10 @@ namespace Helix.Service.DTOs.RadiologyOrderDto
         public Guid Id { get; set; }
         public Guid PatientId { get; set; }
         public Guid DoctorId { get; set; }
-        public string PatientName { get; set; }
+
+        // ADDED: string.Empty for consistency
+        public string PatientName { get; set; } = string.Empty;
+
         public string DoctorName { get; set; } = string.Empty;
         public Guid TerminologyCodeId { get; set; }
         public string TerminologyDisplay { get; set; } = string.Empty;
@@ -16,7 +20,10 @@ namespace Helix.Service.DTOs.RadiologyOrderDto
         public string QrToken { get; set; } = string.Empty;
         public EnRadiologyOrderStatus Status { get; set; } = EnRadiologyOrderStatus.Pending;
         public string StatusName => Status.ToString();
+
+        // Perfect. This will be null when the status is "Pending"
         public Guid? RadiologyResultId { get; set; }
+
         public DateTime CreatedAt { get; set; }
     }
 }

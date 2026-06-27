@@ -2,6 +2,7 @@
 using Helix.Core.Bases;
 using Helix.Data.Enums;
 using Helix.Service.DTOs.RadiologyOrderDto;
+using Helix.Service.DTOs.RadiologyReportDtos;
 using Helix.Service.DTOs.RadiologyTestResultDto;
 using Helix.Service.Helper;
 using Helix.Service.Interfaces;
@@ -236,6 +237,29 @@ namespace Helix.API.Controllers
                 Message = result ? "Radiology order deleted successfully." : "Failed to delete radiology order."
             };
             return NewResult(response);
+        }
+        [HttpGet("order/{orderId}")]
+        [Authorize] // Ensure proper roles/consent are applied here!
+        public async Task<IActionResult> GetReportByOrderId(Guid orderId)
+        {
+            var result = await radiologyOrderService.GetReportByOrderIdAsync(orderId);
+
+            if (result == null)
+            {
+                return NewResult(new Response<RadiologyReportDto>(null)
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.NotFound,
+                    Message = "No radiology report has been uploaded for this order yet."
+                });
+            }
+
+            return NewResult(new Response<RadiologyReportDto>(result)
+            {
+                Succeeded = true,
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Message = "Radiology report retrieved successfully."
+            });
         }
     }
 }

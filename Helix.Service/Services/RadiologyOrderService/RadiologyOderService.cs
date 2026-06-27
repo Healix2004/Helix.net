@@ -1,6 +1,7 @@
 ﻿using Helix.Data.Entities;
 using Helix.Data.Enums;
 using Helix.Service.DTOs.RadiologyOrderDto;
+using Helix.Service.DTOs.RadiologyReportDtos;
 using Helix.Service.DTOs.RadiologyTestResultDto;
 using Helix.Service.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -146,6 +147,7 @@ namespace Helix.Service.Services.RadiologyOrderService
                 .Include(o => o.Patient).ThenInclude(p => p.AppUser)
                 .Include(o => o.Doctor).ThenInclude(d => d.AppUser)
                 .Include(o => o.MedicalConcept)
+                .Include(o => o.Report)
                 .FirstOrDefaultAsync();
 
             if (order == null)
@@ -161,7 +163,10 @@ namespace Helix.Service.Services.RadiologyOrderService
                 TerminologyCodeId = order.MedicalConceptId,
                 QrToken = order.QrToken,
                 Status = order.Status,
-                CreatedAt = order.CreatedAt
+                CreatedAt = order.CreatedAt,
+                RadiologyResultId = order.Report.Id,
+                TerminologyCode = order.MedicalConcept.Code,
+                TerminologyDisplay= order.MedicalConcept.Display
             };
         }
 
@@ -255,6 +260,43 @@ namespace Helix.Service.Services.RadiologyOrderService
 
             await unitOfWork.Repository<RadiologyOrder>().UpdateAsync(order);
             return await unitOfWork.CompleteAsync() > 0;
+        }
+        public async Task<RadiologyReportDto> GetReportByOrderIdAsync(Guid orderId)
+        {
+            // Fetch the report based on the parent Order ID
+            var query = await unitOfWork.Repository<RadiologyReport>()
+                .FindAsQueryable(r => r.RadiologyOrderId == orderId);
+
+            var report = await query
+                .Include(r => r.RadiologyOrder)
+                    .ThenInclude(o => o.Patient)
+                .Include(r => r.RadiologyOrder)
+                    .ThenInclude(o => o.Doctor)
+                .Include(r => r.RadiologyOrder)
+                    .ThenInclude(o => o.MedicalConcept)
+                .FirstOrDefaultAsync();
+
+            // If the order is still "Pending", it won't have a report yet.
+            // Return null gracefully so the controller can return a 404.
+            if (report == null)
+            {
+                return null;
+            }
+
+            // Map to your new clean DTO
+            return new RadiologyReportDto
+            {
+                Id = report.Id,
+                RadiologyOrderId = report.RadiologyOrderId,
+                PatientName = report.RadiologyOrder.Patient.FullName,
+                RequestingDoctorName = report.RadiologyOrder.Doctor.FullName,
+                TerminologyDisplay = report.RadiologyOrder.MedicalConcept.Display,
+                ExternalRadiologistName = report.ExternalRadiologistName,
+                Findings = report.Findings,
+                Conclusion = report.Conclusion,
+                ReportDate = report.ReportDate,
+                ImageUrls = report.ImageUrls // Assuming this is stored as a List<string> or JSON
+            };
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Helix.Service.DTOs.RadiologyOrderDto;
+using Helix.Service.DTOs.RadiologyReportDtos;
 using Helix.Service.DTOs.RadiologyTestResultDto;
 
 namespace Helix.Service.Interfaces
@@ -30,5 +31,6 @@ namespace Helix.Service.Interfaces
         Task<List<RadiologyOrderDto>> GetAllRadiologyOrdersAsync();
         Task<bool> UpdateOrderStatusAsync(Guid id, string newStatus);
         Task<bool> DeleteRadiologyOrderAsync(Guid id);
+        Task<RadiologyReportDto> GetReportByOrderIdAsync(Guid orderId);
     }
 }
