@@ -2,8 +2,10 @@
 using Helix.Service.Interfaces;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Caching.Memory;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Helix.Service.Services.DrugDataService
 {
@@ -54,47 +56,57 @@ namespace Helix.Service.Services.DrugDataService
 
         public async Task<InteractionResponseDTO?> CheckDrugInteractionAsync(InteractionRequestDTO dto)
         {
+            // 1. Validate Drugs
             var drugs = await GetDrugsFromCacheAsync();
-
             var drug1 = drugs.FirstOrDefault(d => d.Id == dto.IdDrug1);
             var drug2 = drugs.FirstOrDefault(d => d.Id == dto.IdDrug2);
 
             if (drug1 == null || drug2 == null)
-            {
-                return null; // Or throw a specific custom exception
-            }
+                throw new ArgumentException("Invalid Drug ID provided.");
 
+            // 2. Prepare API Call
             var serverIp = await GetServerIP();
             var pythonApiUrl = $"http://{serverIp}:8000/predict";
-
-            var payload = new
-            {
-                drug_a = drug1.Name,
-                drug_b = drug2.Name
-            };
-
-            var json = JsonSerializer.Serialize(payload);
-            using var content = new StringContent(json, Encoding.UTF8, "application/json");
-
+            var payload = new { drug_a = drug1.Name, drug_b = drug2.Name };
             var client = httpClientFactory.CreateClient();
 
             try
             {
-                var response = await client.PostAsync(pythonApiUrl, content);
+                // 3. Post to AI Service
+                var response = await client.PostAsJsonAsync(pythonApiUrl, payload);
                 response.EnsureSuccessStatusCode();
 
-                var responseContent = await response.Content.ReadAsStringAsync();
+                var rawResult = await response.Content.ReadFromJsonAsync<RawAiResponseDTO>();
+                if (rawResult == null || rawResult.Status != "success")
+                    return null;
 
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                return JsonSerializer.Deserialize<InteractionResponseDTO>(responseContent, options);
+                // 4. Parse AI Logic (Result string: "The metabolism decrease (Confidence: 87.2%)")
+                // Check for interaction status
+                bool isInteraction = !rawResult.Result.Contains("No interaction detected", StringComparison.OrdinalIgnoreCase);
+
+                // Extract confidence using Regex
+                double confidence = 0.0;
+                var match = Regex.Match(rawResult.Result, @"Confidence:\s*(\d+(\.\d+)?)%");
+                if (match.Success)
+                {
+                    double.TryParse(match.Groups[1].Value, out confidence);
+                }
+
+                // 5. Return Clean DTO
+                return new InteractionResponseDTO
+                {
+                    DrugA = rawResult.DrugA,
+                    DrugB = rawResult.DrugB,
+                    IsInteraction = isInteraction,
+                    Confidence = confidence,
+                    Message = rawResult.Result
+                };
             }
             catch (HttpRequestException ex)
             {
-                // Better error logging indicating a network issue
-                throw new Exception($"Network error connecting to Python AI Server at {pythonApiUrl}: {ex.Message}");
+                throw new Exception($"AI Server unavailable at {pythonApiUrl}: {ex.Message}");
             }
         }
-
         // ==========================================
         // INTERFACE IMPLEMENTATIONS
         // ==========================================
