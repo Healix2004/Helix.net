@@ -125,6 +125,7 @@ namespace Helix.Infrastructure.Context
             builder.Entity<SpecialtyCatalog>().Property(s => s.CodeSystem).HasMaxLength(50);
 
             builder.Entity<Appointment>().HasOne(a => a.Patient).WithMany().OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<Prescription>().HasOne(a => a.Patient).WithMany().OnDelete(DeleteBehavior.Restrict);
 
             // Configure the Foreign Key Relationship
             builder.Entity<Allergy>().HasOne(a => a.Patient).WithMany(p => p.Allergies).HasForeignKey(a => a.PatientId)
@@ -157,5 +158,6 @@ namespace Helix.Infrastructure.Context
         public DbSet<MedicalConcept> MedicalConceptCatalogs { get; set; }
         public DbSet<LoincPanelComponent> LoincPanelComponents { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
+        public DbSet<Prescription> Prescriptions{ get; set; }
     }
 }

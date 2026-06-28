@@ -59,4 +59,12 @@ namespace Helix.Service.Helper
             }
         }
     }
+
+    public static class StringExtensions
+    {
+        public static EgyptainNationalId ParseEgyptianId(this string nationalId)
+        {
+            return new EgyptainNationalId(nationalId);
+        }
+    }
 }

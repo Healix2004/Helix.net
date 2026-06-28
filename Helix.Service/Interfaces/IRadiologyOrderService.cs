@@ -1,4 +1,6 @@
-﻿using Helix.Service.DTOs.RadiologyOrderDto;
+﻿using Helix.Data.Enums;
+using Helix.Service.DTOs.PrescriptionDtos;
+using Helix.Service.DTOs.RadiologyOrderDto;
 using Helix.Service.DTOs.RadiologyReportDtos;
 using Helix.Service.DTOs.RadiologyTestResultDto;
 
@@ -32,5 +34,11 @@ namespace Helix.Service.Interfaces
         Task<bool> UpdateOrderStatusAsync(Guid id, string newStatus);
         Task<bool> DeleteRadiologyOrderAsync(Guid id);
         Task<RadiologyReportDto> GetReportByOrderIdAsync(Guid orderId);
+    }
+    public interface IPrescriptionService
+    {
+        Task<Guid> CreatePrescriptionAsync(Guid doctorId, CreatePrescriptionDto dto);
+        Task<PatientClinicalSummaryDto> GetPatientClinicalSummaryAsync(Guid patientId);
+        Task<bool> UpdatePrescriptionItemStatusAsync(Guid itemId, EnPrescriptionItemStatus newStatus);
     }
 }

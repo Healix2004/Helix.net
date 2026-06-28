@@ -56,6 +56,7 @@ namespace Helix.Service
             services.AddEmailService();
             services.AddDrugService();
             services.AddPatientService();
+            services.AddPrescriptionService();
             services.AddDoctorService();
             services.AddConsentService();
             services.AddConsentValidationService();
@@ -221,24 +222,23 @@ namespace Helix.Service
             services.AddScoped<IEmailService, EmailServices>();
             return services;
         }
-        private static IServiceCollection AddDrugService(this IServiceCollection services)
-        {
+        private static IServiceCollection AddDrugService(this IServiceCollection services) =>
             services.AddSingleton<IDrugDataService, DrugDataService>();
-            return services;
-        }
-
         private static IServiceCollection AddPatientService(this IServiceCollection services)
         {
             services.AddScoped<IPatientService, Helix.Service.Services.PatientService.PatientService>();
             return services;
         }
-
+        private static IServiceCollection AddPrescriptionService(this IServiceCollection services)
+        {
+            services.AddScoped<IPrescriptionService, Helix.Service.Services.PrescriptionService.PrescriptionService>();
+            return services;
+        }
         private static IServiceCollection AddDoctorService(this IServiceCollection services)
         {
             services.AddScoped<IDoctorService, Helix.Service.Services.DoctorService.DoctorService>();
             return services;
         }
-
         private static IServiceCollection AddConsentService(this IServiceCollection services)
         {
             services.AddScoped<IConsentService, Helix.Service.Services.ConsentService.ConsentService>();
