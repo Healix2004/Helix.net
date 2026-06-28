@@ -104,5 +104,43 @@ namespace Helix.Service.Services.DoctorService
 
             return mapper.Map<DoctorDto>(doctor);
         }
+
+        public async Task<IEnumerable<DoctorDto>> SearchDoctorsByNameAsync(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return new List<DoctorDto>();
+            }
+
+            var query = await unitOfWork.Repository<Doctor>()
+                .FindAsQueryable(d => d.FullName.ToLower().Contains(name.ToLower()));
+
+            var doctors = await query
+                .Include(d => d.SpecialtyCatalog)
+                .ToListAsync();
+
+            // Map to your DoctorDto (assuming you have AutoMapper or manual mapping)
+            return mapper.Map<IEnumerable<DoctorDto>>(doctors);
+        }
+
+        public async Task<IEnumerable<DoctorDto>> SearchDoctorsBySpecialtyAsync(string specialty)
+        {
+            if (string.IsNullOrWhiteSpace(specialty))
+            {
+                return new List<DoctorDto>();
+            }
+
+            // This searches both the code (e.g., "CARDIO") and the display name (e.g., "Cardiology")
+            var query = await unitOfWork.Repository<Doctor>()
+                .FindAsQueryable(d =>
+                    d.SpecialtyCatalogCode.ToLower().Contains(specialty.ToLower()) ||
+                    (d.SpecialtyCatalog != null && d.SpecialtyCatalog.DisplayName.ToLower().Contains(specialty.ToLower())));
+
+            var doctors = await query
+                .Include(d => d.SpecialtyCatalog)
+                .ToListAsync();
+
+            return mapper.Map<IEnumerable<DoctorDto>>(doctors);
+        }
     }
 }

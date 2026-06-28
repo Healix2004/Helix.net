@@ -1,4 +1,5 @@
 using Helix.Api.Base;
+using Helix.Core.Bases;
 using Helix.Core.Features.Doctors.Commands.Models;
 using Helix.Core.Features.Doctors.Queries.Models;
 using Helix.Data.Enums;
@@ -12,9 +13,6 @@ using System.Text.Json;
 
 namespace Helix.API.Controllers
 {
-    /// <summary>
-    /// Manages doctor records in the HELIX healthcare ecosystem.
-    /// </summary>
     [Route("api/doctors")] // FIX 1: Explicit RESTful routing
     [ApiController]
     public class DoctorController(IMediator mediator, IDoctorService doctorService) : AppControllerBase
@@ -138,6 +136,30 @@ namespace Helix.API.Controllers
             var command = new DeleteDoctorCommand(id);
             var response = await mediator.Send(command);
             return NewResult(response);
+        }
+
+        [HttpGet("search/name")]
+        public async Task<IActionResult> SearchByName([FromQuery] string name)
+        {
+            var doctors = await doctorService.SearchDoctorsByNameAsync(name);
+            return NewResult(new Response<IEnumerable<DoctorDto>>(doctors)
+            {
+                Succeeded = true,
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Message = "Doctors retrieved successfully."
+            });
+        }
+
+        [HttpGet("search/specialty")]
+        public async Task<IActionResult> SearchBySpecialty([FromQuery] string specialty)
+        {
+            var doctors = await doctorService.SearchDoctorsBySpecialtyAsync(specialty);
+            return NewResult(new Response<IEnumerable<DoctorDto>>(doctors)
+            {
+                Succeeded = true,
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Message = "Doctors retrieved successfully."
+            });
         }
     }
 }
