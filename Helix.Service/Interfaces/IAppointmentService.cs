@@ -10,6 +10,6 @@ namespace Helix.Service.Interfaces
         // Dashboard Endpoints
         Task<List<AppointmentListDto>> GetDoctorAppointmentsForTodayAsync(Guid doctorId);
         Task<DailyScheduleSummaryDto> GetDailyScheduleSummaryAsync(Guid doctorId);
-        Task<List<TimeSlotDto>> GetAvailableTimeSlotsAsync(Guid doctorId, DateTime selectedDate);
+        Task<DoctorAvailabilityDto> GetAvailableTimeSlotsAsync(Guid doctorId, DateTime selectedDate);
     }
 }

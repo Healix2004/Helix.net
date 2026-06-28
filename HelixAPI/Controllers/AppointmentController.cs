@@ -108,13 +108,13 @@ namespace Helix.API.Controllers
         [Authorize] // Any logged-in user (Patient, Admin, Nurse) should be able to view slots
         public async Task<IActionResult> GetAvailableSlots(Guid doctorId, [FromQuery] DateTime date)
         {
-            var slots = await appointmentService.GetAvailableTimeSlotsAsync(doctorId, date);
+            var availability = await appointmentService.GetAvailableTimeSlotsAsync(doctorId, date);
 
-            var response = new Response<List<TimeSlotDto>>(slots)
+            var response = new Response<DoctorAvailabilityDto>(availability)
             {
                 Succeeded = true,
                 StatusCode = System.Net.HttpStatusCode.OK,
-                Message = "Time slots retrieved successfully."
+                Message = "Availability retrieved successfully."
             };
             return NewResult(response);
         }

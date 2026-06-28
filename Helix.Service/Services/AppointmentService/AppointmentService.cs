@@ -103,49 +103,91 @@ namespace Helix.Service.Services.AppointmentService
 
             return $"{parts[0][0]}{parts[^1][0]}".ToUpper();
         }
-        public async Task<List<TimeSlotDto>> GetAvailableTimeSlotsAsync(Guid doctorId, DateTime selectedDate)
+        public async Task<DoctorAvailabilityDto> GetAvailableTimeSlotsAsync(Guid doctorId, DateTime selectedDate)
         {
-            // 1. Define the working hours (e.g., 8:00 AM to 6:00 PM)
-            var startOfDay = selectedDate.Date.AddHours(8);
-            var endOfDay = selectedDate.Date.AddHours(18);
+            // 1. Fetch the doctor to get their exact schedule rules
+            var doctor = await unitOfWork.Repository<Doctor>().GetByIdAsync(doctorId);
+            if (doctor == null) throw new KeyNotFoundException("Doctor not found.");
+
+            var startOfWeek = selectedDate.Date.AddDays(-(int)selectedDate.DayOfWeek);
+            var endOfWeek = startOfWeek.AddDays(7);
+
+            // 2. Fetch all existing appointments for the ENTIRE WEEK
+            var query = await unitOfWork.Repository<Appointment>()
+                .FindAsQueryable(a => a.DoctorId == doctorId &&
+                                      a.StartTime >= startOfWeek &&
+                                      a.StartTime < endOfWeek &&
+                                      a.Status != EnAppointmentStatus.Cancelled);
+
+            var weeklyAppointments = await query.ToListAsync();
+
+            var result = new DoctorAvailabilityDto();
             var slotDuration = TimeSpan.FromMinutes(30);
 
-            // 2. Fetch the doctor's existing appointments for this specific day
-            var quary = await unitOfWork.Repository<Appointment>()
-                .FindAsQueryable(a => a.DoctorId == doctorId &&a.StartTime >= startOfDay &&a.StartTime < endOfDay &&
-                                      a.Status != EnAppointmentStatus.Cancelled);
-            var existingAppointments = await quary.ToListAsync();
-            var timeSlots = new List<TimeSlotDto>();
-            var currentSlot = startOfDay;
-
-            // 3. Generate the 30-minute chunks
-            while (currentSlot < endOfDay)
+            // 3. Loop through all 7 days of the calendar week
+            for (int i = 0; i < 7; i++)
             {
-                var slotEndTime = currentSlot.Add(slotDuration);
+                var currentDate = startOfWeek.AddDays(i);
+                string currentDayName = currentDate.DayOfWeek.ToString(); // e.g., "Monday"
 
-                // Check if this slot overlaps with any existing appointment in the database
-                bool isBooked = existingAppointments.Any(a =>
-                    (currentSlot >= a.StartTime && currentSlot < a.EndTime) ||
-                    (a.StartTime >= currentSlot && a.StartTime < slotEndTime));
-
-                // 4. Prevent booking in the past (if they select today's date)
-                if (currentSlot < DateTime.UtcNow)
+                // Check if the doctor actually works on this day!
+                if (!doctor.AvailabeDays.Contains(currentDayName))
                 {
-                    isBooked = true;
+                    result.WeeklyAvailability.Add(new DayAvailabilityDto { Date = currentDate.Date, HasAvailableSlots = false });
+                    continue; // Skip to the next day
                 }
 
-                timeSlots.Add(new TimeSlotDto
+                var dailyAppointments = weeklyAppointments.Where(a => a.StartTime.Date == currentDate.Date).ToList();
+                bool hasAvailableSlot = false;
+                var dailySlots = new List<TimeSlotDto>();
+
+                // 4. Loop through the specific shifts the doctor defined (e.g., Morning Shift, Evening Shift)
+                foreach (var shift in doctor.AvailableTimeSlots)
                 {
-                    DisplayTime = currentSlot.ToString("hh:mm tt"), // e.g., "08:30 AM"
-                    StartTime = currentSlot,
-                    EndTime = slotEndTime,
-                    IsAvailable = !isBooked
+                    var currentSlot = currentDate.Date.Add(shift.StartTime);
+                    var endOfShift = currentDate.Date.Add(shift.EndTime);
+
+                    // Generate the 30-minute chunks for this specific shift
+                    while (currentSlot < endOfShift)
+                    {
+                        var slotEndTime = currentSlot.Add(slotDuration);
+
+                        bool isBooked = dailyAppointments.Any(a =>
+                            (currentSlot >= a.StartTime && currentSlot < a.EndTime) ||
+                            (a.StartTime >= currentSlot && a.StartTime < slotEndTime));
+
+                        if (currentSlot < DateTime.UtcNow) isBooked = true;
+
+                        if (!isBooked) hasAvailableSlot = true;
+
+                        if (currentDate.Date == selectedDate.Date)
+                        {
+                            dailySlots.Add(new TimeSlotDto
+                            {
+                                DisplayTime = currentSlot.ToString("hh:mm tt"),
+                                StartTime = currentSlot,
+                                EndTime = slotEndTime,
+                                IsAvailable = !isBooked
+                            });
+                        }
+
+                        currentSlot = slotEndTime;
+                    }
+                }
+
+                result.WeeklyAvailability.Add(new DayAvailabilityDto
+                {
+                    Date = currentDate.Date,
+                    HasAvailableSlots = hasAvailableSlot
                 });
 
-                currentSlot = slotEndTime;
+                if (currentDate.Date == selectedDate.Date)
+                {
+                    result.SelectedDaySlots = dailySlots;
+                }
             }
 
-            return timeSlots;
+            return result;
         }
     }
 }
