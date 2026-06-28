@@ -8,6 +8,7 @@ using Helix.Service.Interfaces;
 using Helix.Service.Repositories;
 using Helix.Service.Services;
 using Helix.Service.Services.AllergenCatalogServices;
+using Helix.Service.Services.AppointmentService;
 using Helix.Service.Services.AuthServices;
 using Helix.Service.Services.ChronicDiseaseCatalogServices;
 using Helix.Service.Services.ConsentService;
@@ -66,6 +67,7 @@ namespace Helix.Service
             services.AddMedicationService();
             services.AddObservationService();
             services.AddRadiologyOrderService();
+            services.AddAppointmentService();
             services.AddRadiologyResultService();
             services.AddLabOrderService();
             services.AddLabTestResultService();
@@ -291,6 +293,11 @@ namespace Helix.Service
         private static IServiceCollection AddRadiologyOrderService(this IServiceCollection services)
         {
             services.AddScoped<IRadiologyOrderService, RadiologyOrderService>();
+            return services;
+        }
+        private static IServiceCollection AddAppointmentService(this IServiceCollection services)
+        {
+            services.AddScoped<IAppointmentService, AppointmentService>();
             return services;
         }
         private static IServiceCollection AddRadiologyResultService(this IServiceCollection services)
