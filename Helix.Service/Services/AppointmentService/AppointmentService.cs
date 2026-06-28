@@ -103,5 +103,49 @@ namespace Helix.Service.Services.AppointmentService
 
             return $"{parts[0][0]}{parts[^1][0]}".ToUpper();
         }
+        public async Task<List<TimeSlotDto>> GetAvailableTimeSlotsAsync(Guid doctorId, DateTime selectedDate)
+        {
+            // 1. Define the working hours (e.g., 8:00 AM to 6:00 PM)
+            var startOfDay = selectedDate.Date.AddHours(8);
+            var endOfDay = selectedDate.Date.AddHours(18);
+            var slotDuration = TimeSpan.FromMinutes(30);
+
+            // 2. Fetch the doctor's existing appointments for this specific day
+            var quary = await unitOfWork.Repository<Appointment>()
+                .FindAsQueryable(a => a.DoctorId == doctorId &&a.StartTime >= startOfDay &&a.StartTime < endOfDay &&
+                                      a.Status != EnAppointmentStatus.Cancelled);
+            var existingAppointments = await quary.ToListAsync();
+            var timeSlots = new List<TimeSlotDto>();
+            var currentSlot = startOfDay;
+
+            // 3. Generate the 30-minute chunks
+            while (currentSlot < endOfDay)
+            {
+                var slotEndTime = currentSlot.Add(slotDuration);
+
+                // Check if this slot overlaps with any existing appointment in the database
+                bool isBooked = existingAppointments.Any(a =>
+                    (currentSlot >= a.StartTime && currentSlot < a.EndTime) ||
+                    (a.StartTime >= currentSlot && a.StartTime < slotEndTime));
+
+                // 4. Prevent booking in the past (if they select today's date)
+                if (currentSlot < DateTime.UtcNow)
+                {
+                    isBooked = true;
+                }
+
+                timeSlots.Add(new TimeSlotDto
+                {
+                    DisplayTime = currentSlot.ToString("hh:mm tt"), // e.g., "08:30 AM"
+                    StartTime = currentSlot,
+                    EndTime = slotEndTime,
+                    IsAvailable = !isBooked
+                });
+
+                currentSlot = slotEndTime;
+            }
+
+            return timeSlots;
+        }
     }
 }
