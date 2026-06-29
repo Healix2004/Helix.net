@@ -1,5 +1,7 @@
 # Helix API — Frontend Guide: Lab Orders, Radiology & Consent
 
+> **Main integration doc:** See [`FRONTEND_INTEGRATION_GUIDE.md`](./FRONTEND_INTEGRATION_GUIDE.md) for the complete screen-by-screen guide (auth, patient/doctor portals, UI design mapping). This file is the detailed appendix for lab, radiology, and consent modules.
+
 This document explains how the frontend should call the backend endpoints for **lab orders**, **radiology orders**, and **patient consent**, including end-to-end workflows for each role.
 
 ---
