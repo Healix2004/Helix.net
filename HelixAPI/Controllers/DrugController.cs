@@ -91,5 +91,16 @@ namespace Helix.API.Controllers
             var response = await mediator.Send(command);
             return NewResult(response);
         }
+        [HttpPost("check-interaction")]
+        [Authorize(Roles = nameof(EnRoles.Doctor))]
+        [ProducesResponseType(typeof(InteractionResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> CheckInteraction([FromBody] InteractionRequestDTO dto)
+        {
+            // Pass the DTO into the new Query
+            var query = new CheckInteractionQuery(dto);
+            var response = await mediator.Send(query);
+            return NewResult(response);
+        }
     }
 }

@@ -6,9 +6,6 @@ using MediatR;
 
 namespace Helix.Core.Features.Drugs.Queries.Handler
 {
-    /// <summary>
-    /// Handles <see cref="GetDrugListQuery"/> by importing the full drug list from the external drug data service.
-    /// </summary>
     public class GetDrugListQueryHandler : IRequestHandler<GetDrugListQuery, Response<IEnumerable<DrugDTO>>>
     {
         private readonly IDrugDataService _drugDataService;
@@ -27,12 +24,24 @@ namespace Helix.Core.Features.Drugs.Queries.Handler
             return _responseHandler.Success(result.AsEnumerable());
         }
     }
+    public class CheckInteractionQueryHandler : IRequestHandler<CheckInteractionQuery, Response<InteractionResponseDTO>>
+    {
+        private readonly IDrugDataService _drugDataService;
+        private readonly ResponseHandler _responseHandler;
 
-    /// <summary>
-    /// Handles <see cref="GetDrugByIdQuery"/> by validating the drug ID and retrieving the drug name
-    /// from the external drug data service.
-    /// Returns <see cref="System.Net.HttpStatusCode.NotFound"/> if the drug ID is not recognised.
-    /// </summary>
+        public CheckInteractionQueryHandler(IDrugDataService drugDataService, ResponseHandler responseHandler)
+        {
+            _drugDataService = drugDataService;
+            _responseHandler = responseHandler;
+        }
+
+        /// <inheritdoc />
+        public async Task<Response<InteractionResponseDTO>> Handle(CheckInteractionQuery request, CancellationToken cancellationToken)
+        {
+            var result = await _drugDataService.CheckDrugInteractionAsync( request.interactionRequestDTO);
+            return _responseHandler.Success(result);
+        }
+    }
     public class GetDrugByIdQueryHandler : IRequestHandler<GetDrugByIdQuery, Response<DrugDTO>>
     {
         private readonly IDrugDataService _drugDataService;
