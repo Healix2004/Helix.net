@@ -72,6 +72,7 @@ namespace Helix.Service
             services.AddRadiologyResultService();
             services.AddLabOrderService();
             services.AddLabTestResultService();
+            services.AddChatbotService();
             services.AddTerminologyCodeLookupService();
             services.AddUnitOfWork();
             services.AddNotificationService();
@@ -340,6 +341,8 @@ namespace Helix.Service
             services.AddScoped<ILabTestResultService, Helix.Service.Services.LabTestResultService.LabTestResultService>();
             return services;
         }
+        private static IServiceCollection AddChatbotService(this IServiceCollection services) =>
+            services.AddScoped<IChatbotService, Helix.Service.Services.ChatbotService.ChatbotService>();
         private static IServiceCollection AddLabOrderService (this IServiceCollection services)
         {
             services.AddScoped<ILabOrderService, Helix.Service.Services.LabOrderService.LabOrderService>();
