@@ -7,7 +7,7 @@ pipeline {
         DOCKER_HUB_CREDS = 'docker-hub-creds' 
         
         
-        EC2_IP = '54.163.68.219' 
+        EC2_IP = '3.239.57.253' 
         EC2_USER = 'ec2-user' 
         EC2_CREDS_ID = 'aws-ec2-key' 
     }
