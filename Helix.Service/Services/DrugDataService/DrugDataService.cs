@@ -1,11 +1,16 @@
-﻿using Helix.Service.DTOs.DrugDTOs;
+﻿using Helix.Data.Enums;
+using Helix.Infrastructure.Context;
+using Helix.Service.DTOs.DrugDTOs;
 using Helix.Service.Interfaces;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System;
+using System.Linq;
 
 namespace Helix.Service.Services.DrugDataService
 {
@@ -65,7 +70,7 @@ namespace Helix.Service.Services.DrugDataService
                 throw new ArgumentException("Invalid Drug ID provided.");
 
             // 2. Prepare API Call
-            var serverIp = await GetServerIP();
+            var serverIp = DefaultServerIp;
             var pythonApiUrl = $"http://{serverIp}:8000/predict";
             var payload = new { drug_a = drug1.Name, drug_b = drug2.Name };
             var client = httpClientFactory.CreateClient();
@@ -121,26 +126,16 @@ namespace Helix.Service.Services.DrugDataService
             var drugs = await GetDrugsFromCacheAsync();
             return drugs.Any(d => d.Id == drugId);
         }
+        public async Task<int?> GetIdAsync(string drugName)
+        {
+            var drugs = await GetDrugsFromCacheAsync();
+            return drugs.FirstOrDefault(d => d.Name == drugName)?.Id;
+        }
 
         public async Task<string?> GetDrugName(int drugId)
         {
             var drugs = await GetDrugsFromCacheAsync();
             return drugs.FirstOrDefault(d => d.Id == drugId)?.Name;
-        }
-
-        public Task<string> GetServerIP()
-        {
-            // Safely fetch the IP from cache, falling back to the default if it hasn't been changed
-            var ip = cache.Get<string>(IpCacheKey) ?? DefaultServerIp;
-            return Task.FromResult(ip);
-        }
-
-        public Task SetServerIP(string ip)
-        {
-            // Saving the IP in the global memory cache means the change applies instantly
-            // to all future requests, regardless of the DI lifecycle!
-            cache.Set(IpCacheKey, ip);
-            return Task.CompletedTask;
         }
     }
 }

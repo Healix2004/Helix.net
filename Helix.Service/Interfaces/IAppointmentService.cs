@@ -1,5 +1,6 @@
 ﻿using Helix.Data.Enums;
 using Helix.Service.DTOs.AppointmentDtos;
+using Helix.Service.DTOs.DoctorDTOs;
 
 namespace Helix.Service.Interfaces
 {
@@ -11,5 +12,11 @@ namespace Helix.Service.Interfaces
         Task<List<AppointmentListDto>> GetDoctorAppointmentsForTodayAsync(Guid doctorId);
         Task<DailyScheduleSummaryDto> GetDailyScheduleSummaryAsync(Guid doctorId);
         Task<DoctorAvailabilityDto> GetAvailableTimeSlotsAsync(Guid doctorId, DateTime selectedDate);
+
+        Task<IEnumerable<DoctorSearchResultDto>> SearchDoctorsAsync(string query, int count = 20);
+        Task<DoctorDetailsDto?> GetDoctorDetailsAsync(Guid id);
+
+        Task<AvailableDaysDto> GetAvailableDaysInMonthAsync(Guid doctorId, int year, int month);
+        Task<DayTimeSlotsDto> GetTimeSlotsForDayAsync(Guid doctorId, DateTime date);
     }
 }

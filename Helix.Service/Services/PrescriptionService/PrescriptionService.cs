@@ -1,5 +1,7 @@
 ﻿using Helix.Data.Entities;
 using Helix.Data.Enums;
+using Helix.Infrastructure.Context;
+using Helix.Service.DTOs.DrugDTOs;
 using Helix.Service.DTOs.PrescriptionDtos; // Ensure this matches your namespace
 using Helix.Service.Helper;
 using Helix.Service.Interfaces;
@@ -11,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace Helix.Service.Services.PrescriptionService
 {
-    public class PrescriptionService(IUnitOfWork unitOfWork) : IPrescriptionService
+    public class PrescriptionService(IUnitOfWork unitOfWork,ApplicationDbContext dbContext, IDrugDataService  drugDataService) : IPrescriptionService
     {
         public async Task<Guid> CreatePrescriptionAsync(Guid doctorId, CreatePrescriptionDto dto)
         {
@@ -105,6 +107,96 @@ namespace Helix.Service.Services.PrescriptionService
                 age--;
             }
             return age;
+        }
+        public async Task<PrescriptionSafetyResultDto> CheckCompletePrescriptionSafetyAsync(PrescriptionSafetyCheckDto request)
+        {
+            var result = new PrescriptionSafetyResultDto { IsSafe = true };
+
+            if (request.NewMedicationIds == null || !request.NewMedicationIds.Any())
+                return result;
+
+            // 1. Fetch Patient's CURRENT Active Medications from the Database
+            var patient = await dbContext.Patients
+                .Include(p => p.Medications) // Ensure this is explicitly included if Lazy Loading is off
+                .FirstOrDefaultAsync(p => p.Id == request.PatientId);
+
+            if (patient == null || patient.Medications == null)
+                return result;
+
+            var activePrescriptionItems = patient.Medications.Where(med =>
+                !med.EndDate.HasValue ||
+                med.EndDate.Value.ToDateTime(System.TimeOnly.MinValue) > DateTime.UtcNow);
+
+            // These are Rxcui strings
+            var currentMedIds = activePrescriptionItems.Select(pi => pi.medicationCatalogRxcui).ToList();
+
+            // 2. Bulk Fetch AiModelNames from DbContext (MUST do this before multi-threading!)
+            var allRxcuis = currentMedIds.Concat(request.NewMedicationIds).Distinct().ToList();
+
+            // Create a dictionary mapping the Rxcui (e.g., "1191") to the AiModelName (e.g., "Aspirin")
+            var rxCuiToAiNameMap = await dbContext.MedicationCatalogs
+                .Where(m => allRxcuis.Contains(m.Rxcui) && m.AiModelName != null)
+                .ToDictionaryAsync(m => m.Rxcui, m => m.AiModelName);
+
+            // 3. Generate Pairs to Check using the Rxcuis
+            var pairsToCheck = new HashSet<(string RxcuiA, string RxcuiB)>();
+
+            // Pair New vs Current
+            foreach (var newMed in request.NewMedicationIds)
+            {
+                foreach (var currentMed in currentMedIds)
+                {
+                    if (newMed != currentMed)
+                        pairsToCheck.Add((newMed, currentMed));
+                }
+            }
+
+            // Pair New vs New
+            for (int i = 0; i < request.NewMedicationIds.Count; i++)
+            {
+                for (int j = i + 1; j < request.NewMedicationIds.Count; j++)
+                {
+                    pairsToCheck.Add((request.NewMedicationIds[i], request.NewMedicationIds[j]));
+                }
+            }
+
+            // 4. Fire Concurrent AI Checks
+            var checkTasks = new List<Task<InteractionResponseDTO?>>();
+
+            foreach (var pair in pairsToCheck)
+            {
+                // Translate Rxcui to AiModelName safely
+                if (!rxCuiToAiNameMap.TryGetValue(pair.RxcuiA, out var aiNameA) ||
+                    !rxCuiToAiNameMap.TryGetValue(pair.RxcuiB, out var aiNameB))
+                {
+                    continue; // Skip if one of the drugs isn't mapped to an AI name
+                }
+
+                // Now translate the AiModelName to your Cache Integer ID
+                var id1 = await drugDataService.GetIdAsync(aiNameA);
+                var id2 = await drugDataService.GetIdAsync(aiNameB);
+
+                if (!id1.HasValue || !id2.HasValue)
+                    continue;
+
+                var dto = new InteractionRequestDTO { IdDrug1 = id1.Value, IdDrug2 = id2.Value };
+                checkTasks.Add(drugDataService.CheckDrugInteractionAsync(dto));
+            }
+
+            // Await all API calls simultaneously 
+            var aiResponses = await Task.WhenAll(checkTasks);
+
+            // 5. Filter Results
+            foreach (var aiResponse in aiResponses)
+            {
+                if (aiResponse != null && aiResponse.IsInteraction && aiResponse.Confidence > 50.0)
+                {
+                    result.DangerousInteractions.Add(aiResponse);
+                    result.IsSafe = false;
+                }
+            }
+
+            return result;
         }
     }
 }

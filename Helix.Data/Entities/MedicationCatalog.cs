@@ -2,7 +2,6 @@
 
 namespace Helix.Data.Entities
 {
-    // This lookup table holds the local RxNorm dataset
     public class MedicationCatalog
     {
         [Key]
@@ -13,8 +12,11 @@ namespace Helix.Data.Entities
         [MaxLength(1000)]
         public string DrugName { get; set; }
 
-        // TTY (Term Type) - tells you if it's an Ingredient (IN), Brand Name (BN), or Clinical Drug (SCD)
         [MaxLength(20)]
         public string TermType { get; set; }
+
+        // Added to store the exact string the Python AI expects
+        [MaxLength(200)]
+        public string? AiModelName { get; set; }
     }
 }

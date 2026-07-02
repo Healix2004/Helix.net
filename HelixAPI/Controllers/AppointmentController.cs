@@ -2,6 +2,7 @@
 using Helix.Core.Bases;
 using Helix.Data.Enums;
 using Helix.Service.DTOs.AppointmentDtos;
+using Helix.Service.DTOs.DoctorDTOs;
 using Helix.Service.Helper;
 using Helix.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -117,6 +118,99 @@ namespace Helix.API.Controllers
                 Message = "Availability retrieved successfully."
             };
             return NewResult(response);
+        }
+
+        [HttpGet("search")]
+        [ProducesResponseType(typeof(Response<IEnumerable<DoctorSearchResultDto>>), StatusCodes.Status200OK)]
+        [Authorize(Roles = $"{nameof(EnRoles.Patient)},{nameof(EnRoles.Doctor)}")]
+        public async Task<IActionResult> SearchDoctors([FromQuery] string query, [FromQuery] int count = 20)
+        {
+            // 1. Call your highly optimized service function
+            var doctors = await appointmentService.SearchDoctorsAsync(query, count);
+
+            // 2. Wrap the result in your standard Helix response format
+            var response = new Response<IEnumerable<DoctorSearchResultDto>>(doctors)
+            {
+                Succeeded = true,
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Message = "Search completed successfully."
+            };
+
+            // 3. Return using your base controller's NewResult method
+            return NewResult(response);
+        }
+
+        [HttpGet("{id}")]
+        [ProducesResponseType(typeof(Response<DoctorDetailsDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(Response<DoctorDetailsDto>), StatusCodes.Status404NotFound)]
+        [Authorize(Roles = $"{nameof(EnRoles.Patient)},{nameof(EnRoles.Doctor)}")]
+        public async Task<IActionResult> GetDoctorDetails(Guid id)
+        {
+            // 1. Fetch the doctor details from the service
+            var doctor = await appointmentService.GetDoctorDetailsAsync(id);
+
+            // 2. Handle the Not Found scenario gracefully
+            if (doctor == null)
+            {
+                return NewResult(new Response<DoctorDetailsDto>
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.NotFound,
+                    Message = "Doctor not found."
+                });
+            }
+
+            // 3. Return the successful result
+            return NewResult(new Response<DoctorDetailsDto>(doctor)
+            {
+                Succeeded = true,
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Message = "Doctor details retrieved successfully."
+            });
+        }
+        // ==========================================
+        // SCHEDULE MODAL WORKFLOW (Calendar & Slots)
+        // ==========================================
+
+        [HttpGet("doctor/{doctorId}/available-days")]
+        [Authorize(Roles = $"{nameof(EnRoles.Patient)},{nameof(EnRoles.Doctor)},{nameof(EnRoles.Admin)}")]
+        public async Task<IActionResult> GetAvailableDaysInMonth(Guid doctorId, [FromQuery] int year, [FromQuery] int month)
+        {
+            if (month < 1 || month > 12)
+            {
+                return NewResult(new Response<AvailableDaysDto>
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.BadRequest,
+                    Message = "Month must be between 1 and 12."
+                });
+            }
+
+            var result = await appointmentService.GetAvailableDaysInMonthAsync(doctorId, year, month);
+
+            return NewResult(new Response<AvailableDaysDto>(result)
+            {
+                Succeeded = true,
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Message = "Available days retrieved successfully."
+            });
+        }
+
+        [HttpGet("doctor/{doctorId}/available-slots")]
+        [Authorize(Roles = $"{nameof(EnRoles.Patient)},{nameof(EnRoles.Doctor)},{nameof(EnRoles.Admin)}")]
+        public async Task<IActionResult> GetTimeSlotsForDay(Guid doctorId, [FromQuery] DateTime date)
+        {
+            // Ensure we are only looking at the date part, stripping any time data sent by the frontend
+            var cleanDate = date.Date;
+
+            var result = await appointmentService.GetTimeSlotsForDayAsync(doctorId, cleanDate);
+
+            return NewResult(new Response<DayTimeSlotsDto>(result)
+            {
+                Succeeded = true,
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Message = "Time slots retrieved successfully."
+            });
         }
     }
 }

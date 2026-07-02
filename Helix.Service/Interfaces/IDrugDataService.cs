@@ -10,8 +10,7 @@ namespace Helix.Service.Interfaces
         Task<List<DrugDTO>> ImportDrugDataAsync();
         Task<InteractionResponseDTO> CheckDrugInteractionAsync(InteractionRequestDTO dto);
         Task<bool> IsValidDrug(int drugId);
-        Task<string> GetServerIP();
         Task<string> GetDrugName(int drugId);
-        Task SetServerIP(string ip);
+        Task<int?> GetIdAsync(string drugName);
     }
 }
