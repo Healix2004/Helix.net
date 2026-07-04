@@ -2,12 +2,16 @@
 using Helix.Data.Enums;
 using Helix.Service.DTOs.AppointmentDtos;
 using Helix.Service.DTOs.DoctorDTOs;
+using Helix.Service.DTOs.MedicationDTOs;
+using Helix.Service.DTOs.PatientDTOs;
+using Helix.Service.Helper;
 using Helix.Service.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Linq;
+using System.Runtime.Serialization;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Helix.Service.Services.AppointmentService
@@ -486,6 +490,154 @@ namespace Helix.Service.Services.AppointmentService
                     Status = a.Status
                 })
                 .ToList();
+        }
+
+        public async Task<PatientDashboardDto> GetPatientDashboardSummaryAsync(Guid appointmentId, Guid doctorId)
+        {
+            // 1. Fetch Current Appointment & Patient
+            var appointments = await unitOfWork.Repository<Appointment>().FindAsync(a => a.Id == appointmentId);
+            var appointment = appointments.FirstOrDefault();
+
+            if (appointment == null) throw new KeyNotFoundException("Appointment not found.");
+            if (appointment.DoctorId != doctorId) throw new UnauthorizedAccessException("Not allowed to view this data.");
+
+            var patientId = appointment.PatientId;
+
+            var patientQuery = await unitOfWork.Repository<Patient>().FindAsQueryable(p => p.Id == patientId);
+            var patient = await patientQuery
+                .Include(p => p.AppUser)
+                .Include(p => p.Insurance) // CRITICAL: Added missing Include so patient.Insurance doesn't crash
+                .Include(p => p.Allergies).ThenInclude(a => a.AllergenCatalog)
+                .Include(p => p.ChronicDiseases).ThenInclude(ch => ch.ChronicDiseaseCatalog)
+                .Include(p => p.Medications).ThenInclude(m => m.medicationCatalog)
+                .AsNoTracking() // Performance boost
+                .FirstOrDefaultAsync();
+
+            if (patient == null) throw new KeyNotFoundException("Patient not found.");
+
+            // Safe null-coalescing in case lists are empty
+            var allergies = patient.Allergies ?? new List<Allergy>();
+            var chronicList = patient.ChronicDiseases;
+
+            // FIX: Show ACTIVE medications (EndDate is null OR in the future) instead of expired ones
+            var todayDate = DateOnly.FromDateTime(DateTime.Now);
+            var medications = patient.Medications?
+                .Where(m => m.EndDate == null || m.EndDate >= todayDate)
+                .ToList() ?? new List<Medication>();
+
+            // 4. Fetch Last Visit (The most recent 'Fulfilled' appointment)
+            var pastAppointments = await unitOfWork.Repository<Appointment>()
+                .FindAsync(a => a.PatientId == patientId && a.Status == EnAppointmentStatus.Fulfilled);
+
+            var lastAppointment = pastAppointments.OrderByDescending(a => a.StartTime).FirstOrDefault();
+
+            LastVisitSummaryDto? lastVisitDto = null;
+            if (lastAppointment != null)
+            {
+                // If a past visit exists, map its details
+                lastVisitDto = new LastVisitSummaryDto
+                {
+                    AppointmentTitle = lastAppointment.AppointmentType ?? "General Checkup",
+                    AppointmentDate = lastAppointment.StartTime.ToString("MM-dd-yyyy"),
+                    PrescriptionSummary = "View active medications list",
+                    ClinicalNoteSummary = "Routine visit completed.",
+                    ClinicalNoteDate = GetRelativeDateString(lastAppointment.StartTime),
+                    LabResultSummary = "No recent labs",
+                    LabResultDate = ""
+                };
+            }
+
+            // Safely parse National ID to prevent hard crashes on invalid data
+            int patientAge = 0;
+            string patientGender = "Unknown";
+            if (!string.IsNullOrWhiteSpace(patient.NationalId))
+            {
+                try
+                {
+                    var idData = patient.NationalId.ParseEgyptianId();
+                    patientAge = CalculateAge(idData.dateOfBirth);
+                    patientGender = idData.gender.ToString();
+                }
+                catch
+                {
+                    // Fallback if NationalId format is invalid
+                }
+            }
+
+            // 5. Construct the final Payload
+            return new PatientDashboardDto
+            {
+                PatientId = patientId,
+                FullName = patient.FullName ?? "Unknown",
+                Initials = GetInitials(patient.FullName),
+                DisplayId = patient.Id.ToString()[..7].ToUpper(), // Fallback if no custom ID
+                Age = patientAge,
+                Gender = patientGender,
+                Phone = patient.AppUser?.PhoneNumber ?? "No Phone",
+                Email = patient.AppUser?.Email ?? "No Email",
+                InsuranceProvider = patient.Insurance?.InsuranceProvider ?? "Self-Pay",
+                PatientStatus = "Active Patient",
+
+                KnownAllergies = allergies.Select(a => a.AllergenCatalog?.DisplayName ?? "Unknown").ToList(),
+                ChronicConditions = chronicList.Select(ch => ch.ChronicDiseaseCatalog?.DisplayName ?? "Unknown").ToList(),
+                CurrentMedications = medications.Select(m => new MedicationDto
+                {
+                    Rxcui = m.medicationCatalogRxcui,
+                    Name = m.medicationCatalog?.DrugName ?? "Unknown",
+                    Dosage = m.Dosage,
+                    StartDate = m.StartDate,
+                    EndDate = m.EndDate ?? default // Safe fallback
+                }).ToList(),
+
+                LastVisit = lastVisitDto,
+                IsMedicalHistoryLocked = true // Keeps the bottom timeline blurred
+            };
+        }
+
+        // Helper to calculate accurate age
+        private int CalculateAge(DateOnly dateOfBirth)
+        {
+            // Convert today's DateTime into a DateOnly for safe comparison
+            var today = DateOnly.FromDateTime(DateTime.Today);
+
+            var age = today.Year - dateOfBirth.Year;
+
+            // DateOnly supports AddYears, so this comparison now works perfectly
+            if (dateOfBirth > today.AddYears(-age))
+            {
+                age--;
+            }
+
+            return age;
+        }
+
+        private string GetRelativeDateString(DateTime date)
+        {
+            // We use .Date to strip the time. This prevents a bug where an event at 
+            // 11:00 PM yesterday evaluates to "0 days ago" if checked at 8:00 AM today.
+            var today = DateTime.UtcNow.Date;
+            var targetDate = date.Date;
+
+            var span = today - targetDate;
+
+            if (span.Days == 0) return "Today";
+            if (span.Days == 1) return "Yesterday";
+            if (span.Days < 7) return $"{span.Days} days ago";
+
+            if (span.Days < 30)
+            {
+                int weeks = span.Days / 7;
+                return weeks == 1 ? "1 week ago" : $"{weeks} weeks ago";
+            }
+
+            if (span.Days < 365)
+            {
+                int months = span.Days / 30;
+                return months == 1 ? "1 month ago" : $"{months} months ago";
+            }
+
+            // Fallback for events older than a year
+            return date.ToString("MMM d, yyyy"); // e.g., "Jan 15, 2025"
         }
     }
 }

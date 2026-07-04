@@ -1,6 +1,7 @@
 ﻿using Helix.Data.Enums;
 using Helix.Service.DTOs.AppointmentDtos;
 using Helix.Service.DTOs.DoctorDTOs;
+using Helix.Service.DTOs.PatientDTOs;
 
 namespace Helix.Service.Interfaces
 {
@@ -20,5 +21,8 @@ namespace Helix.Service.Interfaces
         Task<DayTimeSlotsDto> GetTimeSlotsForDayAsync(Guid doctorId, DateTime date, Guid? patientId = null);
         Task<List<AppointmentListDto>> GetDoctorAppointmentsAsync(Guid doctorId, string filter);
         Task<List<AppointmentListDto>> GetHighPriorityPatientsTodayAsync(Guid doctorId);
+
+
+        Task<PatientDashboardDto> GetPatientDashboardSummaryAsync(Guid appointmentId, Guid doctorId);
     }
 }

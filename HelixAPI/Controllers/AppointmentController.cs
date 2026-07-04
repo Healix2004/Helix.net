@@ -3,6 +3,7 @@ using Helix.Core.Bases;
 using Helix.Data.Enums;
 using Helix.Service.DTOs.AppointmentDtos;
 using Helix.Service.DTOs.DoctorDTOs;
+using Helix.Service.DTOs.PatientDTOs;
 using Helix.Service.Helper;
 using Helix.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -248,6 +249,54 @@ namespace Helix.API.Controllers
                 Message = "Daily summary generated successfully."
             };
             return NewResult(response);
+        }
+
+
+
+        /// <summary>
+        /// Retrieves the comprehensive patient summary for the appointment dashboard.
+        /// Example: GET /api/appointments/3fa85f64-5717-4562-b3fc-2c963f66afa6/patient-dashboard
+        /// </summary>
+        [HttpGet("{id}/patient-dashboard")]
+        [Authorize(Roles = nameof(EnRoles.Doctor))]
+        public async Task<IActionResult> GetPatientDashboardSummary(Guid id)
+        {
+            try
+            {
+                // 1. Securely grab the logged-in doctor's ID from their token
+                var doctorId = await User.GetDoctorIdAsync(doctorService);
+
+                // 2. Fetch the data
+                var result = await appointmentService.GetPatientDashboardSummaryAsync(id, doctorId);
+
+                // 3. Return successful response
+                return NewResult(new Response<PatientDashboardDto>(result)
+                {
+                    Succeeded = true,
+                    StatusCode = System.Net.HttpStatusCode.OK,
+                    Message = "Patient dashboard summary retrieved successfully."
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                // Catches the security check if the doctor doesn't own this appointment
+                return NewResult(new Response<PatientDashboardDto>
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.Forbidden,
+                    Message = ex.Message
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                // Catches if the appointment or patient doesn't exist
+                return NewResult(new Response<PatientDashboardDto>
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.NotFound,
+                    Message = ex.Message
+                });
+            }
         }
 
     }
