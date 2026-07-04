@@ -36,30 +36,12 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        [HttpGet("dashboard/summary")]
-        [Authorize(Roles = nameof(EnRoles.Doctor))]
-        public async Task<IActionResult> GetDailySummary()
-        {
-            var doctorId = await User.GetDoctorIdAsync(doctorService);
-
-            // This powers the "Daily Schedule Summary" card on the right of your UI
-            var result = await appointmentService.GetDailyScheduleSummaryAsync(doctorId);
-
-            var response = new Response<DailyScheduleSummaryDto>(result)
-            {
-                Succeeded = true,
-                StatusCode = System.Net.HttpStatusCode.OK,
-                Message = "Daily summary generated successfully."
-            };
-            return NewResult(response);
-        }
-
         // ==========================================
         // MANAGEMENT WORKFLOW (CRUD & Status)
         // ==========================================
 
         [HttpPost]
-        [Authorize(Roles = $"{nameof(EnRoles.Doctor)},{nameof(EnRoles.Admin)}")]
+        [Authorize(Roles = $"{nameof(EnRoles.Doctor)},{nameof(EnRoles.Patient)},{nameof(EnRoles.Admin)}")]
         public async Task<IActionResult> ScheduleAppointment([FromBody] CreateAppointmentDto dto)
         {
             // Optional: If a doctor is creating this, force the DoctorId to be their own ID
@@ -67,6 +49,10 @@ namespace Helix.API.Controllers
             if (User.IsInRole(nameof(EnRoles.Doctor)))
             {
                 dto.DoctorId = await User.GetDoctorIdAsync(doctorService);
+            }
+            else if (User.IsInRole(nameof(EnRoles.Patient)))
+            {
+                dto.PatientId = await User.GetPatientIdAsync(patientService);
             }
 
             var resultId = await appointmentService.ScheduleAppointmentAsync(dto);
@@ -171,22 +157,22 @@ namespace Helix.API.Controllers
         // ==========================================
         // SCHEDULE MODAL WORKFLOW (Calendar & Slots)
         // ==========================================
-
         [HttpGet("doctor/{doctorId}/available-days")]
         [Authorize(Roles = $"{nameof(EnRoles.Patient)},{nameof(EnRoles.Doctor)},{nameof(EnRoles.Admin)}")]
         public async Task<IActionResult> GetAvailableDaysInMonth(Guid doctorId, [FromQuery] int year, [FromQuery] int month)
         {
             if (month < 1 || month > 12)
+                return NewResult(new Response<AvailableDaysDto> { Succeeded = false, StatusCode = System.Net.HttpStatusCode.BadRequest, Message = "Invalid month." });
+
+            Guid? patientId = null;
+
+            // Extract the Patient ID if a patient is the one viewing the calendar
+            if (User.IsInRole(nameof(EnRoles.Patient)))
             {
-                return NewResult(new Response<AvailableDaysDto>
-                {
-                    Succeeded = false,
-                    StatusCode = System.Net.HttpStatusCode.BadRequest,
-                    Message = "Month must be between 1 and 12."
-                });
+                patientId = await User.GetPatientIdAsync(patientService);
             }
 
-            var result = await appointmentService.GetAvailableDaysInMonthAsync(doctorId, year, month);
+            var result = await appointmentService.GetAvailableDaysInMonthAsync(doctorId, year, month, patientId);
 
             return NewResult(new Response<AvailableDaysDto>(result)
             {
@@ -195,15 +181,16 @@ namespace Helix.API.Controllers
                 Message = "Available days retrieved successfully."
             });
         }
-
         [HttpGet("doctor/{doctorId}/available-slots")]
         [Authorize(Roles = $"{nameof(EnRoles.Patient)},{nameof(EnRoles.Doctor)},{nameof(EnRoles.Admin)}")]
         public async Task<IActionResult> GetTimeSlotsForDay(Guid doctorId, [FromQuery] DateTime date)
         {
             // Ensure we are only looking at the date part, stripping any time data sent by the frontend
             var cleanDate = date.Date;
-
-            var result = await appointmentService.GetTimeSlotsForDayAsync(doctorId, cleanDate);
+            Guid? patientId = User.IsInRole(nameof(EnRoles.Patient))
+                ? (Guid?)(await User.GetPatientIdAsync(patientService))
+                : null;
+            var result = await appointmentService.GetTimeSlotsForDayAsync(doctorId, cleanDate, patientId);
 
             return NewResult(new Response<DayTimeSlotsDto>(result)
             {
@@ -212,5 +199,56 @@ namespace Helix.API.Controllers
                 Message = "Time slots retrieved successfully."
             });
         }
+        // ==========================================
+        // DOCTOR DASHBOARD WORKFLOW
+        // ==========================================
+
+        [HttpGet("dashboard/list")]
+        [Authorize(Roles = nameof(EnRoles.Doctor))]
+        public async Task<IActionResult> GetDashboardList([FromQuery] string filter = "today")
+        {
+            var doctorId = await User.GetDoctorIdAsync(doctorService); // Your existing extension method
+            var result = await appointmentService.GetDoctorAppointmentsAsync(doctorId, filter);
+
+            return NewResult(new Response<List<AppointmentListDto>>(result)
+            {
+                Succeeded = true,
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Message = $"Appointments for '{filter}' retrieved successfully."
+            });
+        }
+        [HttpGet("dashboard/high-priority")]
+        [Authorize(Roles = nameof(EnRoles.Doctor))]
+        public async Task<IActionResult> GetHighPriorityPatients()
+        {
+            var doctorId = await User.GetDoctorIdAsync(doctorService);
+            var result = await appointmentService.GetHighPriorityPatientsTodayAsync(doctorId);
+
+            return NewResult(new Response<List<AppointmentListDto>>(result)
+            {
+                Succeeded = true,
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Message = "High-priority patients retrieved successfully."
+            });
+        }
+
+        [HttpGet("dashboard/summary")]
+        [Authorize(Roles = nameof(EnRoles.Doctor))]
+        public async Task<IActionResult> GetDailySummary()
+        {
+            var doctorId = await User.GetDoctorIdAsync(doctorService);
+
+            // This powers the "Daily Schedule Summary" card on the right of your UI
+            var result = await appointmentService.GetDailyScheduleSummaryAsync(doctorId);
+
+            var response = new Response<DailyScheduleSummaryDto>(result)
+            {
+                Succeeded = true,
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Message = "Daily summary generated successfully."
+            };
+            return NewResult(response);
+        }
+
     }
 }

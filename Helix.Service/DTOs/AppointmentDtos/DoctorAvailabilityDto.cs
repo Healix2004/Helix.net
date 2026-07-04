@@ -9,4 +9,5 @@
         // 2. The exact clickable time buttons for the specifically requested date
         public List<TimeSlotDto> SelectedDaySlots { get; set; } = new List<TimeSlotDto>();
     }
+
 }

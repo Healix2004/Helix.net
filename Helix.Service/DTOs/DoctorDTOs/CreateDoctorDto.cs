@@ -44,12 +44,4 @@ namespace Helix.Service.DTOs.DoctorDTOs
         public IFormFile NationalIdDocument { get; set; }
         public IFormFile? ProfileImage { get; set; }
     }
-    public class CreateAvailableTimeSlotDto
-    {
-        [Required]
-        public TimeSpan StartTime { get; set; }
-
-        [Required]
-        public TimeSpan EndTime { get; set; }
-    }
 }

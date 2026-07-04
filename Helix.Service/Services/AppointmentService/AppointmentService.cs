@@ -16,12 +16,36 @@ namespace Helix.Service.Services.AppointmentService
     {
         public async Task<Guid> ScheduleAppointmentAsync(CreateAppointmentDto dto)
         {
+            // 1. Fetch the exact availability for that day using the logic we already built
+            // We pass the PatientId so the "one appointment per day" rule is checked!
+            var dailyAvailability = await GetTimeSlotsForDayAsync(dto.DoctorId, dto.StartTime.Date, dto.PatientId);
+
+            // 2. Find the specific slot the user is trying to book
+            var requestedSlot = dailyAvailability.Slots.FirstOrDefault(s => s.StartTime == dto.StartTime);
+
+            // 3. Validation: Does the slot exist in the schedule?
+            if (requestedSlot == null)
+            {
+                throw new InvalidOperationException("The requested time is outside the doctor's working hours or is not a valid 30-minute slot.");
+            }
+
+            // 4. Validation: Is the slot actually available?
+            if (!requestedSlot.IsAvailable)
+            {
+                throw new InvalidOperationException("This time slot is already booked, has passed, or you already have an appointment with this doctor today.");
+            }
+
+            // 5. Proceed with booking
             var appointment = new Appointment
             {
                 PatientId = dto.PatientId,
                 DoctorId = dto.DoctorId,
                 StartTime = dto.StartTime,
-                EndTime = dto.EndTime,
+
+                // Safety feature: Force the EndTime to match the official 30-minute slot duration
+                // This prevents bad data from the frontend where EndTime might be completely wrong
+                EndTime = requestedSlot.EndTime,
+
                 AppointmentType = dto.AppointmentType,
                 Priority = dto.Priority,
                 PatientInstruction = dto.PatientInstruction,
@@ -55,7 +79,7 @@ namespace Helix.Service.Services.AppointmentService
                 .FindAsQueryable(a => a.DoctorId == doctorId && a.StartTime.Date == today);
 
             var rawAppointments = await query
-                .Include(a => a.Patient)
+                .Include<Appointment, Patient>(a => a.Patient)
                 .OrderBy(a => a.StartTime)
                 .ToListAsync(); // Execute query here to bring data into memory
 
@@ -244,28 +268,24 @@ namespace Helix.Service.Services.AppointmentService
             };
         }
 
-        public async Task<AvailableDaysDto> GetAvailableDaysInMonthAsync(Guid doctorId, int year, int month)
+        // 1. Update the signature to accept the optional patientId
+        public async Task<AvailableDaysDto> GetAvailableDaysInMonthAsync(Guid doctorId, int year, int month, Guid? patientId = null)
         {
             var result = new AvailableDaysDto { Year = year, Month = month, AvailableDays = new List<int>() };
 
-            // 1. Fetch Doctor with their shifts (Use Include if AvailableTimeSlots is a separate table)
             var query = await unitOfWork.Repository<Doctor>()
                 .FindAsQueryable(d => d.Id == doctorId);
-
-            // Make sure to eagerly load the shifts if they are in a related table!
-            // query = query.Include(d => d.AvailableTimeSlots); 
 
             var doctor = await query.FirstOrDefaultAsync();
 
             if (doctor == null || doctor.AvailabeDays == null || !doctor.AvailableTimeSlots.Any())
-                return result; // Doctor not found or hasn't set up a schedule
+                return result;
 
             var firstDayOfMonth = new DateTime(year, month, 1);
             var daysInMonth = DateTime.DaysInMonth(year, month);
             var endOfMonth = firstDayOfMonth.AddMonths(1).AddTicks(-1);
             var today = DateTime.Today;
 
-            // 2. Fetch all appointments for the ENTIRE MONTH in one fast query
             var appointmentsQuery = await unitOfWork.Repository<Appointment>()
                 .FindAsQueryable(a => a.DoctorId == doctorId &&
                                       a.StartTime >= firstDayOfMonth &&
@@ -274,7 +294,6 @@ namespace Helix.Service.Services.AppointmentService
 
             var monthlyAppointments = await appointmentsQuery.ToListAsync();
 
-            // 3. Calculate how many total slots the doctor can take in a single day
             int totalPossibleSlotsPerDay = 0;
             var slotDuration = TimeSpan.FromMinutes(30);
             foreach (var shift in doctor.AvailableTimeSlots)
@@ -282,7 +301,6 @@ namespace Helix.Service.Services.AppointmentService
                 totalPossibleSlotsPerDay += (int)((shift.EndTime - shift.StartTime).TotalMinutes / slotDuration.TotalMinutes);
             }
 
-            // 4. Loop through the days of the month to check availability
             for (int day = 1; day <= daysInMonth; day++)
             {
                 var currentDate = new DateTime(year, month, day);
@@ -290,14 +308,27 @@ namespace Helix.Service.Services.AppointmentService
                 // Rule A: Skip days in the past
                 if (currentDate < today) continue;
 
-                // Rule B: Skip days the doctor doesn't work (e.g., Weekends)
-                string currentDayName = currentDate.DayOfWeek.ToString(); // e.g., "Monday"
+                // Rule B: Skip days the doctor doesn't work
+                string currentDayName = currentDate.DayOfWeek.ToString();
                 if (!doctor.AvailabeDays.Contains(currentDayName)) continue;
 
-                // Rule C: Count booked appointments for this specific day
-                var bookedCount = monthlyAppointments.Count(a => a.StartTime.Date == currentDate);
+                // Rule C: (NEW) Check if the patient already has a booking on this specific day
+                if (patientId.HasValue && patientId.Value != Guid.Empty)
+                {
+                    bool hasPatientAlreadyBooked = monthlyAppointments.Any(a =>
+                        a.StartTime.Date == currentDate.Date &&
+                        a.PatientId == patientId.Value);
 
-                // If the doctor has fewer bookings than their maximum capacity, the day is available!
+                    // If they already have an appointment today, skip this day entirely
+                    if (hasPatientAlreadyBooked)
+                    {
+                        continue;
+                    }
+                }
+
+                // Rule D: Count overall booked appointments to see if the doctor is fully booked
+                var bookedCount = monthlyAppointments.Count(a => a.StartTime.Date == currentDate.Date);
+
                 if (bookedCount < totalPossibleSlotsPerDay)
                 {
                     result.AvailableDays.Add(day);
@@ -307,27 +338,24 @@ namespace Helix.Service.Services.AppointmentService
             return result;
         }
 
-
-        public async Task<DayTimeSlotsDto> GetTimeSlotsForDayAsync(Guid doctorId, DateTime date)
+        // 1. Update the signature to accept an optional patientId
+        public async Task<DayTimeSlotsDto> GetTimeSlotsForDayAsync(Guid doctorId, DateTime date, Guid? patientId = null)
         {
             var result = new DayTimeSlotsDto { Date = date.Date, Slots = new List<TimeSlotDto>() };
 
-            // 1. Fetch Doctor configuration
             var doctorQuery = await unitOfWork.Repository<Doctor>().FindAsQueryable(d => d.Id == doctorId);
             var doctor = await doctorQuery.FirstOrDefaultAsync();
 
             if (doctor == null) throw new KeyNotFoundException("Doctor not found.");
 
-            // Check if the doctor actually works on this day before querying appointments
             if (!doctor.AvailabeDays.Contains(date.DayOfWeek.ToString()))
             {
-                return result; // Returns empty list of slots because doctor is off
+                return result;
             }
 
             var startOfDay = date.Date;
             var endOfDay = startOfDay.AddDays(1);
 
-            // 2. Fetch appointments for ONLY THIS SINGLE DAY (Massive performance boost)
             var query = await unitOfWork.Repository<Appointment>()
                 .FindAsQueryable(a => a.DoctorId == doctorId &&
                                       a.StartTime >= startOfDay &&
@@ -336,47 +364,128 @@ namespace Helix.Service.Services.AppointmentService
 
             var dailyAppointments = await query.ToListAsync();
 
+            // 2. NEW: Check if the patient already has a booking today with this doctor
+            bool hasPatientAlreadyBookedToday = false;
+            if (patientId.HasValue && patientId.Value != Guid.Empty)
+            {
+                hasPatientAlreadyBookedToday = dailyAppointments.Any(a => a.PatientId == patientId.Value);
+            }
+
             var slotDuration = TimeSpan.FromMinutes(30);
+            var now = DateTime.UtcNow; // Ensure this matches your server's timezone configuration
 
-            // Note: If your system uses local time (Egypt UTC+2/+3), ensure this is DateTime.Now
-            var now = DateTime.UtcNow;
-
-            // 3. Loop through the specific shifts (e.g., Morning Shift, Evening Shift)
             foreach (var shift in doctor.AvailableTimeSlots)
             {
                 var currentSlot = startOfDay.Add(shift.StartTime);
                 var endOfShift = startOfDay.Add(shift.EndTime);
 
-                // Generate the 30-minute chunks for this specific shift
                 while (currentSlot < endOfShift)
                 {
                     var slotEndTime = currentSlot.Add(slotDuration);
 
-                    // Check if slot overlaps with any booked appointment
+                    // Check if slot overlaps with ANY booked appointment
                     bool isBooked = dailyAppointments.Any(a =>
                         (currentSlot >= a.StartTime && currentSlot < a.EndTime) ||
                         (a.StartTime >= currentSlot && a.StartTime < slotEndTime));
 
-                    // Block slots that have already passed if viewing today's date
+                    // Block slots that have already passed
                     if (currentSlot < now)
                     {
                         isBooked = true;
                     }
 
+                    // 3. NEW: If the patient already booked today, block all remaining slots to prevent double-booking
+                    if (hasPatientAlreadyBookedToday)
+                    {
+                        isBooked = true;
+                    }
 
                     result.Slots.Add(new TimeSlotDto
                     {
                         StartTime = currentSlot,
                         EndTime = slotEndTime,
-                        DisplayTime = currentSlot.ToString("hh:mm tt"), // e.g., "08:30 AM"
+                        DisplayTime = currentSlot.ToString("hh:mm tt"),
                         IsAvailable = !isBooked
                     });
 
-                    currentSlot = slotEndTime; // Move to next slot
+                    currentSlot = slotEndTime;
                 }
             }
 
             return result;
+        }
+
+        public async Task<List<AppointmentListDto>> GetDoctorAppointmentsAsync(Guid doctorId, string filter)
+        {
+            var today = DateTime.UtcNow.Date;
+            DateTime startDate = today;
+            DateTime endDate = today;
+            bool urgentOnly = false;
+
+            // Determine date ranges before hitting the database
+            switch (filter.ToLower())
+            {
+                case "tomorrow":
+                    startDate = today.AddDays(1);
+                    endDate = startDate;
+                    break;
+                case "week":
+                    endDate = today.AddDays(7);
+                    break;
+                case "urgent":
+                    urgentOnly = true;
+                    break;
+            }
+
+            // Note: If your FindAsync supports includes (e.g., passing "Patient" as a string), add it here\
+            var query = await unitOfWork.Repository<Appointment>().FindAsQueryable(a => a.DoctorId == doctorId &&
+                a.Status != EnAppointmentStatus.Cancelled &&
+                (urgentOnly
+                    ? (a.Priority == EnAppointmentPriority.Urgent || a.Priority == EnAppointmentPriority.Stat)
+                    : (a.StartTime.Date >= startDate && a.StartTime.Date <= endDate)));
+            var rawAppointments = await query.Include(a => a.Patient).ToListAsync();
+            return rawAppointments
+                .OrderBy(a => a.StartTime)
+                .Select(a => new AppointmentListDto
+                {
+                    Id = a.Id,
+                    PatientId = a.PatientId,
+                    PatientName = a.Patient?.FullName ?? "Unknown",
+                    PatientInitials = GetInitials(a.Patient?.FullName),
+                    AppointmentType = a.AppointmentType ?? "General Checkup",
+                    DisplayTime = a.StartTime.ToString("hh:mm tt"),
+                    Status = a.Status
+                })
+                .ToList();
+        }
+
+        public async Task<List<AppointmentListDto>> GetHighPriorityPatientsTodayAsync(Guid doctorId)
+        {
+            var today = DateTime.UtcNow.Date;
+
+            var query = await unitOfWork.Repository<Appointment>().FindAsQueryable(a =>
+                a.DoctorId == doctorId &&
+                a.StartTime.Date == today &&
+                (a.Priority == EnAppointmentPriority.Urgent || a.Priority == EnAppointmentPriority.Stat) &&
+                a.Status != EnAppointmentStatus.Fulfilled &&
+                a.Status != EnAppointmentStatus.Cancelled);
+
+            var rawAppointments = await query.Include(a => a.Patient).ToListAsync();
+
+            return rawAppointments
+                .OrderBy(a => a.StartTime)
+                .Take(5)
+                .Select(a => new AppointmentListDto
+                {
+                    Id = a.Id,
+                    PatientId = a.PatientId,
+                    PatientName = a.Patient?.FullName ?? "Unknown",
+                    PatientInitials = GetInitials(a.Patient?.FullName),
+                    AppointmentType = $"Urgent - {a.AppointmentType ?? "Assessment"}",
+                    DisplayTime = a.StartTime.ToString("hh:mm tt"),
+                    Status = a.Status
+                })
+                .ToList();
         }
     }
 }

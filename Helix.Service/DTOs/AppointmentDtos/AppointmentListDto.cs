@@ -7,10 +7,7 @@ namespace Helix.Service.DTOs.AppointmentDtos
         public Guid Id { get; set; }
         public Guid PatientId { get; set; }
         public string PatientName { get; set; } = string.Empty;
-
-        // Just send the initials for the avatar circles (e.g., "SJ", "MC")
-        public string PatientInitials { get; set; } = string.Empty;
-
+        public string PatientInitials { get; set; } = string.Empty; // e.g., "SJ"
         public string AppointmentType { get; set; } = string.Empty;
 
         // Formatted specifically for your UI (e.g., "09:00 AM")

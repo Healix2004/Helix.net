@@ -16,7 +16,9 @@ namespace Helix.Service.Interfaces
         Task<IEnumerable<DoctorSearchResultDto>> SearchDoctorsAsync(string query, int count = 20);
         Task<DoctorDetailsDto?> GetDoctorDetailsAsync(Guid id);
 
-        Task<AvailableDaysDto> GetAvailableDaysInMonthAsync(Guid doctorId, int year, int month);
-        Task<DayTimeSlotsDto> GetTimeSlotsForDayAsync(Guid doctorId, DateTime date);
+        Task<AvailableDaysDto> GetAvailableDaysInMonthAsync(Guid doctorId, int year, int month, Guid? patientId = null);
+        Task<DayTimeSlotsDto> GetTimeSlotsForDayAsync(Guid doctorId, DateTime date, Guid? patientId = null);
+        Task<List<AppointmentListDto>> GetDoctorAppointmentsAsync(Guid doctorId, string filter);
+        Task<List<AppointmentListDto>> GetHighPriorityPatientsTodayAsync(Guid doctorId);
     }
 }

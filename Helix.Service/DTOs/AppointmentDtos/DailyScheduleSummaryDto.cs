@@ -1,11 +1,12 @@
-﻿namespace Helix.Service.DTOs.AppointmentDtos
+﻿using Helix.Data.Enums;
+
+namespace Helix.Service.DTOs.AppointmentDtos
 {
-    // Maps directly to the "Daily Schedule Summary" card in your UI
     public class DailyScheduleSummaryDto
     {
         public int TotalAppointments { get; set; }
-        public int Confirmed { get; set; } // Status = Booked
-        public int Waiting { get; set; }   // Status = Arrived
-        public int Urgent { get; set; }    // Priority = Urgent/Stat
+        public int Confirmed { get; set; }
+        public int Waiting { get; set; }
+        public int Urgent { get; set; }
     }
 }
