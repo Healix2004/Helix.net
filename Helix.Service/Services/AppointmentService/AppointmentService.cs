@@ -418,20 +418,24 @@ namespace Helix.Service.Services.AppointmentService
 
             return result;
         }
-
         public async Task<List<AppointmentListDto>> GetDoctorAppointmentsAsync(Guid doctorId, string filter)
         {
-            var today = DateTime.UtcNow.Date;
+            var now = DateTime.UtcNow;
+            var today = now.Date;
             DateTime startDate = today;
             DateTime endDate = today;
             bool urgentOnly = false;
 
-            // Determine date ranges before hitting the database
+            // 1. Determine date ranges
             switch (filter.ToLower())
             {
                 case "tomorrow":
                     startDate = today.AddDays(1);
                     endDate = startDate;
+                    break;
+                case "past":
+                    startDate = today.AddDays(-365);
+                    endDate = today;
                     break;
                 case "week":
                     endDate = today.AddDays(7);
@@ -441,13 +445,39 @@ namespace Helix.Service.Services.AppointmentService
                     break;
             }
 
-            // Note: If your FindAsync supports includes (e.g., passing "Patient" as a string), add it here\
-            var query = await unitOfWork.Repository<Appointment>().FindAsQueryable(a => a.DoctorId == doctorId &&
+            // 2. Query the database
+            // Optimized the Date comparison for better SQL indexing
+            var query = await unitOfWork.Repository<Appointment>().FindAsQueryable(a =>
+                a.DoctorId == doctorId &&
                 a.Status != EnAppointmentStatus.Cancelled &&
                 (urgentOnly
                     ? (a.Priority == EnAppointmentPriority.Urgent || a.Priority == EnAppointmentPriority.Stat)
-                    : (a.StartTime.Date >= startDate && a.StartTime.Date <= endDate)));
+                    : (a.StartTime >= startDate && a.StartTime < endDate.AddDays(1))));
+
             var rawAppointments = await query.Include(a => a.Patient).ToListAsync();
+
+            // 3. Auto-Update Past Appointments
+            bool requiresDatabaseSave = false;
+
+            foreach (var apt in rawAppointments)
+            {
+                // If the appointment time has passed and it is still marked as Scheduled/Active
+                if (apt.StartTime < now && apt.Status == EnAppointmentStatus.Pending)
+                {
+                    apt.Status = EnAppointmentStatus.Fulfilled;
+
+                    await unitOfWork.Repository<Appointment>().UpdateAsync(apt);
+                    requiresDatabaseSave = true;
+                }
+            }
+
+            // Only hit the database with a commit if we actually changed something
+            if (requiresDatabaseSave)
+            {
+                await unitOfWork.CompleteAsync();
+            }
+
+            // 4. Map to DTOs and return
             return rawAppointments
                 .OrderBy(a => a.StartTime)
                 .Select(a => new AppointmentListDto

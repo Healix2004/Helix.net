@@ -1,4 +1,6 @@
-﻿namespace Helix.Service.DTOs.PrescriptionDtos
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Helix.Service.DTOs.PrescriptionDtos
 {
     public class ActiveMedicationDto
     {
@@ -10,5 +12,31 @@
         public DateTime PrescribedDate { get; set; }
         // Displays the status (e.g., "Active", "OnHold")
         public string Status { get; set; } = string.Empty;
+    }
+    public class PrescriptionPayloadDto
+    {
+        [Required]
+        public Guid AppointmentId { get; set; }
+        public List<MedicationOrderItem> Medications { get; set; } = new();
+        public List<string> LabOrderCodes { get; set; } = new();
+        public List<string> RadiologyOrderCodes { get; set; } = new();
+    }
+
+    public class MedicationOrderItem
+    {
+        [Required]
+        public string Rxcui { get; set; }
+
+        [Required]
+        public string DrugName { get; set; }
+
+        [Required]
+        public string Dosage { get; set; }
+
+        [Required]
+        public string Frequency { get; set; }
+
+        [Required]
+        public string Duration { get; set; }
     }
 }

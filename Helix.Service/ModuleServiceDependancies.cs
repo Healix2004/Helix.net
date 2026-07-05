@@ -60,6 +60,7 @@ namespace Helix.Service
             services.AddDoctorService();
             services.AddConsentService();
             services.AddConsentValidationService();
+            services.AddMedicalHistoryService();
             services.AddAllergyService();
             services.AddDiagnoseService();
             services.AddEncounterService();
@@ -255,13 +256,16 @@ namespace Helix.Service
             services.AddScoped<IAllergyService, Helix.Service.Services.AllergyService.AllergyService>();
             return services;
         }
-
+        private static IServiceCollection AddMedicalHistoryService(this IServiceCollection services)
+        {
+            services.AddScoped<IMedicalHistoryService, Helix.Service.Services.MedicalHistory.MedicalHistoryService>();
+            return services;
+        }
         private static IServiceCollection AddDiagnoseService(this IServiceCollection services)
         {
             services.AddScoped<IDiagnoseService, Helix.Service.Services.DiagnoseService.DiagnoseService>();
             return services;
         }
-
         private static IServiceCollection AddEncounterService(this IServiceCollection services)
         {
             services.AddScoped<IEncounterService, Helix.Service.Services.EncounterService.EncounterService>();

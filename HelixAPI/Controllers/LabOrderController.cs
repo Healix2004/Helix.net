@@ -34,7 +34,6 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        // NEW ENDPOINT: Get all orders (History) for the logged-in patient
         [HttpGet("my-history")]
         [Authorize(Roles = nameof(EnRoles.Patient))]
         public async Task<IActionResult> GetPatientOrderHistory()
@@ -71,7 +70,6 @@ namespace Helix.API.Controllers
         }
 
         [HttpPost("{orderId}/results")]
-        //[Authorize(Roles = nameof(EnRoles.Admin))] 
         public async Task<IActionResult> UploadLabResult(Guid orderId, [FromBody] UploadLabResultDto dto)
         {
             dto.OrderId = orderId;
@@ -85,7 +83,6 @@ namespace Helix.API.Controllers
             };
             return NewResult(response);
         }
-
         // ==========================================================
         // 2. FOR THE DOCTOR (Requires the 2-Hour Consent Token)
         // ==========================================================

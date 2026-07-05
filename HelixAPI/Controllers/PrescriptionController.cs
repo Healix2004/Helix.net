@@ -1,9 +1,12 @@
 using Helix.Api.Base;
 using Helix.Core.Bases;
 using Helix.Data.Enums;
+using Helix.Service.DTOs.MedicalHistoryDtos;
 using Helix.Service.DTOs.PrescriptionDtos;
 using Helix.Service.Helper;
 using Helix.Service.Interfaces; // ADDED: Need this to inject IDoctorService
+using Helix.Service.Services.ConsentService;
+using Helix.Service.Services.DoctorService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,9 +14,7 @@ namespace Helix.API.Controllers
 {
     [Route("api/prescriptions")]
     [ApiController]
-    public class PrescriptionController(
-        IPrescriptionService prescriptionService,
-        IDoctorService doctorService) : AppControllerBase
+    public class PrescriptionController(IPrescriptionService prescriptionService,IDoctorService doctorService) : AppControllerBase
     {
         // ==========================================
         // CLINICAL SUMMARY (Sidebar View)
@@ -39,21 +40,24 @@ namespace Helix.API.Controllers
         // ==========================================
         // PRESCRIPTION MANAGEMENT
         // ==========================================
-
         [HttpPost]
         [Authorize(Roles = nameof(EnRoles.Doctor))]
-        public async Task<IActionResult> AddPrescription([FromBody] CreatePrescriptionDto dto)
+        public async Task<IActionResult> AddPrescription([FromBody] PrescriptionPayloadDto dto)
         {
-            // Security: Extract current doctor context
+            // 1. Security: Extract current doctor context
             var doctorId = await User.GetDoctorIdAsync(doctorService);
 
-            var prescriptionId = await prescriptionService.CreatePrescriptionAsync(doctorId, dto);
-
-            return NewResult(new Response<Guid>(prescriptionId)
+            if (doctorId == Guid.Empty)
             {
-                Succeeded = prescriptionId != Guid.Empty,
-                StatusCode = System.Net.HttpStatusCode.Created,
-                Message = prescriptionId != Guid.Empty ? "Prescription created successfully." : "Failed to create prescription."
+                return Unauthorized(new { Message = "Doctor context could not be verified." });
+            }
+            // 2. Execute the unified creation service
+            var prescriptionId = await prescriptionService.CreatePrescriptionAsync(doctorId, dto);
+            // 3. Return success response to the frontend
+            return Ok(new
+            {
+                Message = "Prescription and diagnostic orders saved successfully.",
+                PrescriptionId = prescriptionId
             });
         }
 

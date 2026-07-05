@@ -2,7 +2,9 @@
 using Helix.Data.Enums;
 using Helix.Infrastructure.Context;
 using Helix.Service.DTOs.DrugDTOs;
+using Helix.Service.DTOs.LabOrderDTOs;
 using Helix.Service.DTOs.PrescriptionDtos; // Ensure this matches your namespace
+using Helix.Service.DTOs.RadiologyOrderDto;
 using Helix.Service.Helper;
 using Helix.Service.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -13,24 +15,26 @@ using System.Threading.Tasks;
 
 namespace Helix.Service.Services.PrescriptionService
 {
-    public class PrescriptionService(IUnitOfWork unitOfWork,ApplicationDbContext dbContext, IDrugDataService  drugDataService) : IPrescriptionService
+    public class PrescriptionService(IUnitOfWork unitOfWork,ApplicationDbContext dbContext,IRadiologyOrderService radiology, ILabOrderService lab, IDrugDataService  drugDataService) : IPrescriptionService
     {
-        public async Task<Guid> CreatePrescriptionAsync(Guid doctorId, CreatePrescriptionDto dto)
+
+        public async Task<Guid> CreatePrescriptionAsync(Guid doctorId, PrescriptionPayloadDto dto)
         {
+            var appointment = await unitOfWork.Repository<Appointment>().GetByIdAsync(dto.AppointmentId);
+            var patientId = appointment.PatientId;
             var prescription = new Prescription
             {
-                PatientId = dto.PatientId,
+                PatientId = patientId,
                 DoctorId = doctorId,
                 AppointmentId = dto.AppointmentId,
-                DoctorNotes = dto.DoctorNotes,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.Now
             };
 
             foreach (var itemDto in dto.Medications)
             {
                 prescription.Items.Add(new PrescriptionItem
                 {
-                    MedicationCatalogRxcui = itemDto.TerminologyRxcui,
+                    MedicationCatalogRxcui = itemDto.Rxcui, // Handles both DTO variations
                     Dosage = itemDto.Dosage,
                     Frequency = itemDto.Frequency,
                     Duration = itemDto.Duration,
@@ -39,6 +43,35 @@ namespace Helix.Service.Services.PrescriptionService
             }
 
             await unitOfWork.Repository<Prescription>().AddAsync(prescription);
+
+            if (dto.LabOrderCodes != null && dto.LabOrderCodes.Any())
+            {
+                foreach (var test in dto.LabOrderCodes)
+                {
+                    await lab.CreateLabOrderAsync(new CreateLabOrderDto
+                    {
+                        PatientId = patientId,
+                        DoctorId = doctorId,
+                        TerminologyCode = test
+                    });
+                }
+            }
+
+            if (dto.RadiologyOrderCodes != null && dto.RadiologyOrderCodes.Any())
+            {
+                foreach (var scan in dto.RadiologyOrderCodes)
+                {
+                    await radiology.CreateRadiologyOrderAsync(new CreateRadiologyOrderDto
+                    {
+                        PatientId = patientId,
+                        DoctorId = doctorId,
+                        TerminologyCode = scan
+                    });
+                }
+            }
+            appointment.Status = EnAppointmentStatus.Fulfilled;
+            await unitOfWork.Repository<Appointment>().UpdateAsync(appointment);
+
             await unitOfWork.CompleteAsync();
 
             return prescription.Id;
@@ -87,27 +120,6 @@ namespace Helix.Service.Services.PrescriptionService
             return await unitOfWork.CompleteAsync() > 0;
         }
 
-        // --- Helper Methods ---
-        private string GetInitials(string fullName)
-        {
-            if (string.IsNullOrWhiteSpace(fullName)) return "N/A";
-            var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            return parts.Length > 1
-                ? $"{parts[0][0]}{parts[^1][0]}".ToUpper()
-                : parts[0][0].ToString().ToUpper();
-        }
-
-        private int CalculateAge(DateOnly dob)
-        {
-            var today = DateOnly.FromDateTime(DateTime.Today);
-            var age = today.Year - dob.Year;
-
-            if (dob > today.AddYears(-age))
-            {
-                age--;
-            }
-            return age;
-        }
         public async Task<PrescriptionSafetyResultDto> CheckCompletePrescriptionSafetyAsync(PrescriptionSafetyCheckDto request)
         {
             var result = new PrescriptionSafetyResultDto { IsSafe = true };
@@ -197,6 +209,26 @@ namespace Helix.Service.Services.PrescriptionService
             }
 
             return result;
+        }
+        // --- Helper Methods ---
+        private string GetInitials(string fullName)
+        {
+            if (string.IsNullOrWhiteSpace(fullName)) return "N/A";
+            var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length > 1
+                ? $"{parts[0][0]}{parts[^1][0]}".ToUpper()
+                : parts[0][0].ToString().ToUpper();
+        }
+        private int CalculateAge(DateOnly dob)
+        {
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            var age = today.Year - dob.Year;
+
+            if (dob > today.AddYears(-age))
+            {
+                age--;
+            }
+            return age;
         }
     }
 }

@@ -251,12 +251,6 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-
-
-        /// <summary>
-        /// Retrieves the comprehensive patient summary for the appointment dashboard.
-        /// Example: GET /api/appointments/3fa85f64-5717-4562-b3fc-2c963f66afa6/patient-dashboard
-        /// </summary>
         [HttpGet("{id}/patient-dashboard")]
         [Authorize(Roles = nameof(EnRoles.Doctor))]
         public async Task<IActionResult> GetPatientDashboardSummary(Guid id)
