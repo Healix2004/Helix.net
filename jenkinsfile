@@ -93,11 +93,11 @@ stage('AWS ECR Login') {
 
         stage('Docker Build & Scan') {
             steps {
-                sh "docker build -t ${ECR_URL}/${REPO_NAME}:${IMAGE_TAG} -t ${ECR_URL}/${REPO_NAME}:latest ."
-                sh "trivy image --exit-code 0 --severity CRITICAL ${ECR_URL}/${REPO_NAME}:${IMAGE_TAG}"
-            }
-        }
-
+               script {
+         sh "docker build -t ${ECR_URL}/${REPO_NAME}:${IMAGE_TAG} -t ${ECR_URL}/${REPO_NAME}:latest -f HelixAPI/Dockerfile ."
+         sh "trivy image --exit-code 0 --severity CRITICAL ${ECR_URL}/${REPO_NAME}:${IMAGE_TAG}"            }
+                  }
+                      }
         stage('Docker Push to ECR') {
             steps {
                 sh "docker push ${ECR_URL}/${REPO_NAME}:${IMAGE_TAG}"
