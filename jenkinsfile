@@ -13,7 +13,7 @@ pipeline {
     }
 */
 environment {
-        AWS_REGISTRY_ID = '123456789012' 
+        AWS_REGISTRY_ID = '538784191153' 
         AWS_REGION      = 'us-east-1'     
         CLUSTER_NAME    = 'helix-eks-cluster'
         REPO_NAME       = 'helix-backend'
