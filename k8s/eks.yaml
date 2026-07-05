@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helix-backend-deployment
+  labels:
+    app: helix-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: helix-backend
+  template:
+    metadata:
+      labels:
+        app: helix-backend
+    spec:
+      containers:
+      - name: helix-backend-container
+        image: 538784191153.dkr.ecr.us-east-1.amazonaws.com/helix-backend:TAG_PLACEHOLDER
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - secretRef:
+            name: backend-secrets 
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  selector:
+    app: helix-backend
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
