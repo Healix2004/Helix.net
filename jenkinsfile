@@ -125,12 +125,4 @@ stage('AWS ECR Login') {
         }
     }
 }
-    post {
-        success {
-            echo "HelixBackend Pipeline Completed Successfully!"
-        }
-        failure {
-            echo "HelixBackend Pipeline failed. Please check Jenkins Logs."
-        }
-    }
-}
+    
