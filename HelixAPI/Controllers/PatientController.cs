@@ -83,6 +83,43 @@ namespace Helix.API.Controllers
                 Message = "Lab dashboard retrieved successfully."
             });
         }
+        [HttpGet("lab-dashboard/{orderId:guid}")]
+        [Authorize(Roles = "Patient")]
+        public async Task<IActionResult> GetLabTestDetails([FromRoute] Guid orderId)
+        {
+            // 1. Get the securely authenticated patient ID
+            var patientId = await User.GetPatientIdAsync(patientService);
+
+            if (patientId == Guid.Empty)
+            {
+                return NewResult(new Response<LabTestDetailsDto>("Patient profile could not be verified.")
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.Unauthorized
+                });
+            }
+
+            // 2. Fetch the data
+            var detailsData = await dashboardService.GetLabTestDetailsAsync(orderId, patientId);
+
+            // 3. Handle not found (e.g., bad ID or trying to access someone else's order)
+            if (detailsData == null)
+            {
+                return NewResult(new Response<LabTestDetailsDto>("Lab order not found or access denied.")
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.NotFound
+                });
+            }
+
+            // 4. Return the formatted payload
+            return NewResult(new Response<LabTestDetailsDto>(detailsData)
+            {
+                Succeeded = true,
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Message = "Lab test details retrieved successfully."
+            });
+        }
 
         // ==========================================================
         // 1. FOR THE PATIENT (Fetching their own profile)

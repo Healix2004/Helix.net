@@ -78,4 +78,43 @@ namespace Helix.Service.DTOs.PatientDTOs
         // Used by Angular to render the colored dot next to the activity
         public string StatusColor { get; set; }
     }
+
+
+    public class LabTestDetailsDto
+    {
+        public Guid OrderId { get; set; }
+        public string PanelName { get; set; } // e.g., "Complete Blood Count & Metabolic Panel"
+
+        public LabPatientInfoDto PatientInfo { get; set; }
+        public LabDoctorCommentDto DoctorComment { get; set; }
+        public List<LabParameterResultDto> Results { get; set; } = new();
+    }
+
+    public class LabPatientInfoDto
+    {
+        public string PatientName { get; set; }
+        public string Email { get; set; }
+        public string Contact { get; set; }
+        public string DateOfBirth { get; set; } // e.g., "March 15, 1985 (41 years)"
+        public string TestDate { get; set; }
+        public string PatientIdDisplay { get; set; } // e.g., "PT-2026-4782"
+    }
+
+    public class LabDoctorCommentDto
+    {
+        public string DoctorName { get; set; }
+        public string Specialty { get; set; }
+        public string CommentDate { get; set; }
+        public string OverallComment { get; set; }
+        public List<string> Recommendations { get; set; } = new();
+    }
+
+    public class LabParameterResultDto
+    {
+        public string ParameterName { get; set; }
+        public string ResultValue { get; set; }
+        public string NormalRange { get; set; }
+        public string Unit { get; set; }
+        public string Status { get; set; }
+    }
 }

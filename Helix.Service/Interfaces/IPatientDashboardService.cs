@@ -6,5 +6,6 @@ namespace Helix.Service.Interfaces
     {
         Task<PatientPortalDashboardDto> GetDashboardDataAsync(Guid patientId);
         Task<PatientLabDashboardDto> GetPatientLabDashboardAsync(Guid patientId);
+        Task<LabTestDetailsDto> GetLabTestDetailsAsync(Guid orderId, Guid requestingPatientId);
     }
 }

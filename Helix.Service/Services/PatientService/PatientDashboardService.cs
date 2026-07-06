@@ -1,6 +1,7 @@
 using Helix.Data.Entities;
 using Helix.Data.Enums;
 using Helix.Service.DTOs.PatientDTOs;
+using Helix.Service.Helper;
 using Helix.Service.Interfaces;
 using Helix.Service.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -183,7 +184,100 @@ namespace Helix.Service.Services.PatientService
 
             return dashboard;
         }
-        // --- Helper Method ---
+
+        public async Task<LabTestDetailsDto> GetLabTestDetailsAsync(Guid orderId, Guid requestingPatientId)
+        {
+            // 1. Fetch the specific order, ensuring it belongs to the logged-in patient for security
+            var labOrder = await (await unitOfWork.Repository<LabOrder>()
+                .FindAsQueryable(l => l.Id == orderId && l.PatientId == requestingPatientId))
+                .Include(l => l.Patient)
+                    .ThenInclude(p => p.AppUser)
+                .Include(l => l.Doctor)
+                    .ThenInclude(d => d.SpecialtyCatalog) // Ensure the catalog is loaded to access DisplayName
+                .Include(l => l.MedicalConcept)
+                .Include(l => l.Results)
+                    .ThenInclude(r => r.MedicalConcept)
+                .FirstOrDefaultAsync();
+
+            if (labOrder == null)
+            {
+                return null; // Will trigger a 404/Error in the controller
+            }
+
+            // 2. Map the Patient Info Card (Bulletproofed)
+            var patientInfo = new LabPatientInfoDto
+            {
+                PatientName = labOrder.Patient?.FullName ?? "Unknown",
+                Email = labOrder.Patient?.AppUser?.Email ?? "No email provided",
+                Contact = labOrder.Patient?.AppUser?.PhoneNumber ?? "No contact provided",
+
+                // Safely check if Patient and NationalId exist before attempting to parse
+                DateOfBirth = (labOrder.Patient != null && !string.IsNullOrWhiteSpace(labOrder.Patient.NationalId))
+                    ? FormatDateOfBirth(labOrder.Patient.NationalId.ParseEgyptianId().dateOfBirth)
+                    : "Unknown",
+
+                TestDate = labOrder.CreatedAt.ToString("MMM d, yyyy"),
+
+                // Safely evaluate the ID before calling Substring
+                PatientIdDisplay = labOrder.Patient != null
+                    ? $"PT-{labOrder.Patient.Id.ToString().Substring(0, 8).ToUpper()}"
+                    : "PT-UNKNOWN"
+            };
+
+            // 3. Map the Doctor's Comments Sidebar (Bulletproofed)
+            var doctorComment = new LabDoctorCommentDto
+            {
+                DoctorName = labOrder.Doctor != null ? $"Dr. {labOrder.Doctor.FullName}" : "Unknown Provider",
+
+                // Safely navigate through SpecialtyCatalog
+                Specialty = labOrder.Doctor?.SpecialtyCatalog?.DisplayName ?? "General Medicine",
+
+                // Safely check if Results collection is null before getting FirstOrDefault
+                CommentDate = labOrder.Results?.FirstOrDefault()?.ResultDate?.ToString("MMM d, yyyy 'at' h:mm tt")
+                              ?? labOrder.CreatedAt.ToString("MMM d, yyyy 'at' h:mm tt"),
+
+                OverallComment = "No additional comments provided.",
+                Recommendations = new List<string>()
+            };
+
+            // 4. Map the Results Table
+            var resultsList = labOrder.Results?.Select(r => new LabParameterResultDto
+            {
+                ParameterName = r.MedicalConcept?.Display ?? r.MedicalConcept?.Code ?? "Unknown Parameter",
+                ResultValue = r.NumericValue.HasValue ? r.NumericValue.Value.ToString("G") : (r.StringValue ?? "-"),
+                NormalRange = r.ReferenceRange ?? "-",
+                Unit = r.Unit ?? "",
+
+                // Default to "Normal" if no flag is set. The UI uses this for the red/green formatting.
+                Status = string.IsNullOrWhiteSpace(r.InterpretationFlag) ? "Normal" : r.InterpretationFlag
+            }).ToList() ?? new List<LabParameterResultDto>();
+
+            // 5. Assemble the final response
+            return new LabTestDetailsDto
+            {
+                OrderId = labOrder.Id,
+                PanelName = labOrder.MedicalConcept?.Display ?? "General Lab Panel",
+                PatientInfo = patientInfo,
+                DoctorComment = doctorComment,
+                Results = resultsList
+            };
+        }
+
+        // --- Helper Method for DOB & Age ---
+        private string FormatDateOfBirth(DateOnly? dateOfBirth)
+        {
+            if (!dateOfBirth.HasValue) return "Unknown";
+            var dob = dateOfBirth.Value;
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            var age = today.Year - dob.Year;
+
+            if (dob.AddYears(age) > today)
+            {
+                age--;
+            }
+
+            return $"{dob:MMMM d, yyyy} ({age} years)";
+        }
         private string GetTimeAgo(DateTime date)
         {
             var timeSpan = DateTime.UtcNow - date;
