@@ -117,4 +117,91 @@ namespace Helix.Service.DTOs.PatientDTOs
         public string Unit { get; set; }
         public string Status { get; set; }
     }
+
+
+    public class RadiologyDashboardDto
+    {
+        // Top Metric Cards
+        public int TotalScans { get; set; }
+        public int PendingReview { get; set; }
+        public int RecentUploads { get; set; }
+        public int AbnormalFindings { get; set; }
+
+        // Main Table
+        public List<RadiologyScanItemDto> Scans { get; set; } = new();
+
+        // Right Sidebar Widgets
+        public LatestScanPreviewDto? LatestScanPreview { get; set; }
+        public LatestRadiologistNoteDto? LatestNote { get; set; }
+    }
+
+    public class RadiologyScanItemDto
+    {
+        public Guid Id { get; set; }
+        public string ScanType { get; set; } // e.g., "MRI Brain"
+        public string Category { get; set; } // e.g., "MRI", "CT", "Ultrasound" (For frontend tab filtering)
+        public DateTime Date { get; set; }
+        public string RequestedBy { get; set; }
+        public string Status { get; set; } // "Pending", "Completed", "Abnormal"
+    }
+
+    public class LatestScanPreviewDto
+    {
+        public Guid ScanId { get; set; }
+        public string ScanName { get; set; }
+        public string PatientName { get; set; }
+    }
+
+    public class LatestRadiologistNoteDto
+    {
+        public string DoctorName { get; set; }
+        public string TimeAgo { get; set; }
+        public string NotePreview { get; set; }
+    }
+
+
+    public class RadiologyStudyDetailsDto
+    {
+        public Guid OrderId { get; set; }
+        public List<string> ImageUrls { get; set; } = new(); // The URLs to the DICOM or JPG images
+
+        public RadiologyMetadataDto Metadata { get; set; }
+        public RadiologistFindingsDto Findings { get; set; }
+        public PhysicianNotesDto PhysicianNotes { get; set; }
+    }
+
+    public class RadiologyMetadataDto
+    {
+        public string PatientName { get; set; }
+        public string DateOfBirth { get; set; }
+        public string Gender { get; set; }
+        public string Contact { get; set; }
+        public string Email { get; set; }
+        public string PatientIdDisplay { get; set; }
+
+        public string StudyDate { get; set; }
+        public string StudyTime { get; set; }
+        public string ReferringPhysician { get; set; }
+        public string Modality { get; set; } // e.g., "X-Ray"
+        public string BodyPart { get; set; } // e.g., "Chest"
+        public string Institution { get; set; }
+    }
+
+    public class RadiologistFindingsDto
+    {
+        public string Status { get; set; }
+        public string RadiologistName { get; set; }
+        public string ClinicalIndication { get; set; }
+        public string FindingsText { get; set; }
+        public string Impression { get; set; }
+        public string ReportDate { get; set; }
+    }
+
+    public class PhysicianNotesDto
+    {
+        public string PhysicianName { get; set; }
+        public string Notes { get; set; }
+    }
+
+
 }

@@ -121,6 +121,76 @@ namespace Helix.API.Controllers
             });
         }
 
+
+        [HttpGet("radiology-dashboard")]
+        [Authorize(Roles = "Patient")]
+        public async Task<IActionResult> GetRadiologyDashboard()
+        {
+            // 1. Securely extract the Patient ID from the JWT token
+            var patientId = await User.GetPatientIdAsync(patientService);
+
+            // 2. Validate the profile exists
+            if (patientId == Guid.Empty)
+            {
+                return NewResult(new Response<RadiologyDashboardDto>("Patient profile could not be verified.")
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.Unauthorized
+                });
+            }
+
+            // 3. Call the secured service method
+            var dashboardData = await dashboardService.GetPatientDashboardAsync(patientId);
+
+            // 4. Return the standardized Helix response
+            return NewResult(new Response<RadiologyDashboardDto>(dashboardData)
+            {
+                Succeeded = true,
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Message = "Radiology dashboard retrieved successfully."
+            });
+        }
+
+        [HttpGet("radiology-dashboard/{orderId:guid}")]
+        [Authorize(Roles = "Patient")]
+        public async Task<IActionResult> GetRadiologyStudyDetails([FromRoute] Guid orderId)
+        {
+            // 1. Securely get the authenticated patient's ID
+            var patientId = await User.GetPatientIdAsync(patientService);
+
+            if (patientId == Guid.Empty)
+            {
+                return NewResult(new Response<RadiologyStudyDetailsDto>("Patient profile could not be verified.")
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.Unauthorized
+                });
+            }
+
+            // 2. Fetch data
+            var detailsData = await dashboardService.GetRadiologyStudyDetailsAsync(orderId, patientId);
+
+            // 3. Handle if the scan belongs to someone else, or doesn't exist
+            if (detailsData == null)
+            {
+                return NewResult(new Response<RadiologyStudyDetailsDto>("Radiology study not found or access denied.")
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.NotFound
+                });
+            }
+
+            // 4. Return success
+            return NewResult(new Response<RadiologyStudyDetailsDto>(detailsData)
+            {
+                Succeeded = true,
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Message = "Radiology study details retrieved successfully."
+            });
+        }
+
+
+
         // ==========================================================
         // 1. FOR THE PATIENT (Fetching their own profile)
         // ==========================================================

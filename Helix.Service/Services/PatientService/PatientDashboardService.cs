@@ -263,7 +263,172 @@ namespace Helix.Service.Services.PatientService
             };
         }
 
-        // --- Helper Method for DOB & Age ---
+
+        public async Task<RadiologyDashboardDto> GetPatientDashboardAsync(Guid patientId)
+        {
+            var yesterday = DateTime.UtcNow.AddDays(-1);
+
+            // 1. Fetch radiology orders ONLY for the logged-in patient
+            // CRITICAL SECURITY FIX: Filter by r.PatientId == patientId
+            var orders = await (await unitOfWork.Repository<RadiologyOrder>()
+                .FindAsQueryable(r => r.PatientId == patientId))
+                .Include(r => r.Doctor)
+                .Include(r => r.Patient)
+                .Include(r => r.MedicalConcept)
+                .Include(r => r.Report)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            var dashboard = new RadiologyDashboardDto
+            {
+                TotalScans = orders.Count,
+                RecentUploads = orders.Count(r => r.CreatedAt >= yesterday)
+            };
+
+            // 2. Process each scan for the table and metrics
+            foreach (var order in orders)
+            {
+                string uiStatus = order.Status.ToString();
+                string category = DetermineCategory(order.MedicalConcept?.Display ?? "");
+
+                // Increment Counters
+                if (uiStatus == "Pending") dashboard.PendingReview++;
+                if (uiStatus == "Abnormal") dashboard.AbnormalFindings++;
+
+                // Add to table list
+                dashboard.Scans.Add(new RadiologyScanItemDto
+                {
+                    Id = order.Id,
+                    ScanType = order.MedicalConcept?.Display ?? "Unknown Scan",
+                    Category = category,
+                    Date = order.CreatedAt,
+                    RequestedBy = order.Doctor != null ? $"Dr. {order.Doctor.FullName}" : "Unknown Provider",
+                    Status = uiStatus
+                });
+            }
+
+            // 3. Populate Right Sidebar: Latest Scan Preview
+            var latestScan = orders.FirstOrDefault(r => r.Status == EnRadiologyOrderStatus.Completed);
+            if (latestScan != null)
+            {
+                dashboard.LatestScanPreview = new LatestScanPreviewDto
+                {
+                    ScanId = latestScan.Id,
+                    ScanName = latestScan.MedicalConcept?.Display ?? "Recent Scan",
+                    PatientName = latestScan.Patient?.FullName ?? "Unknown Patient"
+                };
+            }
+
+            // 4. Populate Right Sidebar: Latest Radiologist Note
+            var latestNoteScan = orders.FirstOrDefault(r => r.Report != null && !string.IsNullOrWhiteSpace(r.Report.Conclusion));
+
+            if (latestNoteScan != null)
+            {
+                dashboard.LatestNote = new LatestRadiologistNoteDto
+                {
+                    DoctorName = latestNoteScan.Doctor != null ? $"Dr. {latestNoteScan.Doctor.FullName}" : "Radiologist",
+                    TimeAgo = GetTimeAgo(latestNoteScan.Report.ReportDate),
+                    NotePreview = latestNoteScan.Report.Conclusion
+                };
+            }
+
+            return dashboard;
+        }
+        public async Task<RadiologyStudyDetailsDto> GetRadiologyStudyDetailsAsync(Guid orderId, Guid requestingPatientId)
+        {
+            // 1. Fetch the specific order, locked down to the requesting patient!
+            var order = await (await unitOfWork.Repository<RadiologyOrder>()
+                .FindAsQueryable(r => r.Id == orderId && r.PatientId == requestingPatientId))
+                .Include(r => r.Patient).ThenInclude(p => p.AppUser)
+                .Include(r => r.Doctor) // The Referring/Attending Physician
+                .Include(r => r.MedicalConcept) // Holds Modality and Body Part data
+                .Include(r => r.Report) // Holds the actual radiologist findings
+                .FirstOrDefaultAsync();
+
+            if (order == null)
+            {
+                return null; // Will trigger a 404 Not Found in the controller
+            }
+
+            // 2. Map Metadata (Bulletproofed)
+            var metadata = new RadiologyMetadataDto
+            {
+                PatientName = order.Patient?.FullName ?? "Unknown",
+                Gender = order.Patient?.NationalId.ParseEgyptianId().gender.ToString() ?? "Unknown",
+                Email = order.Patient?.AppUser?.Email ?? "No email provided",
+                Contact = order.Patient?.AppUser?.PhoneNumber ?? "No contact provided",
+
+                DateOfBirth = (order.Patient != null && !string.IsNullOrWhiteSpace(order.Patient.NationalId))
+                    ? FormatDateOfBirth(order.Patient.NationalId.ParseEgyptianId().dateOfBirth)
+                    : "Unknown",
+
+                PatientIdDisplay = order.Patient != null
+                    ? $"PT-{order.Patient.Id.ToString().Substring(0, 8).ToUpper()}"
+                    : "PT-UNKNOWN",
+
+                StudyDate = order.CreatedAt.ToString("MMM d, yyyy"),
+                StudyTime = order.CreatedAt.ToString("HH:mm tt"),
+                ReferringPhysician = order.Doctor != null ? $"Dr. {order.Doctor.FullName}" : "Unknown Provider",
+
+                // Map the correct concept fields instead of the UI's dummy data
+                Modality = order.MedicalConcept?.Display ?? "Unknown Modality",
+                BodyPart = order.MedicalConcept?.Code ?? "Unknown Region",
+                Institution = "Helix Memorial Hospital" // Replace with actual Clinic/Hospital entity if multi-tenant
+            };
+
+            // 3. Map Radiologist Findings (Bulletproofed)
+            var findings = new RadiologistFindingsDto
+            {
+                Status = order.Status.ToString(),
+
+                // Grab the Radiologist's name from the Report, fallback to "Radiology Dept"
+                RadiologistName = order.Report?.ExternalRadiologistName ?? "Helix Radiology Dept",
+
+                ClinicalIndication = order.Report.Conclusion ?? "Follow-up examination.", // Or map from order reason
+
+                FindingsText = order.Report?.Findings ?? "No specific findings recorded.",
+                Impression = order.Report?.Conclusion ?? "No impression recorded.",
+
+                ReportDate = order.Report?.ReportDate != null
+                    ? $"Reported on {order.Report.ReportDate.ToString("MMM d, yyyy 'at' h:mm tt")}"
+                    : "Pending Report"
+            };
+
+            // 4. Map Attending Physician Notes
+            var notes = new PhysicianNotesDto
+            {
+                PhysicianName = order.Doctor != null ? $"Dr. {order.Doctor.FullName}, MD" : "Attending Physician",
+
+                // If your schema has a separate field for the referring doctor's discussion notes, map it here.
+                // Otherwise, it can remain a generic fallback or empty until the doctor adds a comment.
+                Notes = "Discussed findings with patient. Will proceed with current treatment plan."
+            };
+
+            // 5. Assemble Final Response
+            return new RadiologyStudyDetailsDto
+            {
+                OrderId = order.Id,
+                ImageUrls = order.Report?.ImageUrls,
+                Metadata = metadata,
+                Findings = findings,
+                PhysicianNotes = notes
+            };
+        }
+
+        // --- Helper Methods ---
+
+        private string DetermineCategory(string scanName)
+        {
+            if (string.IsNullOrWhiteSpace(scanName)) return "Other";
+
+            var lowerName = scanName.ToLower();
+            if (lowerName.Contains("mri")) return "MRI";
+            if (lowerName.Contains("ct") || lowerName.Contains("computed tomography")) return "CT";
+            if (lowerName.Contains("ultrasound") || lowerName.Contains("us ")) return "Ultrasound";
+            if (lowerName.Contains("x-ray") || lowerName.Contains("xray")) return "X-Ray";
+
+            return "Other";
+        }
         private string FormatDateOfBirth(DateOnly? dateOfBirth)
         {
             if (!dateOfBirth.HasValue) return "Unknown";
