@@ -561,6 +561,7 @@ namespace Helix.Service.Services.PatientService
             return new PrescriptionDetailsDto
             {
                 PrescriptionId = prescription.Id,
+                QrToken= prescription.QrToken,
                 Summary = summary,
                 DoctorInstructions = prescription.DoctorNotes ?? "Take all medications exactly as prescribed. Contact your doctor if you experience unusual side effects.",
                 Medications = medications,

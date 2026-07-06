@@ -8,6 +8,7 @@ namespace Helix.Data.Entities
     // The "Parent" document created during the visit
     public class Prescription : BaseEntity
     {
+        public string? QrToken { get; set; }
         public Guid PatientId { get; set; }
         public Guid DoctorId { get; set; }
         public Guid?PharmacyId { get; set; } = Guid.Empty;

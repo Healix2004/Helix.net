@@ -42,6 +42,7 @@ namespace Helix.Service.Services.PrescriptionService
                 });
             }
 
+            prescription.QrToken = $"RX-{Guid.NewGuid().ToString("N").Substring(0, 7).ToUpper()}"; // Generate a unique 7-character token 
             await unitOfWork.Repository<Prescription>().AddAsync(prescription);
 
             if (dto.LabOrderCodes != null && dto.LabOrderCodes.Any())

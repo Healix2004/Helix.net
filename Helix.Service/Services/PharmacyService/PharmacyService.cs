@@ -5,6 +5,7 @@ using Helix.Service.Helper;
 using Helix.Service.Interfaces;
 using Helix.Service.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -201,7 +202,12 @@ namespace Helix.Service.Services.PharmacyService
                 IssueDate = prescription.CreatedAt.ToString("dd MMM yyyy")
             };
         }
-
+        
+        public async Task<PharmacyPrescriptionDetailsDto> GetPrescriptionDetailsForPharmacyAsync(string QrToken, Guid appUserId)
+        {
+            var prescription = (await unitOfWork.Repository<Prescription>().FindAsync(p => p.QrToken == QrToken)).FirstOrDefault();
+            return await GetPrescriptionDetailsForPharmacyAsync(prescription.Id, appUserId);
+        }
         public async Task<bool> DispensePrescriptionAsync(Guid prescriptionId, Guid appUserId)
         {
             var pharmacy = await (await unitOfWork.Repository<Pharmacy>().FindAsQueryable(p => p.AppUserId == appUserId)).FirstOrDefaultAsync();

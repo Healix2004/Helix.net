@@ -248,7 +248,7 @@ namespace Helix.Service.DTOs.PatientDTOs
     public class PrescriptionDetailsDto
     {
         public Guid PrescriptionId { get; set; }
-
+        public string QrToken { get; set; }
         public PrescriptionSummaryDto Summary { get; set; }
         public string DoctorInstructions { get; set; }
         public List<PrescribedMedicationDto> Medications { get; set; } = new();

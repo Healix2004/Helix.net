@@ -1,5 +1,6 @@
 ﻿using Helix.Api.Base;
 using Helix.Core.Bases;
+using Helix.Data.Enums;
 using Helix.Service.DTOs.Pharmacy;
 using Helix.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -68,6 +69,7 @@ namespace Helix.API.Controllers
         }
 
         [HttpGet("dashboard")]
+        [Authorize(Roles = nameof(EnRoles.Pharmaciest))]
         public async Task<IActionResult> GetDashboard()
         {
             // Extract the AppUserId from the ClaimsPrincipal
@@ -103,7 +105,7 @@ namespace Helix.API.Controllers
         }
 
         [HttpGet("prescriptions/{prescriptionId:guid}")]
-        [Authorize(Roles = "Pharmacist")]
+        [Authorize(Roles = nameof(EnRoles.Pharmaciest))]
         public async Task<IActionResult> GetPrescriptionDetails([FromRoute] Guid prescriptionId)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -123,9 +125,30 @@ namespace Helix.API.Controllers
 
             return NewResult(new Response<PharmacyPrescriptionDetailsDto>(data) { Succeeded = true });
         }
+        [HttpGet("prescriptions/{QrToken}")]
+        [Authorize(Roles = nameof(EnRoles.Pharmaciest))]
+        public async Task<IActionResult> GetPrescriptionDetails([FromRoute] string QrToken)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid appUserId))
+                return Unauthorized();
+
+            var data = await _pharmacyService.GetPrescriptionDetailsForPharmacyAsync(QrToken, appUserId);
+
+            if (data == null)
+            {
+                return NewResult(new Response<PharmacyPrescriptionDetailsDto>("Prescription not found or access denied.")
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.NotFound
+                });
+            }
+
+            return NewResult(new Response<PharmacyPrescriptionDetailsDto>(data) { Succeeded = true });
+        }
 
         [HttpPost("prescriptions/{prescriptionId:guid}/dispense")]
-        [Authorize(Roles = "Pharmacist")]
+        [Authorize(Roles = nameof(EnRoles.Pharmaciest))]
         public async Task<IActionResult> DispensePrescription([FromRoute] Guid prescriptionId)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -141,7 +164,7 @@ namespace Helix.API.Controllers
         }
 
         [HttpPost("prescriptions/{prescriptionId:guid}/flag")]
-        [Authorize(Roles = "Pharmacist")]
+        [Authorize(Roles = nameof(EnRoles.Pharmaciest))]
         public async Task<IActionResult> FlagPrescription([FromRoute] Guid prescriptionId, [FromBody] FlagPrescriptionDto dto)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
