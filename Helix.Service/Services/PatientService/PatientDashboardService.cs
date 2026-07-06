@@ -2,6 +2,7 @@ using Helix.Data.Entities;
 using Helix.Data.Enums;
 using Helix.Service.DTOs.PatientDTOs;
 using Helix.Service.Interfaces;
+using Helix.Service.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace Helix.Service.Services.PatientService
@@ -110,6 +111,78 @@ namespace Helix.Service.Services.PatientService
             return dashboard;
         }
 
+        public async Task<PatientLabDashboardDto> GetPatientLabDashboardAsync(Guid patientId)
+        {
+            // 1. Fetch all Lab Orders for the patient
+            var labs = await (await unitOfWork.Repository<LabOrder>()
+                .FindAsQueryable(l => l.PatientId == patientId))
+                .Include(l => l.Doctor)
+                .Include(l => l.MedicalConcept)
+                .Include(l => l.Results)
+                .OrderByDescending(l => l.CreatedAt)
+                .ToListAsync();
+
+            var dashboard = new PatientLabDashboardDto
+            {
+                TotalTests = labs.Count
+            };
+
+            // 2. Process each lab and determine its UI Status
+            foreach (var lab in labs)
+            {
+                string uiStatus = "Pending";
+
+                if (lab.Status == EnLabOrderStatus.Completed)
+                {
+                    // Check if ANY of the results in this panel have an abnormal flag
+                    bool isAbnormal = lab.Results != null && lab.Results.Any(r =>
+                        !string.IsNullOrWhiteSpace(r.InterpretationFlag) &&
+                        (r.InterpretationFlag.Equals("High", StringComparison.OrdinalIgnoreCase) ||
+                         r.InterpretationFlag.Equals("Low", StringComparison.OrdinalIgnoreCase) ||
+                         r.InterpretationFlag.Equals("Abnormal", StringComparison.OrdinalIgnoreCase)));
+
+                    uiStatus = isAbnormal ? "Abnormal" : "Completed";
+                }
+
+                // Update top-level counters
+                if (uiStatus == "Pending") dashboard.PendingResults++;
+                if (uiStatus == "Abnormal") dashboard.AbnormalResults++;
+
+                // Add to the main table list
+                dashboard.LabTests.Add(new LabTestItemDto
+                {
+                    Id = lab.Id,
+                    TestName = lab.MedicalConcept?.Display ?? lab.MedicalConcept?.Code ?? "Unknown Test",
+                    Date = lab.CreatedAt,
+                    RequestedBy = lab.Doctor != null ? $"Dr. {lab.Doctor.FullName}" : "Unknown Provider",
+                    Status = uiStatus
+                });
+            }
+
+            // 3. Generate the Active Alert (Grab the most recent Abnormal test, if any)
+            var latestAbnormal = dashboard.LabTests.FirstOrDefault(l => l.Status == "Abnormal");
+            if (latestAbnormal != null)
+            {
+                dashboard.ActiveAlert = new LabAlertDto
+                {
+                    Title = "Abnormal Result Alert",
+                    Description = $"Your {latestAbnormal.TestName} shows results outside normal range. Please contact your provider.",
+                    TimeAgo = GetTimeAgo(latestAbnormal.Date)
+                };
+            }
+
+            // 4. Generate the Recent Activity sidebar (Take the 3 most recent events)
+            dashboard.RecentActivity = dashboard.LabTests.Take(3).Select(l => new LabRecentActivityDto
+            {
+                Title = l.Status == "Pending" ? $"{l.TestName} ordered" :
+                        l.Status == "Abnormal" ? $"{l.TestName} results uploaded" :
+                        $"{l.TestName} completed",
+                TimeAgo = GetTimeAgo(l.Date),
+                StatusColor = l.Status == "Abnormal" ? "red" : l.Status == "Pending" ? "yellow" : "green"
+            }).ToList();
+
+            return dashboard;
+        }
         // --- Helper Method ---
         private string GetTimeAgo(DateTime date)
         {

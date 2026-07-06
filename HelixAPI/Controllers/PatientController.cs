@@ -58,6 +58,32 @@ namespace Helix.API.Controllers
                 Message = "Dashboard retrieved successfully."
             });
         }
+
+        [HttpGet("lab-dashboard")]
+        [Authorize(Roles = "Patient")]
+        public async Task<IActionResult> GetLabDashboard()
+        {
+            var patientId = await User.GetPatientIdAsync(patientService);
+
+            if (patientId == Guid.Empty)
+            {
+                return NewResult(new Response<PatientLabDashboardDto>("Patient profile could not be verified.")
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.Unauthorized
+                });
+            }
+
+            var dashboardData = await dashboardService.GetPatientLabDashboardAsync(patientId);
+
+            return NewResult(new Response<PatientLabDashboardDto>(dashboardData)
+            {
+                Succeeded = true,
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Message = "Lab dashboard retrieved successfully."
+            });
+        }
+
         // ==========================================================
         // 1. FOR THE PATIENT (Fetching their own profile)
         // ==========================================================
