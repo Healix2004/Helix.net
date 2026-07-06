@@ -190,6 +190,70 @@ namespace Helix.API.Controllers
         }
 
 
+        [HttpGet("prescription-dashboard")]
+        [Authorize(Roles = "Patient")]
+        public async Task<IActionResult> GetPrescriptionDashboard()
+        {
+            // 1. Securely extract the Patient ID from the JWT token
+            var patientId = await User.GetPatientIdAsync(patientService);
+
+            if (patientId == Guid.Empty)
+            {
+                return NewResult(new Response<PatientPrescriptionDashboardDto>("Patient profile could not be verified.")
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.Unauthorized
+                });
+            }
+
+            // 2. Fetch the aggregated dashboard data
+            var dashboardData = await dashboardService.GetPatientPrescriptionDashboardAsync(patientId);
+
+            // 3. Return the payload
+            return NewResult(new Response<PatientPrescriptionDashboardDto>(dashboardData)
+            {
+                Succeeded = true,
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Message = "Prescription dashboard retrieved successfully."
+            });
+        }
+        [HttpGet("prescription-dashboard/{prescriptionId:guid}")]
+        [Authorize(Roles = "Patient")]
+        public async Task<IActionResult> GetPrescriptionDetails([FromRoute] Guid prescriptionId)
+        {
+            // 1. Securely get the authenticated patient's ID
+            var patientId = await User.GetPatientIdAsync(patientService);
+
+            if (patientId == Guid.Empty)
+            {
+                return NewResult(new Response<PrescriptionDetailsDto>("Patient profile could not be verified.")
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.Unauthorized
+                });
+            }
+
+            // 2. Fetch data
+            var detailsData = await dashboardService.GetPrescriptionDetailsAsync(prescriptionId, patientId);
+
+            // 3. Handle not found or access denied
+            if (detailsData == null)
+            {
+                return NewResult(new Response<PrescriptionDetailsDto>("Prescription not found or access denied.")
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.NotFound
+                });
+            }
+
+            // 4. Return success
+            return NewResult(new Response<PrescriptionDetailsDto>(detailsData)
+            {
+                Succeeded = true,
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Message = "Prescription details retrieved successfully."
+            });
+        }
 
         // ==========================================================
         // 1. FOR THE PATIENT (Fetching their own profile)

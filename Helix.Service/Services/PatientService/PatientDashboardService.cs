@@ -415,8 +415,234 @@ namespace Helix.Service.Services.PatientService
             };
         }
 
-        // --- Helper Methods ---
 
+        public async Task<PatientPrescriptionDashboardDto> GetPatientPrescriptionDashboardAsync(Guid patientId)
+        {
+            var now = DateTime.UtcNow;
+            var startOfMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            // 1. Fetch all prescriptions for the logged-in patient
+            // Assuming your Prescription entity contains a collection of Medications
+            var prescriptions = await( await unitOfWork.Repository<Prescription>()
+                .FindAsQueryable(p => p.PatientId == patientId))
+                .Include(p => p.Doctor)
+                .Include(p => p.Items).ThenInclude(i=> i.MedicationCatalog) // The individual drugs prescribed
+                .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync();
+
+            var dashboard = new PatientPrescriptionDashboardDto();
+
+            // Track unique medication names to prevent duplicate tips
+            var uniqueMedNames = new HashSet<string>();
+
+            // 2. Process each medication across all prescriptions
+            foreach (var prescription in prescriptions)
+            {
+                // Skip if the prescription has no medications attached
+                if (prescription.Items == null) continue;
+
+                foreach (var med in prescription.Items)
+                {
+                    dashboard.TotalMedications++;
+
+                    // Assuming your Medication entity has Name or MedicalConcept attached
+                    string medName = med.MedicationCatalog.DrugName ?? "Unknown Medication";
+                    uniqueMedNames.Add(medName);
+
+                    // Check if it was prescribed this month
+                    if (prescription.CreatedAt >= startOfMonth)
+                    {
+                        dashboard.RenewedThisMonth++;
+                    }
+
+                    // Calculate the expiration date
+                    DateTime endDate = CalculateEndDate(prescription.CreatedAt, med.Duration);
+                    var daysRemaining = (endDate - now).TotalDays;
+
+                    // Determine UI Status
+                    string uiStatus;
+                    if (daysRemaining < 0)
+                    {
+                        uiStatus = "Completed";
+                    }
+                    else if (daysRemaining <= 14) // Consider it "Expiring" if 14 days or less remain
+                    {
+                        uiStatus = "Expiring";
+                        dashboard.ExpiringSoon++;
+                        dashboard.ActivePrescriptions++; // Expiring is still technically active
+
+                        // Add to Renewal Reminders sidebar
+                        dashboard.RenewalReminders.Add(new RenewalReminderDto
+                        {
+                            MedicationId = med.Id,
+                            MedicationName = medName,
+                            ExpiresInText = daysRemaining < 1 ? "Expires today" : $"Expires in {(int)daysRemaining} days"
+                        });
+                    }
+                    else
+                    {
+                        uiStatus = "Active";
+                        dashboard.ActivePrescriptions++;
+                    }
+
+                    // Add to the main table list
+                    dashboard.Medications.Add(new MedicationItemDto
+                    {
+                        Id = med.Id,
+                        PrescriptionId = prescription.Id,
+                        MedicationName = medName,
+                        PrescribedBy = prescription.Doctor != null ? $"Dr. {prescription.Doctor.FullName}" : "Unknown Provider",
+                        Date = prescription.CreatedAt,
+                        Duration = med.Duration ?? "Unknown",
+                        Status = uiStatus
+                    });
+                }
+            }
+
+            // 3. Sort Reminders by urgency (fewest days remaining first)
+            dashboard.RenewalReminders = dashboard.RenewalReminders
+                .OrderBy(r => int.Parse(System.Text.RegularExpressions.Regex.Match(r.ExpiresInText, @"\d+").Value))
+                .Take(4) // Show top 4 in UI
+                .ToList();
+
+            // 4. Generate Medication Tips (Mocked based on active medications)
+            // In a full implementation, you could map these to warning labels in your drug database
+            dashboard.MedicationTips = GenerateMockTips(uniqueMedNames);
+
+            return dashboard;
+        }
+        public async Task<PrescriptionDetailsDto> GetPrescriptionDetailsAsync(Guid prescriptionId, Guid requestingPatientId)
+        {
+            // 1. Fetch the specific prescription securely
+            var prescription = await (await unitOfWork.Repository<Prescription>()
+                .FindAsQueryable(p => p.Id == prescriptionId && p.PatientId == requestingPatientId))
+                .Include(p => p.Patient).ThenInclude(p => p.AppUser)
+                .Include(p => p.Doctor)
+                .Include(p => p.Items).ThenInclude(i=>i.MedicationCatalog) // The list of prescribed drugs
+                .FirstOrDefaultAsync();
+
+            if (prescription == null)
+            {
+                return null;
+            }
+
+            // 2. Map the Summary Card (Bulletproofed)
+            var summary = new PrescriptionSummaryDto
+            {
+                PatientName = prescription.Patient?.FullName ?? "Unknown",
+                Gender = prescription.Patient?.NationalId.ParseEgyptianId().gender.ToString() ?? "Unknown",
+                Email = prescription.Patient?.AppUser?.Email ?? "No email provided",
+                Contact = prescription.Patient?.AppUser?.PhoneNumber ?? "No contact provided",
+
+                DateOfBirth = (prescription.Patient != null && !string.IsNullOrWhiteSpace(prescription.Patient.NationalId))
+                    ? FormatDateOfBirth(prescription.Patient.NationalId.ParseEgyptianId().dateOfBirth)
+                    : "Unknown",
+
+                PatientIdDisplay = prescription.Patient != null
+                    ? $"PT-{prescription.Patient.Id.ToString().Substring(0, 8).ToUpper()}"
+                    : "PT-UNKNOWN",
+
+                IssueDate = prescription.CreatedAt.ToString("MMM d, yyyy"),
+                PrescribingDoctor = prescription.Doctor != null ? $"Dr. {prescription.Doctor.FullName}" : "Unknown Provider",
+
+                // Calculate ValidUntil (Default to 90 days if we can't parse the medications)
+                ValidUntil = CalculateValidUntil(prescription.CreatedAt, prescription.Items).ToString("MMM d, yyyy")
+            };
+
+            // 3. Map the Medications Table
+            var medications = prescription.Items?.Select(m => new PrescribedMedicationDto
+            {
+                MedicationName = m.MedicationCatalog.DrugName?.ToUpper() ?? "UNKNOWN MEDICATION",
+                Dosage = m.Dosage ?? "-",
+                Frequency = m.Frequency ?? "-",
+                Duration = m.Duration ?? "-"
+            }).ToList() ?? new List<PrescribedMedicationDto>();
+
+            // 4. Assemble Final Response
+            return new PrescriptionDetailsDto
+            {
+                PrescriptionId = prescription.Id,
+                Summary = summary,
+                DoctorInstructions = prescription.DoctorNotes ?? "Take all medications exactly as prescribed. Contact your doctor if you experience unusual side effects.",
+                Medications = medications,
+
+                // If you have a Refill entity, query it here. Otherwise, leave empty for now.
+                RefillHistory = new List<RefillHistoryItemDto>(),
+
+                // If you integrate with a drug database (like RxNorm), map the warnings here.
+                Warnings = GenerateMockWarnings()
+            };
+        }
+
+        // --- Helper Methods ---
+        private DateTime CalculateValidUntil(DateTime issueDate, IEnumerable<PrescriptionItem> meds)
+        {
+            if (meds == null || !meds.Any()) return issueDate.AddDays(90);
+
+            int maxDays = 30; // Minimum default validity
+
+            foreach (var med in meds)
+            {
+                if (string.IsNullOrWhiteSpace(med.Duration)) continue;
+
+                var match = System.Text.RegularExpressions.Regex.Match(med.Duration.ToLower(), @"\d+");
+                if (!match.Success) continue;
+
+                int amount = int.Parse(match.Value);
+                int days = med.Duration.ToLower().Contains("month") ? amount * 30 :
+                           med.Duration.ToLower().Contains("week") ? amount * 7 : amount;
+
+                if (days > maxDays) maxDays = days;
+            }
+
+            return issueDate.AddDays(maxDays);
+        }
+        private List<MedicationWarningDto> GenerateMockWarnings()
+        {
+            // Placeholder to match your UI design until you wire up a real drug interaction API
+            return new List<MedicationWarningDto>
+            {
+                new MedicationWarningDto { WarningType = "Drug Interaction", Description = "Avoid grapefruit and grapefruit juice while taking Atorvastatin as it may increase the risk of side effects." },
+                new MedicationWarningDto { WarningType = "Side Effects", Description = "May cause dizziness or lightheadedness. Use caution when driving or operating machinery." },
+                new MedicationWarningDto { WarningType = "Monitoring", Description = "Regular blood glucose monitoring recommended for patients taking Metformin." }
+            };
+        }
+        private DateTime CalculateEndDate(DateTime startDate, string durationText)
+        {
+            if (string.IsNullOrWhiteSpace(durationText)) return startDate.AddDays(30); // Default fallback
+
+            durationText = durationText.ToLower();
+
+            // Extract the number from the string (e.g., "90" from "90 Days")
+            var match = System.Text.RegularExpressions.Regex.Match(durationText, @"\d+");
+            if (!match.Success) return startDate.AddDays(30); // Default fallback
+
+            int amount = int.Parse(match.Value);
+
+            if (durationText.Contains("week")) return startDate.AddDays(amount * 7);
+            if (durationText.Contains("month")) return startDate.AddMonths(amount);
+
+            return startDate.AddDays(amount); // Default to days
+        }
+        private List<MedicationTipDto> GenerateMockTips(HashSet<string> activeMeds)
+        {
+            var tips = new List<MedicationTipDto>();
+
+            // Generic tips that always apply
+            tips.Add(new MedicationTipDto
+            {
+                Title = "Take with Food",
+                Description = "Certain medications should be taken with meals to reduce side effects. Check your bottle labels."
+            });
+
+            tips.Add(new MedicationTipDto
+            {
+                Title = "Morning Dose",
+                Description = "Try taking your once-daily pills at the same time each morning to build a routine."
+            });
+
+            return tips;
+        }
         private string DetermineCategory(string scanName)
         {
             if (string.IsNullOrWhiteSpace(scanName)) return "Other";

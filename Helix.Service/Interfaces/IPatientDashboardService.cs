@@ -12,6 +12,7 @@ namespace Helix.Service.Interfaces
         Task<RadiologyDashboardDto> GetPatientDashboardAsync(Guid patientId);
         Task<RadiologyStudyDetailsDto> GetRadiologyStudyDetailsAsync(Guid orderId, Guid requestingPatientId);
 
-
+        Task<PatientPrescriptionDashboardDto> GetPatientPrescriptionDashboardAsync(Guid patientId);
+        Task<PrescriptionDetailsDto> GetPrescriptionDetailsAsync(Guid prescriptionId, Guid requestingPatientId);
     }
 }
