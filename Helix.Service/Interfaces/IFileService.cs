@@ -9,6 +9,7 @@ namespace Helix.Service.Interfaces
     {
         Task<FileUploadResult> UploadSingleFileAsync(FileUploadDto file);
         Task<string> UploadFileAsync(IFormFile file);
+        Task<string> UploadFileAsync(IFormFile file, string folderName);
         Task<MultipleFileUploadResult> UploadMultipleFilesAsync(MultipleFileUploadDto files);
         Task<FileDownloadResult> DownloadFileAsync(string filePath);
         Task<bool> DeleteFileAsync(string filePath);

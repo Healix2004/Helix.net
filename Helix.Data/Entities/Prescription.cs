@@ -10,11 +10,13 @@ namespace Helix.Data.Entities
     {
         public Guid PatientId { get; set; }
         public Guid DoctorId { get; set; }
+        public Guid?PharmacyId { get; set; } = Guid.Empty;
         public Guid? AppointmentId { get; set; }
         public string? DoctorNotes { get; set; }
         public virtual Patient Patient { get; set; } = null!;
         public virtual Doctor Doctor { get; set; } = null!;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public EnPrescriptionStatus Status { get; set; } = EnPrescriptionStatus.Pending;
         public ICollection<LabOrder> LabOrders { get; set; } = new List<LabOrder>();
         public ICollection<RadiologyOrder> RadiologyOrders { get; set; } = new List<RadiologyOrder>();
         public virtual List<PrescriptionItem> Items { get; set; } = new List<PrescriptionItem>();

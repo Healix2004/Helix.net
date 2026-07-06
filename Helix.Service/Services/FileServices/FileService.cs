@@ -104,6 +104,45 @@ namespace Helix.Service.Services.FileServices
                 return null;
             }
         }
+        public async Task<string> UploadFileAsync(IFormFile file, string folderName)
+        {
+            try
+            {
+                if (file == null || file.Length == 0)
+                {
+                    logger.LogWarning("File upload failed: File is null or empty.");
+                    return null;
+                }
+
+                // Validate file
+                var validationResult = ValidateFile(file);
+                if (!validationResult.IsValid)
+                {
+                    // Log the failure so you know EXACTLY why it was rejected
+                    logger.LogWarning("File validation failed for {FileName} in folder {FolderName}.", file.FileName, folderName);
+                    return null;
+                }
+
+                // CRITICAL FIX: Pass the folderName into your path generator
+                var (folderPath, savePath, fullPath, dbPath) = GenerateFilePaths(file.FileName, folderName);
+
+                // Ensure directory exists
+                Directory.CreateDirectory(savePath);
+
+                // Save file (Using modern C# 8.0+ declaration)
+                await using var stream = new FileStream(fullPath, FileMode.Create);
+                await file.CopyToAsync(stream);
+
+                logger.LogInformation("File uploaded successfully to {FolderName}: {FilePath}", folderName, dbPath);
+
+                return dbPath;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error uploading single file: {FileName} to folder {FolderName}", file?.FileName, folderName);
+                return null;
+            }
+        }
         public async Task<IEnumerable<RadiologyImage>> UploadMultipleFilesAsync(List<IFormFile> files , string PatientName, Guid PatientId)
         {
             try
@@ -351,7 +390,32 @@ namespace Helix.Service.Services.FileServices
 
             return (folderPath, savePath, fullPath, dbPath);
         }
+        private (string folderPath, string savePath, string fullPath, string dbPath) GenerateFilePaths(string originalFileName, string folderName)
+        {
+            // 1. Define the relative folder structure using the passed folderName 
+            // Example output: "Uploads\pharmacy\licenses\2026\07\06"
+            var folderPath = Path.Combine(
+                "Uploads",
+                folderName,
+                DateTime.Now.ToString("yyyy"),
+                DateTime.Now.ToString("MM"),
+                DateTime.Now.ToString("dd"));
 
+            // 2. Combine it with WebRootPath to target the wwwroot folder
+            var savePath = Path.Combine(environment.WebRootPath, folderPath);
+
+            // 3. Generate a unique filename to prevent overwriting other users' files
+            var extension = Path.GetExtension(originalFileName);
+            var uniqueFileName = $"{Guid.NewGuid()}{extension}";
+
+            // 4. The exact physical path on the server where the file will be written
+            var fullPath = Path.Combine(savePath, uniqueFileName);
+
+            // 5. Create a web-safe URL path for the database (e.g., "/Uploads/pharmacy/licenses/2026/07/06/uuid.jpg")
+            var dbPath = $"/{folderPath.Replace("\\", "/")}/{uniqueFileName}";
+
+            return (folderPath, savePath, fullPath, dbPath);
+        }
         private string SanitizeFolderName(string name)
         {
             if (string.IsNullOrWhiteSpace(name))

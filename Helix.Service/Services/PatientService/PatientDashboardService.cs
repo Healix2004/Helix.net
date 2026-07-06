@@ -184,7 +184,6 @@ namespace Helix.Service.Services.PatientService
 
             return dashboard;
         }
-
         public async Task<LabTestDetailsDto> GetLabTestDetailsAsync(Guid orderId, Guid requestingPatientId)
         {
             // 1. Fetch the specific order, ensuring it belongs to the logged-in patient for security

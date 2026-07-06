@@ -159,5 +159,6 @@ namespace Helix.Infrastructure.Context
         public DbSet<LoincPanelComponent> LoincPanelComponents { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<Prescription> Prescriptions{ get; set; }
+        public DbSet<Pharmacy> Pharmacies { get; set; }
     }
 }
