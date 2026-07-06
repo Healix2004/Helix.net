@@ -1,5 +1,3 @@
-using Helix.Service.DTOs.MedicationDTOs;
-
 namespace Helix.Service.DTOs.PatientDTOs
 {
     public class ChronicDiseaseDto
@@ -8,43 +6,35 @@ namespace Helix.Service.DTOs.PatientDTOs
         public string Name { get; set; }
         public DateTime DiagnosisDate { get; set; }
     }
-    public class PatientDashboardDto
+    public class PatientPortalDashboardDto
     {
-        // 1. Patient Basic Data (Top Left Card)
-        public Guid PatientId { get; set; }
-        public string FullName { get; set; } = string.Empty;
-        public string Initials { get; set; } = string.Empty;
-        public string DisplayId { get; set; } = string.Empty; // e.g., "45892-A"
-        public int Age { get; set; }
-        public string Gender { get; set; } = string.Empty;
-        public string Phone { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string InsuranceProvider { get; set; } = string.Empty;
-        public string PatientStatus { get; set; } = "Active Patient";
+        // Top Cards
+        public int TotalRecords { get; set; }
+        public int ActivePrescriptions { get; set; }
+        public int UpcomingAppointments { get; set; }
 
-        // 2. Side Cards (Right Column)
-        public List<string> KnownAllergies { get; set; } = new();
-        public List<string> ChronicConditions { get; set; } = new();
-        public List<MedicationDto> CurrentMedications { get; set; } = new();
+        // Health Score Widget
+        public int HealthScore { get; set; }
+        public string HealthScoreMessage { get; set; }
 
-        // 3. Last Visit Summary (Center Card)
-        public LastVisitSummaryDto? LastVisit { get; set; }
-
-        // 4. State Control
-        public bool IsMedicalHistoryLocked { get; set; } = true;
+        // Lists
+        public List<RecentActivityItemDto> RecentActivity { get; set; } = new();
+        public List<HealthTipDto> HealthTips { get; set; } = new();
     }
 
-    public class LastVisitSummaryDto
+    public class RecentActivityItemDto
     {
-        public string AppointmentTitle { get; set; } = string.Empty;
-        public string AppointmentDate { get; set; } = string.Empty;
+        public string ActivityType { get; set; } // e.g., "Lab", "Prescription", "Appointment"
+        public string Title { get; set; }
+        public string Description { get; set; }
+        public DateTime Date { get; set; }
+        public string TimeAgo { get; set; } // e.g., "2 hours ago"
+    }
 
-        public string PrescriptionSummary { get; set; } = string.Empty;
-
-        public string LabResultSummary { get; set; } = string.Empty;
-        public string LabResultDate { get; set; } = string.Empty;
-
-        public string ClinicalNoteSummary { get; set; } = string.Empty;
-        public string ClinicalNoteDate { get; set; } = string.Empty;
+    public class HealthTipDto
+    {
+        public string IconType { get; set; } // e.g., "Heart", "Activity", "Drop"
+        public string Title { get; set; }
+        public string Description { get; set; }
     }
 }

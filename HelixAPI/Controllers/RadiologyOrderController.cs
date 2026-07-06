@@ -63,7 +63,7 @@ namespace Helix.API.Controllers
         }
 
         [HttpPost("{orderId}/results")]
-        [Authorize(Roles = "Admin,Radiologist")]
+        //[Authorize(Roles = "Admin,Radiologist")]
         public async Task<IActionResult> UploadRadiologyResult(Guid orderId, [FromForm] CreateRadiologyTestResultDto dto)
         {
             dto.OrderId = orderId;
@@ -128,21 +128,69 @@ namespace Helix.API.Controllers
         }
 
         [HttpGet("my-orders")]
-        [Authorize(Roles = nameof(EnRoles.Doctor))]
-        public async Task<IActionResult> GetOrdersByDoctor()
+        [Authorize(Roles = $"{nameof(EnRoles.Doctor)},{nameof(EnRoles.Patient)}")]
+        public async Task<IActionResult> GetMyOrders()
         {
-            var doctorId = await User.GetDoctorIdAsync(doctorService);
-            var result = await radiologyOrderService.GetOrdersByDoctorAsync(doctorId);
+            List<RadiologyOrderDto> result;
+            string userType;
 
+            // 1. Explicitly check for the Doctor role
+            if (User.IsInRole(nameof(EnRoles.Doctor)))
+            {
+                var doctorId = await User.GetDoctorIdAsync(doctorService);
+
+                if (doctorId == Guid.Empty)
+                {
+                    return NewResult(new Response<List<RadiologyOrderDto>>("Doctor profile could not be verified.")
+                    {
+                        Succeeded = false,
+                        StatusCode = System.Net.HttpStatusCode.Unauthorized
+                    });
+                }
+
+                result = await radiologyOrderService.GetOrdersByDoctorAsync(doctorId);
+                userType = "doctor";
+            }
+            // 2. Explicitly check for the Patient role
+            else if (User.IsInRole(nameof(EnRoles.Patient)))
+            {
+                var patientId = await User.GetPatientIdAsync(patientService);
+
+                if (patientId == Guid.Empty)
+                {
+                    return NewResult(new Response<List<RadiologyOrderDto>>("Patient profile could not be verified.")
+                    {
+                        Succeeded = false,
+                        StatusCode = System.Net.HttpStatusCode.Unauthorized
+                    });
+                }
+
+                // Make sure you have implemented this method in your RadiologyOrderService!
+                result = await radiologyOrderService.GetOrdersByPatientAsync(patientId);
+                userType = "patient";
+            }
+            // 3. Fallback for unexpected states
+            else
+            {
+                return NewResult(new Response<List<RadiologyOrderDto>>("You do not have permission to view these orders.")
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.Forbidden
+                });
+            }
+
+            // 4. Construct the unified response
             var response = new Response<List<RadiologyOrderDto>>(result)
             {
                 Succeeded = true,
                 StatusCode = System.Net.HttpStatusCode.OK,
-                Message = result.Count > 0 ? "Radiology orders retrieved successfully." : "No radiology orders found for this doctor."
+                Message = result.Any()
+                    ? "Radiology orders retrieved successfully."
+                    : $"No radiology orders found for this {userType}."
             };
+
             return NewResult(response);
         }
-
         [HttpPut("{id}")]
         [Authorize(Roles = nameof(EnRoles.Doctor))]
         public async Task<IActionResult> UpdateRadiologyOrder(Guid id, [FromBody] UpdateRadiologyOrderDto dto)
@@ -168,7 +216,7 @@ namespace Helix.API.Controllers
         // ==========================================
 
         [HttpGet("{id}")]
-        [Authorize(Roles = nameof(EnRoles.Admin))]
+        [Authorize(Roles = $"{nameof(EnRoles.Doctor)},{nameof(EnRoles.Patient)}")]
         public async Task<IActionResult> GetRadiologyOrderById(Guid id)
         {
             var result = await radiologyOrderService.GetRadiologyOrderByIdAsync(id);
@@ -210,7 +258,7 @@ namespace Helix.API.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = nameof(EnRoles.Admin))]
+        [Authorize(Roles = $"{nameof(EnRoles.Doctor)},{nameof(EnRoles.Patient)}")]
         public async Task<IActionResult> DeleteRadiologyOrder(Guid id)
         {
             var result = await radiologyOrderService.DeleteRadiologyOrderAsync(id);

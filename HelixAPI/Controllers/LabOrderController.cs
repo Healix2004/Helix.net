@@ -5,6 +5,7 @@ using Helix.Service.DTOs.LabOrderDTOs;
 using Helix.Service.DTOs.LabTestResultDTOs;
 using Helix.Service.Helper;
 using Helix.Service.Interfaces;
+using Hl7.FhirPath.Sprache;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -129,18 +130,67 @@ namespace Helix.API.Controllers
 
 
         [HttpGet("my-orders")]
-        [Authorize(Roles = nameof(EnRoles.Doctor))]
-        public async Task<IActionResult> GetOrdersByDoctor()
+        [Authorize(Roles = $"{nameof(EnRoles.Doctor)},{nameof(EnRoles.Patient)}")]
+        public async Task<IActionResult> GetMyOrders()
         {
-            var doctorId = await User.GetDoctorIdAsync(doctorService);
-            var result = await labOrderService.GetOrdersByDoctorAsync(doctorId);
+            List<LabOrderDto> result;
+            string userType;
 
+            // 1. Explicitly check for the Doctor role
+            if (User.IsInRole(nameof(EnRoles.Doctor)))
+            {
+                var doctorId = await User.GetDoctorIdAsync(doctorService);
+
+                // Optional: Check if doctorId is empty/null depending on your helper's return type
+                if (doctorId == Guid.Empty)
+                {
+                    return NewResult(new Response<List<LabOrderDto>>("Doctor profile could not be verified.")
+                    {
+                        Succeeded = false,
+                        StatusCode = System.Net.HttpStatusCode.Unauthorized
+                    });
+                }
+
+                result = await labOrderService.GetOrdersByDoctorAsync(doctorId);
+                userType = "doctor";
+            }
+            // 2. Explicitly check for the Patient role
+            else if (User.IsInRole(nameof(EnRoles.Patient)))
+            {
+                var patientId = await User.GetPatientIdAsync(patientService);
+
+                if (patientId == Guid.Empty)
+                {
+                    return NewResult(new Response<List<LabOrderDto>>("Patient profile could not be verified.")
+                    {
+                        Succeeded = false,
+                        StatusCode = System.Net.HttpStatusCode.Unauthorized
+                    });
+                }
+
+                result = await labOrderService.GetOrdersByPatientAsync(patientId);
+                userType = "patient";
+            }
+            // 3. Fallback for unexpected states
+            else
+            {
+                return NewResult(new Response<List<LabOrderDto>>("You do not have permission to view these orders.")
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.Forbidden
+                });
+            }
+
+            // 4. Construct the unified response
             var response = new Response<List<LabOrderDto>>(result)
             {
                 Succeeded = true,
                 StatusCode = System.Net.HttpStatusCode.OK,
-                Message = result.Count > 0 ? "Lab orders retrieved successfully." : "No lab orders found for this doctor."
+                Message = result.Any()
+                    ? "Lab orders retrieved successfully."
+                    : $"No lab orders found for this {userType}."
             };
+
             return NewResult(response);
         }
 

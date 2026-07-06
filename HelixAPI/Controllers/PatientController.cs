@@ -10,6 +10,7 @@ using Helix.Service.Helper;
 using Helix.Service.Interfaces; // ADDED: Need this to inject IPatientService
 using Helix.Service.Services.DoctorService;
 using Helix.Service.Services.EmergencyAccessService;
+using Helix.Service.Services.PatientService;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,7 +22,8 @@ namespace Helix.API.Controllers
     /// </summary>
     [Route("api/patients")] // FIX 1: Explicit RESTful routing
     [ApiController]
-    public class PatientController(IMediator mediator, IPatientService patientService, IDoctorService doctorService, IEmergencyAccessService emergencyAccessService) : AppControllerBase
+    public class PatientController(IMediator mediator, IPatientService patientService, IPatientDashboardService dashboardService, IDoctorService doctorService,
+        IEmergencyAccessService emergencyAccessService) : AppControllerBase
     {
         [HttpPost("register-patient")]
         public async Task<IActionResult> RegisterPatient([FromForm] CreatePatientDto dto)
@@ -30,6 +32,31 @@ namespace Helix.API.Controllers
             var result = await mediator.Send(command);
 
             return NewResult(result);
+        }
+        [HttpGet("dashboard")]
+        [Authorize(Roles = "Patient")] // Ensure only patients can hit this endpoint
+        public async Task<IActionResult> GetDashboard()
+        {
+            // Extract the Patient ID safely from the current JWT token
+            var patientId = await User.GetPatientIdAsync(patientService);
+
+            if (patientId == System.Guid.Empty)
+            {
+                return NewResult(new Response<PatientDashboardDto>("Patient profile could not be verified.")
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.Unauthorized
+                });
+            }
+
+            var dashboardData = await dashboardService.GetDashboardDataAsync(patientId);
+
+            return NewResult(new Response<PatientPortalDashboardDto>(dashboardData)
+            {
+                Succeeded = true,
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Message = "Dashboard retrieved successfully."
+            });
         }
         // ==========================================================
         // 1. FOR THE PATIENT (Fetching their own profile)

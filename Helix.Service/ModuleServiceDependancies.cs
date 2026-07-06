@@ -56,6 +56,7 @@ namespace Helix.Service
             services.AddEmailService();
             services.AddDrugService();
             services.AddPatientService();
+            services.AddPatientDashboardService();
             services.AddPrescriptionService();
             services.AddDoctorService();
             services.AddConsentService();
@@ -229,6 +230,11 @@ namespace Helix.Service
         private static IServiceCollection AddPatientService(this IServiceCollection services)
         {
             services.AddScoped<IPatientService, Helix.Service.Services.PatientService.PatientService>();
+            return services;
+        }
+        private static IServiceCollection AddPatientDashboardService(this IServiceCollection services)
+        {
+            services.AddScoped<IPatientDashboardService, Helix.Service.Services.PatientService.PatientDashboardService>();
             return services;
         }
         private static IServiceCollection AddPrescriptionService(this IServiceCollection services)
