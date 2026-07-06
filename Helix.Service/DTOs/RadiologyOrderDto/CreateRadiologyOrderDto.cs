@@ -11,6 +11,9 @@ namespace Helix.Service.DTOs.RadiologyOrderDto
         [Required(ErrorMessage = "Doctor is required.")]
         public Guid DoctorId { get; set; }
 
+        [Required(ErrorMessage = "Prescription ID is required.")]
+        public Guid PrescriptionId { get; set; }
+
         [Required(ErrorMessage = "You must select a specific scan (e.g., MRI Brain).")]
         public string TerminologyCode { get; set; } = string.Empty;
     }

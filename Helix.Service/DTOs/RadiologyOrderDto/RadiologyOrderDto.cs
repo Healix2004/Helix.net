@@ -1,5 +1,6 @@
 ﻿using Helix.Data.Enums;
 using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace Helix.Service.DTOs.RadiologyOrderDto
 {
@@ -9,7 +10,7 @@ namespace Helix.Service.DTOs.RadiologyOrderDto
         public Guid Id { get; set; }
         public Guid PatientId { get; set; }
         public Guid DoctorId { get; set; }
-
+        public Guid PrescriptionId { get; set; }
         // ADDED: string.Empty for consistency
         public string PatientName { get; set; } = string.Empty;
 

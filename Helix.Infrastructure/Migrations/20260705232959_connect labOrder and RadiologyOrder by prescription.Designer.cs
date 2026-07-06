@@ -4,6 +4,7 @@ using Helix.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Helix.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260705232959_connect labOrder and RadiologyOrder by prescription")]
+    partial class connectlabOrderandRadiologyOrderbyprescription
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -891,6 +894,8 @@ namespace Helix.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AppointmentId");
+
                     b.HasIndex("DoctorId");
 
                     b.HasIndex("PatientId");
@@ -1590,7 +1595,7 @@ namespace Helix.Infrastructure.Migrations
                         .IsRequired();
 
                     b.HasOne("Helix.Data.Entities.Prescription", "Prescription")
-                        .WithMany("LabOrders")
+                        .WithMany("labOrders")
                         .HasForeignKey("PrescriptionId");
 
                     b.Navigation("Doctor");
@@ -1735,6 +1740,10 @@ namespace Helix.Infrastructure.Migrations
 
             modelBuilder.Entity("Helix.Data.Entities.Prescription", b =>
                 {
+                    b.HasOne("Helix.Data.Entities.Appointment", "Appointment")
+                        .WithMany()
+                        .HasForeignKey("AppointmentId");
+
                     b.HasOne("Helix.Data.Entities.Doctor", "Doctor")
                         .WithMany()
                         .HasForeignKey("DoctorId")
@@ -1746,6 +1755,8 @@ namespace Helix.Infrastructure.Migrations
                         .HasForeignKey("PatientId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Appointment");
 
                     b.Navigation("Doctor");
 
@@ -1801,7 +1812,7 @@ namespace Helix.Infrastructure.Migrations
                         .IsRequired();
 
                     b.HasOne("Helix.Data.Entities.Prescription", "Prescription")
-                        .WithMany("RadiologyOrders")
+                        .WithMany("radiologyOrders")
                         .HasForeignKey("PrescriptionId");
 
                     b.Navigation("Doctor");
@@ -1971,9 +1982,9 @@ namespace Helix.Infrastructure.Migrations
                 {
                     b.Navigation("Items");
 
-                    b.Navigation("LabOrders");
+                    b.Navigation("labOrders");
 
-                    b.Navigation("RadiologyOrders");
+                    b.Navigation("radiologyOrders");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.RadiologyOrder", b =>

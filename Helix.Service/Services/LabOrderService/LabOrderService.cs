@@ -27,6 +27,7 @@ namespace Helix.Service.Services.LabOrderService
             {
                 PatientId = dto.PatientId,
                 DoctorId = dto.DoctorId,
+                PrescriptionId = dto.PrescriptionId,
                 MedicalConceptId = newMedicalConcept.Id,
                 QrToken = qrToken,
                 Status = EnLabOrderStatus.Pending,
@@ -83,7 +84,7 @@ namespace Helix.Service.Services.LabOrderService
             var query = await unitOfWork.Repository<LabOrder>().FindAsQueryable(o => true);
 
             return await query
-                .Include(o => o.Patient).ThenInclude(p => p.AppUser)
+                .Include(o => o.Patient)
                 .Include(o => o.MedicalConcept)
                 .Select(o => new LabOrderDto
                 {
@@ -103,8 +104,7 @@ namespace Helix.Service.Services.LabOrderService
             var order = await query
                 .Include(o => o.Patient) // Ensure the patient data is loaded
                 .Include(o => o.MedicalConcept)
-                .Include(o => o.Results)
-                    .ThenInclude(r => r.MedicalConcept) // Ensure child names are loaded
+                .Include(o => o.Results).ThenInclude(r => r.MedicalConcept) // Ensure child names are loaded
                 .FirstOrDefaultAsync();
 
             if (order == null)
@@ -140,7 +140,7 @@ namespace Helix.Service.Services.LabOrderService
             var query = await unitOfWork.Repository<LabOrder>().FindAsQueryable(o => o.DoctorId == doctorId);
 
             return await query
-                .Include(o => o.Patient).ThenInclude(p => p.AppUser)
+                .Include(o => o.Patient)
                 .Include(o => o.MedicalConcept)
                 .Select(o => new LabOrderDto
                 {
@@ -173,7 +173,7 @@ namespace Helix.Service.Services.LabOrderService
             var query = await unitOfWork.Repository<LabOrder>().FindAsQueryable(o => o.QrToken == qrToken && o.Status == EnLabOrderStatus.Pending);
 
             var order = await query
-                .Include(o => o.Patient).ThenInclude(p => p.AppUser)
+                .Include(o => o.Patient)
                 .Include(o => o.MedicalConcept)
                 .Include(o => o.Results)
                     .ThenInclude(r => r.MedicalConcept)
@@ -303,7 +303,7 @@ namespace Helix.Service.Services.LabOrderService
                 .FindAsQueryable(o => o.PatientId == patientId);
 
             return await query
-                .Include(o => o.Patient).ThenInclude(p => p.AppUser)
+                .Include(o => o.Patient)
                 .Include(o => o.MedicalConcept)
                 // Sort by newest first!
                 .OrderByDescending(o => o.CreatedAt)

@@ -144,22 +144,6 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        [HttpPost]
-        [Authorize(Roles = nameof(EnRoles.Doctor))]
-        public async Task<IActionResult> CreateLabOrder([FromBody] CreateLabOrderDto dto)
-        {
-            dto.DoctorId = await User.GetDoctorIdAsync(doctorService);
-            var result = await labOrderService.CreateLabOrderAsync(dto);
-
-            var response = new Response<Guid>(result)
-            {
-                StatusCode = result != Guid.Empty ? System.Net.HttpStatusCode.Created : System.Net.HttpStatusCode.BadRequest,
-                Succeeded = result != Guid.Empty,
-                Message = result != Guid.Empty ? "Lab order and panel components created successfully." : "Failed to create lab order."
-            };
-            return NewResult(response);
-        }
-
         [HttpPut("{id}")]
         [Authorize(Roles = nameof(EnRoles.Doctor))]
         public async Task<IActionResult> UpdateLabOrder(Guid id, [FromBody] UpdateLabOrderDto dto)

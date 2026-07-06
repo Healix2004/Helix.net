@@ -4,6 +4,7 @@ using Helix.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Helix.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260705231817_connect labOrder and RadiologyOrder by Appointment")]
+    partial class connectlabOrderandRadiologyOrderbyAppointment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -512,6 +515,9 @@ namespace Helix.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("AppointmentId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -524,9 +530,6 @@ namespace Helix.Infrastructure.Migrations
                     b.Property<Guid>("PatientId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("PrescriptionId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("QrToken")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -536,13 +539,13 @@ namespace Helix.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AppointmentId");
+
                     b.HasIndex("DoctorId");
 
                     b.HasIndex("MedicalConceptId");
 
                     b.HasIndex("PatientId");
-
-                    b.HasIndex("PrescriptionId");
 
                     b.ToTable("LabOrders");
                 });
@@ -891,6 +894,8 @@ namespace Helix.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AppointmentId");
+
                     b.HasIndex("DoctorId");
 
                     b.HasIndex("PatientId");
@@ -994,6 +999,9 @@ namespace Helix.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("AppointmentId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -1004,9 +1012,6 @@ namespace Helix.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("PatientId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("PrescriptionId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("QrToken")
@@ -1021,13 +1026,13 @@ namespace Helix.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AppointmentId");
+
                     b.HasIndex("DoctorId");
 
                     b.HasIndex("MedicalConceptId");
 
                     b.HasIndex("PatientId");
-
-                    b.HasIndex("PrescriptionId");
 
                     b.ToTable("RadiologyOrders");
                 });
@@ -1571,6 +1576,10 @@ namespace Helix.Infrastructure.Migrations
 
             modelBuilder.Entity("Helix.Data.Entities.LabOrder", b =>
                 {
+                    b.HasOne("Helix.Data.Entities.Appointment", "Appointment")
+                        .WithMany("labOrders")
+                        .HasForeignKey("AppointmentId");
+
                     b.HasOne("Helix.Data.Entities.Doctor", "Doctor")
                         .WithMany("LabOrders")
                         .HasForeignKey("DoctorId")
@@ -1589,17 +1598,13 @@ namespace Helix.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Helix.Data.Entities.Prescription", "Prescription")
-                        .WithMany("LabOrders")
-                        .HasForeignKey("PrescriptionId");
+                    b.Navigation("Appointment");
 
                     b.Navigation("Doctor");
 
                     b.Navigation("MedicalConcept");
 
                     b.Navigation("Patient");
-
-                    b.Navigation("Prescription");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.LabTestResult", b =>
@@ -1735,6 +1740,10 @@ namespace Helix.Infrastructure.Migrations
 
             modelBuilder.Entity("Helix.Data.Entities.Prescription", b =>
                 {
+                    b.HasOne("Helix.Data.Entities.Appointment", "Appointment")
+                        .WithMany()
+                        .HasForeignKey("AppointmentId");
+
                     b.HasOne("Helix.Data.Entities.Doctor", "Doctor")
                         .WithMany()
                         .HasForeignKey("DoctorId")
@@ -1746,6 +1755,8 @@ namespace Helix.Infrastructure.Migrations
                         .HasForeignKey("PatientId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Appointment");
 
                     b.Navigation("Doctor");
 
@@ -1782,6 +1793,10 @@ namespace Helix.Infrastructure.Migrations
 
             modelBuilder.Entity("Helix.Data.Entities.RadiologyOrder", b =>
                 {
+                    b.HasOne("Helix.Data.Entities.Appointment", "Appointment")
+                        .WithMany("radiologyOrders")
+                        .HasForeignKey("AppointmentId");
+
                     b.HasOne("Helix.Data.Entities.Doctor", "Doctor")
                         .WithMany("RadiologyOrders")
                         .HasForeignKey("DoctorId")
@@ -1800,17 +1815,13 @@ namespace Helix.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Helix.Data.Entities.Prescription", "Prescription")
-                        .WithMany("RadiologyOrders")
-                        .HasForeignKey("PrescriptionId");
+                    b.Navigation("Appointment");
 
                     b.Navigation("Doctor");
 
                     b.Navigation("MedicalConcept");
 
                     b.Navigation("Patient");
-
-                    b.Navigation("Prescription");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.RadiologyReport", b =>
@@ -1916,6 +1927,13 @@ namespace Helix.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Helix.Data.Entities.Appointment", b =>
+                {
+                    b.Navigation("labOrders");
+
+                    b.Navigation("radiologyOrders");
+                });
+
             modelBuilder.Entity("Helix.Data.Entities.Doctor", b =>
                 {
                     b.Navigation("Consents");
@@ -1970,10 +1988,6 @@ namespace Helix.Infrastructure.Migrations
             modelBuilder.Entity("Helix.Data.Entities.Prescription", b =>
                 {
                     b.Navigation("Items");
-
-                    b.Navigation("LabOrders");
-
-                    b.Navigation("RadiologyOrders");
                 });
 
             modelBuilder.Entity("Helix.Data.Entities.RadiologyOrder", b =>

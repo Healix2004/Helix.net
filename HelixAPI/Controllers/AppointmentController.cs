@@ -16,28 +16,6 @@ namespace Helix.API.Controllers
     public class AppointmentController(IAppointmentService appointmentService,IDoctorService doctorService,IPatientService patientService) : AppControllerBase
     {
         // ==========================================
-        // DASHBOARD WORKFLOW (Your UI Design)
-        // ==========================================
-
-        [HttpGet("dashboard/today")]
-        [Authorize(Roles = nameof(EnRoles.Doctor))]
-        public async Task<IActionResult> GetTodayAppointments()
-        {
-            // Securely grab the logged-in doctor's ID from their token
-            var doctorId = await User.GetDoctorIdAsync(doctorService);
-
-            var result = await appointmentService.GetDoctorAppointmentsForTodayAsync(doctorId);
-
-            var response = new Response<List<AppointmentListDto>>(result)
-            {
-                Succeeded = true,
-                StatusCode = System.Net.HttpStatusCode.OK,
-                Message = result.Count > 0 ? "Today's schedule retrieved successfully." : "No appointments scheduled for today."
-            };
-            return NewResult(response);
-        }
-
-        // ==========================================
         // MANAGEMENT WORKFLOW (CRUD & Status)
         // ==========================================
 

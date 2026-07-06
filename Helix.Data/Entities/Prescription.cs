@@ -14,8 +14,9 @@ namespace Helix.Data.Entities
         public string? DoctorNotes { get; set; }
         public virtual Patient Patient { get; set; } = null!;
         public virtual Doctor Doctor { get; set; } = null!;
-        public virtual Appointment Appointment { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public ICollection<LabOrder> LabOrders { get; set; } = new List<LabOrder>();
+        public ICollection<RadiologyOrder> RadiologyOrders { get; set; } = new List<RadiologyOrder>();
         public virtual List<PrescriptionItem> Items { get; set; } = new List<PrescriptionItem>();
     }
     public class PrescriptionItem : BaseEntity

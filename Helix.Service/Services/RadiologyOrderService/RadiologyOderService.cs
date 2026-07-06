@@ -27,6 +27,7 @@ namespace Helix.Service.Services.RadiologyOrderService
             {
                 PatientId = dto.PatientId,
                 DoctorId = dto.DoctorId,
+                PrescriptionId = dto.PrescriptionId,
                 MedicalConceptId = newMedicalConcept.Id,
                 QrToken = qrToken,
                 Status = EnRadiologyOrderStatus.Pending,
@@ -54,13 +55,16 @@ namespace Helix.Service.Services.RadiologyOrderService
 
             return await query
                 .Include(o => o.MedicalConcept)
-                .Include(t => t.Doctor).ThenInclude(d => d.AppUser)
+                .Include(t => t.Doctor)
+                .Include(o => o.Patient)
                 .Include(r => r.Report)
                 .Select(o => new RadiologyOrderDto
                 {
                     Id = o.Id,
                     PatientId = o.PatientId,
+                    PatientName = o.Patient.FullName,
                     DoctorId = o.DoctorId,
+                    PrescriptionId = o.PrescriptionId ?? Guid.Empty,
                     DoctorName = o.Doctor.FullName,
                     TerminologyCodeId = o.MedicalConceptId,
                     TerminologyDisplay = o.MedicalConcept.Display,
@@ -80,6 +84,8 @@ namespace Helix.Service.Services.RadiologyOrderService
             return await query
                 .Include(o => o.Patient).ThenInclude(p => p.AppUser)
                 .Include(o => o.MedicalConcept)
+                .Include(t => t.Doctor)
+                .Include(o => o.Patient)
                 .Select(o => new RadiologyOrderDto
                 {
                     Id = o.Id,
@@ -111,6 +117,7 @@ namespace Helix.Service.Services.RadiologyOrderService
                 {
                     Id = o.Id,
                     PatientName = o.Patient.FullName,
+                    PrescriptionId = o.PrescriptionId ?? Guid.Empty,
                     TerminologyCode = o.MedicalConcept.Code,
                     TerminologyDisplay = o.MedicalConcept.Display,
                     Status = o.Status,
@@ -144,8 +151,8 @@ namespace Helix.Service.Services.RadiologyOrderService
             var query = await unitOfWork.Repository<RadiologyOrder>().FindAsQueryable(o => o.Id == id);
 
             var order = await query
-                .Include(o => o.Patient).ThenInclude(p => p.AppUser)
-                .Include(o => o.Doctor).ThenInclude(d => d.AppUser)
+                .Include(o => o.Patient)
+                .Include(o => o.Doctor)
                 .Include(o => o.MedicalConcept)
                 .Include(o => o.Report)
                 .FirstOrDefaultAsync();
@@ -158,6 +165,7 @@ namespace Helix.Service.Services.RadiologyOrderService
                 Id = order.Id,
                 PatientId = order.PatientId,
                 PatientName = order.Patient.FullName,
+                PrescriptionId = order.PrescriptionId ?? Guid.Empty,
                 DoctorId = order.DoctorId,
                 DoctorName = order.Doctor.FullName,
                 TerminologyCodeId = order.MedicalConceptId,
@@ -175,7 +183,7 @@ namespace Helix.Service.Services.RadiologyOrderService
             var query = await unitOfWork.Repository<RadiologyOrder>().FindAsQueryable(o => o.QrToken == qrToken && o.Status == EnRadiologyOrderStatus.Pending);
 
             var order = await query
-                .Include(o => o.Patient).ThenInclude(p => p.AppUser)
+                .Include(o => o.Patient)
                 .Include(o => o.MedicalConcept)
                 .FirstOrDefaultAsync();
 

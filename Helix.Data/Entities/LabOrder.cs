@@ -20,13 +20,14 @@ namespace Helix.Data.Entities
 
         // Renamed to 'Id' because it holds a Guid, not the string code
         public Guid MedicalConceptId { get; set; } = Guid.Empty;
+        public Guid? PrescriptionId { get; set; }
 
         public Patient Patient { get; set; }
         public Doctor Doctor { get; set; }
 
         // PascalCase for public C# properties
         public MedicalConcept MedicalConcept { get; set; }
-
+        public Prescription? Prescription { get; set; }
         public ICollection<LabTestResult> Results { get; set; }
     }
 }

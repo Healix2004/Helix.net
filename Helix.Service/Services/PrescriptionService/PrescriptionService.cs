@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace Helix.Service.Services.PrescriptionService
 {
-    public class PrescriptionService(IUnitOfWork unitOfWork,ApplicationDbContext dbContext,IRadiologyOrderService radiology, ILabOrderService lab, IDrugDataService  drugDataService) : IPrescriptionService
+    public class PrescriptionService(IUnitOfWork unitOfWork,ApplicationDbContext dbContext, IDrugDataService  drugDataService) : IPrescriptionService
     {
 
         public async Task<Guid> CreatePrescriptionAsync(Guid doctorId, PrescriptionPayloadDto dto)
@@ -48,12 +48,56 @@ namespace Helix.Service.Services.PrescriptionService
             {
                 foreach (var test in dto.LabOrderCodes)
                 {
-                    await lab.CreateLabOrderAsync(new CreateLabOrderDto
+                    // Generate a unique 7-character order token for the barcode/QR
+                    string qrToken = $"ORD-{Guid.NewGuid().ToString("N").Substring(0, 7).ToUpper()}";
+
+                    var medicalConceptQuery = await unitOfWork.Repository<MedicalConcept>().FindAsQueryable(m => m.Code == test);
+                    var newMedicalConcept = await medicalConceptQuery.FirstOrDefaultAsync();
+
+                    if (newMedicalConcept == null) throw new KeyNotFoundException("Terminology code not found.");
+
+                    var labOrder = new LabOrder
                     {
                         PatientId = patientId,
                         DoctorId = doctorId,
-                        TerminologyCode = test
-                    });
+                        MedicalConceptId = newMedicalConcept.Id,
+                        QrToken = qrToken,
+                        Status = EnLabOrderStatus.Pending,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    // FHIR PANEL EXPANSION LOGIC
+                    var panelComponentsQuery = await unitOfWork.Repository<LoincPanelComponent>()
+                        .FindAsQueryable(p => p.ParentLoincConceptId == newMedicalConcept.Id);
+
+                    var childIds = await panelComponentsQuery.Select(p => p.ChildLoincConceptId).ToListAsync();
+
+                    if (childIds.Any())
+                    {
+                        // It is a Panel: Create an empty slot for every child test
+                        foreach (var childId in childIds)
+                        {
+                            labOrder.Results.Add(new LabTestResult
+                            {
+                                MedicalConceptId = childId,
+                                PatientId = patientId,
+                                Status = EnLabOrderStatus.Pending,
+                                ResultDate = null
+                            });
+                        }
+                    }
+                    else
+                    {
+                        // It is a Single Test: Create one empty slot
+                        labOrder.Results.Add(new LabTestResult
+                        {
+                            MedicalConceptId = newMedicalConcept.Id,
+                            PatientId = patientId,
+                            Status = EnLabOrderStatus.Pending,
+                            ResultDate = null
+                        });
+                    }
+                    prescription.LabOrders.Add(labOrder);
                 }
             }
 
@@ -61,12 +105,23 @@ namespace Helix.Service.Services.PrescriptionService
             {
                 foreach (var scan in dto.RadiologyOrderCodes)
                 {
-                    await radiology.CreateRadiologyOrderAsync(new CreateRadiologyOrderDto
+                    string qrToken = $"ORD-{Guid.NewGuid().ToString("N").Substring(0, 7).ToUpper()}";
+
+                    var medicalConceptQuery = await unitOfWork.Repository<MedicalConcept>().FindAsQueryable(m => m.Code == scan);
+                    var newMedicalConcept = await medicalConceptQuery.FirstOrDefaultAsync();
+
+                    if (newMedicalConcept == null) throw new KeyNotFoundException("Terminology code not found.");
+
+                    var radioOrder = new RadiologyOrder
                     {
                         PatientId = patientId,
                         DoctorId = doctorId,
-                        TerminologyCode = scan
-                    });
+                        MedicalConceptId = newMedicalConcept.Id,
+                        QrToken = qrToken,
+                        Status = EnRadiologyOrderStatus.Pending,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    prescription.RadiologyOrders.Add(radioOrder);
                 }
             }
             appointment.Status = EnAppointmentStatus.Fulfilled;

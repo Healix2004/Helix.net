@@ -143,22 +143,6 @@ namespace Helix.API.Controllers
             return NewResult(response);
         }
 
-        [HttpPost]
-        [Authorize(Roles = nameof(EnRoles.Doctor))]
-        public async Task<IActionResult> CreateRadiologyOrder([FromBody] CreateRadiologyOrderDto dto)
-        {
-            dto.DoctorId = await User.GetDoctorIdAsync(doctorService);
-            var result = await radiologyOrderService.CreateRadiologyOrderAsync(dto);
-
-            var response = new Response<Guid>(result)
-            {
-                StatusCode = result != Guid.Empty ? System.Net.HttpStatusCode.Created : System.Net.HttpStatusCode.BadRequest,
-                Succeeded = result != Guid.Empty,
-                Message = result != Guid.Empty ? "Radiology order created successfully." : "Failed to create radiology order."
-            };
-            return NewResult(response);
-        }
-
         [HttpPut("{id}")]
         [Authorize(Roles = nameof(EnRoles.Doctor))]
         public async Task<IActionResult> UpdateRadiologyOrder(Guid id, [FromBody] UpdateRadiologyOrderDto dto)

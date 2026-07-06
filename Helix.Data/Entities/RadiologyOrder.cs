@@ -15,11 +15,13 @@ namespace Helix.Data.Entities
         public Guid PatientId { get; set; }
         public Guid DoctorId { get; set; }
         public Guid MedicalConceptId { get; set; }
+        public Guid? PrescriptionId { get; set; }
 
         // --- Navigation Properties ---
         public virtual Patient Patient { get; set; } = null!;
         public virtual Doctor Doctor { get; set; } = null!;
         public virtual MedicalConcept MedicalConcept { get; set; } = null!;
+        public virtual Prescription? Prescription { get; set; }
         public virtual RadiologyReport? Report { get; set; }
     }
 }
