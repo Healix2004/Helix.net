@@ -13,6 +13,7 @@ namespace Helix.Service.Interfaces
         Task<DoctorDto> CreateDoctorAsync(CreateDoctorDto createDoctorDto);
         Task<DoctorDto> UpdateDoctorAsync(Guid id, UpdateDoctorDto updateDoctorDto);
         Task<bool> DeleteDoctorAsync(Guid id);
+        Task<CalendarMonthDto> GetCalendarFlagsAsync(Guid doctorId, int year, int month);
 
         // --- Added Search Methods ---
         Task<IEnumerable<DoctorDto>> SearchDoctorsByNameAsync(string name);

@@ -22,7 +22,7 @@ namespace Helix.Service.Interfaces
         Task<List<AppointmentListDto>> GetDoctorAppointmentsAsync(Guid doctorId, string filter);
         Task<List<AppointmentListDto>> GetHighPriorityPatientsTodayAsync(Guid doctorId);
 
-
+        Task<List<AppointmentListDto>> GetDoctorDayAppointmentAsync(Guid doctorId, DateTime date);
         Task<PatientDashboardDto> GetPatientDashboardSummaryAsync(Guid appointmentId, Guid doctorId);
     }
 }

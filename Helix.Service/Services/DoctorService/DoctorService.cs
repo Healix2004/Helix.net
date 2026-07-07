@@ -4,12 +4,14 @@ using Helix.Data.Enums;
 using Helix.Service.DTOs.DoctorDTOs;
 using Helix.Service.DTOs.PatientDTOs;
 using Helix.Service.Interfaces;
+using Helix.Service.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Helix.Service.Services.DoctorService
 {
-    public class DoctorService(IUnitOfWork unitOfWork, IMapper mapper, UserManager<AppUser> userManager, IFileService fileService , RoleManager<IdentityRole>  roleManager) : IDoctorService
+    public class DoctorService(IUnitOfWork unitOfWork, IMapper mapper, UserManager<AppUser> userManager, IFileService fileService 
+        , RoleManager<IdentityRole>  roleManager) : IDoctorService
     {
         public async Task<DoctorDto> CreateDoctorAsync(CreateDoctorDto createDoctorDto)
         {
@@ -50,6 +52,50 @@ namespace Helix.Service.Services.DoctorService
             return mapper.Map<DoctorDto>(doctor);
         }
 
+        public async Task<CalendarMonthDto> GetCalendarFlagsAsync(Guid doctorId, int year, int month)
+        {
+            // 1. Locate the doctor profile
+            var doctor = await(await unitOfWork.Repository<Doctor>()
+                .FindAsQueryable(d => d.Id == doctorId))
+                .FirstOrDefaultAsync();
+
+            if (doctor == null) throw new InvalidOperationException("Doctor profile not found.");
+
+            // 2. Define the date range for the requested month
+            var startDate = new DateTime(year, month, 1);
+            var daysInMonth = DateTime.DaysInMonth(year, month);
+            var endDate = startDate.AddMonths(1).AddDays(-1); // Last day of the month
+
+            // 3. Query the database efficiently for days with appointments
+            // Assuming your appointment entity is named 'Appointment' and has a 'Date' or 'StartTime' property
+            var daysWithAppointments =await ( await unitOfWork.Repository<Appointment>()
+                .FindAsQueryable(a => a.DoctorId == doctor.Id&& a.StartTime >= startDate
+                                   && a.StartTime <= endDate&& a.Status != Data.Enums.EnAppointmentStatus.Cancelled))
+                .Select(a => a.StartTime.Day)
+                .Distinct()
+                .ToListAsync();
+
+            // 4. Build the complete calendar payload
+            var calendar = new CalendarMonthDto
+            {
+                Year = year,
+                Month = month,
+                Days = new List<CalendarDayDto>()
+            };
+
+            for (int i = 1; i <= daysInMonth; i++)
+            {
+                calendar.Days.Add(new CalendarDayDto
+                {
+                    Day = i,
+                    Date = new DateTime(year, month, i),
+                    // If the list of days from the DB contains this day, flip the flag to true
+                    HasAppointments = daysWithAppointments.Contains(i)
+                });
+            }
+
+            return calendar;
+        }
         public async Task<bool> DeleteDoctorAsync(Guid id)
         {
             var doctor = await unitOfWork.Repository<Doctor>().GetByIdAsync(id);

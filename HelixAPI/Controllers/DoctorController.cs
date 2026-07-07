@@ -3,20 +3,23 @@ using Helix.Core.Bases;
 using Helix.Core.Features.Doctors.Commands.Models;
 using Helix.Core.Features.Doctors.Queries.Models;
 using Helix.Data.Enums;
+using Helix.Service.DTOs.AppointmentDtos;
 using Helix.Service.DTOs.DoctorDTOs;
 using Helix.Service.Helper;
 using Helix.Service.Interfaces; // ADDED: Need this to inject IDoctorService
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using System.Text.Json;
 
 namespace Helix.API.Controllers
 {
     [Route("api/doctors")] // FIX 1: Explicit RESTful routing
     [ApiController]
-    public class DoctorController(IMediator mediator, IDoctorService doctorService) : AppControllerBase
+    public class DoctorController(IMediator mediator, IDoctorService doctorService,IAppointmentService appointmentService) : AppControllerBase
     {
+
         [HttpPost("register-doctor")]
         public async Task<IActionResult> RegisterDoctor([FromForm] RegisterDoctorDto dto)
         {
@@ -61,9 +64,7 @@ namespace Helix.API.Controllers
         [ProducesResponseType(typeof(DoctorDto), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetMyProfile()
         {
-            // Safely get the ID from their JWT login token using your extension method!
-            // Note: Since your ID is an 'int' in this controller, ensure your extension method returns an int for doctors.
-            var doctorId = await User.GetDoctorIdAsync(doctorService);
+           var doctorId = await User.GetDoctorIdAsync(doctorService);
 
             var query = new GetDoctorByIdQuery(doctorId);
             var response = await mediator.Send(query);
@@ -160,6 +161,100 @@ namespace Helix.API.Controllers
                 StatusCode = System.Net.HttpStatusCode.OK,
                 Message = "Doctors retrieved successfully."
             });
+        }
+
+        [HttpGet("calendar")]
+        public async Task<IActionResult> GetMonthFlags([FromQuery] int year, [FromQuery] int month)
+        {
+            try
+            {
+                // Validate input
+                if (year < 2000 || month < 1 || month > 12)
+                {
+                    return NewResult(new Response<CalendarMonthDto>("Invalid year or month parameters.")
+                    {
+                        Succeeded = false,
+                        StatusCode = System.Net.HttpStatusCode.BadRequest
+                    });
+                }
+
+                var doctorId = await User.GetDoctorIdAsync(doctorService);
+
+
+                var calendarData = await doctorService.GetCalendarFlagsAsync(doctorId, year, month);
+
+                return NewResult(new Response<CalendarMonthDto>(calendarData)
+                {
+                    Succeeded = true,
+                    StatusCode = System.Net.HttpStatusCode.OK
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NewResult(new Response<CalendarMonthDto>(ex.Message)
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.NotFound
+                });
+            }
+            catch (Exception ex)
+            {
+                return NewResult(new Response<CalendarMonthDto>("An error occurred while fetching the calendar.")
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.InternalServerError,
+                    Errors = new System.Collections.Generic.List<string> { ex.Message }
+                });
+            }
+        }
+
+        [HttpGet("appointments/day-date")]
+        public async Task<IActionResult> GetDailyAppointments([FromQuery] DateTime date)
+        {
+            try
+            {
+                // 1. Basic validation: ensure the date isn't empty (DateTime.MinValue)
+                if (date == default)
+                {
+                    return NewResult(new Response<List<AppointmentListDto>>("A valid date is required. Format: YYYY-MM-DD")
+                    {
+                        Succeeded = false,
+                        StatusCode = System.Net.HttpStatusCode.BadRequest
+                    });
+                }
+
+                // 2. Extract the Doctor's  ID from the JWT token
+                var doctorId = await User.GetDoctorIdAsync(doctorService);
+
+
+                // 3. Fetch the schedule
+                var scheduleData = await appointmentService.GetDoctorDayAppointmentAsync(doctorId, date);
+
+                // 4. Return standard Helix response
+                return NewResult(new Response<List<AppointmentListDto>>(scheduleData)
+                {
+                    Succeeded = true,
+                    StatusCode = System.Net.HttpStatusCode.OK,
+                    Message = $"Appointments retrieved for {date:yyyy-MM-dd}"
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NewResult(new Response<List<AppointmentListDto>>(ex.Message)
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.NotFound
+                });
+            }
+            catch (Exception ex)
+            {
+                return NewResult(new Response<List<AppointmentListDto>>("An error occurred while fetching the daily schedule.")
+                {
+                    Succeeded = false,
+                    StatusCode = System.Net.HttpStatusCode.InternalServerError,
+                    Errors = new System.Collections.Generic.List<string> { ex.Message }
+                });
+            }
         }
     }
 }

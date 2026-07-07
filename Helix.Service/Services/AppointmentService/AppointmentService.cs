@@ -13,6 +13,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Net.WebRequestMethods;
 
 namespace Helix.Service.Services.AppointmentService
 {
@@ -122,17 +123,6 @@ namespace Helix.Service.Services.AppointmentService
                 Waiting = waiting,
                 Urgent = urgent
             };
-        }
-
-        // Helper method to extract "SJ" from "Sarah Johnson"
-        private string GetInitials(string fullName)
-        {
-            if (string.IsNullOrWhiteSpace(fullName)) return "UK"; // Unknown
-
-            var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length == 1) return parts[0][..1].ToUpper();
-
-            return $"{parts[0][0]}{parts[^1][0]}".ToUpper();
         }
         public async Task<DoctorAvailabilityDto> GetAvailableTimeSlotsAsync(Guid doctorId, DateTime selectedDate)
         {
@@ -440,6 +430,9 @@ namespace Helix.Service.Services.AppointmentService
                 case "week":
                     endDate = today.AddDays(7);
                     break;
+                case "month":
+                    endDate = today.AddMonths(1);
+                    break;
                 case "urgent":
                     urgentOnly = true;
                     break;
@@ -492,7 +485,61 @@ namespace Helix.Service.Services.AppointmentService
                 })
                 .ToList();
         }
+        public async Task<List<AppointmentListDto>> GetDoctorDayAppointmentAsync(Guid doctorId, DateTime date)
+        {
+            var now = DateTime.UtcNow;
+            var today = now.Date;
+            DateTime startDate = today;
+            DateTime endDate = today.AddDays(1);
+            bool urgentOnly = false;
 
+            // 2. Query the database
+            // Optimized the Date comparison for better SQL indexing
+            var query = await unitOfWork.Repository<Appointment>().FindAsQueryable(a =>
+                a.DoctorId == doctorId &&
+                a.Status != EnAppointmentStatus.Cancelled &&
+                (urgentOnly
+                    ? (a.Priority == EnAppointmentPriority.Urgent || a.Priority == EnAppointmentPriority.Stat)
+                    : (a.StartTime >= startDate && a.StartTime < endDate.AddDays(1))));
+
+            var rawAppointments = await query.Include(a => a.Patient).ToListAsync();
+
+            // 3. Auto-Update Past Appointments
+            bool requiresDatabaseSave = false;
+
+            foreach (var apt in rawAppointments)
+            {
+                // If the appointment time has passed and it is still marked as Scheduled/Active
+                if (apt.StartTime < now && apt.Status == EnAppointmentStatus.Pending)
+                {
+                    apt.Status = EnAppointmentStatus.Fulfilled;
+
+                    await unitOfWork.Repository<Appointment>().UpdateAsync(apt);
+                    requiresDatabaseSave = true;
+                }
+            }
+
+            // Only hit the database with a commit if we actually changed something
+            if (requiresDatabaseSave)
+            {
+                await unitOfWork.CompleteAsync();
+            }
+
+            // 4. Map to DTOs and return
+            return rawAppointments
+                .OrderBy(a => a.StartTime)
+                .Select(a => new AppointmentListDto
+                {
+                    Id = a.Id,
+                    PatientId = a.PatientId,
+                    PatientName = a.Patient?.FullName ?? "Unknown",
+                    PatientInitials = GetInitials(a.Patient?.FullName),
+                    AppointmentType = a.AppointmentType ?? "General Checkup",
+                    DisplayTime = a.StartTime.ToString("hh:mm tt"),
+                    Status = a.Status
+                })
+                .ToList();
+        }
         public async Task<List<AppointmentListDto>> GetHighPriorityPatientsTodayAsync(Guid doctorId)
         {
             var today = DateTime.UtcNow.Date;
@@ -640,7 +687,15 @@ namespace Helix.Service.Services.AppointmentService
 
             return age;
         }
+        private string GetInitials(string fullName)
+        {
+            if (string.IsNullOrWhiteSpace(fullName)) return "UK"; // Unknown
 
+            var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 1) return parts[0][..1].ToUpper();
+
+            return $"{parts[0][0]}{parts[^1][0]}".ToUpper();
+        }
         private string GetRelativeDateString(DateTime date)
         {
             // We use .Date to strip the time. This prevents a bug where an event at 
