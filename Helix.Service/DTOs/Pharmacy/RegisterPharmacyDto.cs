@@ -8,6 +8,8 @@ namespace Helix.Service.DTOs.Pharmacy
 {
     public class RegisterPharmacyDto
     {
+        [Required(ErrorMessage = "Full Name is required.")]
+        public string FullName { get; set; }
         [Required(ErrorMessage = "National ID is required.")]
         public string NationalId { get; set; }
 

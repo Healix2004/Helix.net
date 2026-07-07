@@ -6,6 +6,7 @@
         public virtual AppUser AppUser { get; set; }
 
         // --- Shared Fields (Required by both) ---
+        public string FullName { get; set; } = string.Empty;
         public string NationalId { get; set; } = default!;
         public string PharmacyName { get; set; }
         public string Address { get; set; }

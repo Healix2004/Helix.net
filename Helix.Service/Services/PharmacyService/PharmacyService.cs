@@ -40,6 +40,7 @@ namespace Helix.Service.Services.PharmacyService
             // 3. Map DTO to Entity
             var pharmacy = new Pharmacy
             {
+                FullName = dto.FullName,
                 AppUserId = appUserId,
                 NationalId = dto.NationalId,
                 PharmacyName = dto.PharmacyName,
