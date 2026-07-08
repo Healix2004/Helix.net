@@ -15,63 +15,107 @@ using System.Threading.Tasks;
 
 namespace Helix.Service.Services.PrescriptionService
 {
-    public class PrescriptionService(IUnitOfWork unitOfWork,ApplicationDbContext dbContext, IDrugDataService  drugDataService) : IPrescriptionService
+    public class PrescriptionService(IUnitOfWork unitOfWork,ApplicationDbContext dbContext
+                                    , IDrugDataService  drugDataService) : IPrescriptionService
     {
-
-        public async Task<Guid> CreatePrescriptionAsync(Guid doctorId, PrescriptionPayloadDto dto)
+        public async Task<CreatePrescriptionResultDto> CreatePrescriptionAsync(Guid doctorId, PrescriptionPayloadDto dto)
         {
+            // 1. Validate Appointment
             var appointment = await unitOfWork.Repository<Appointment>().GetByIdAsync(dto.AppointmentId);
+            if (appointment == null) throw new KeyNotFoundException("Appointment not found.");
+
             var patientId = appointment.PatientId;
+            var now = DateTime.UtcNow;
+
+            // 2. Perform DDI (Drug-Drug Interaction) Check BEFORE creating entities
+            if (dto.DDIEnabled && dto.Medications != null && dto.Medications.Any())
+            {
+                // Extract all Rxcui codes and hit the DB exactly ONE time (Avoids N+1)
+                var rxcuis = dto.Medications.Select(m => m.Rxcui).ToList();
+                var aiModelNames = await dbContext.MedicationCatalogs
+                    .Where(m => rxcuis.Contains(m.Rxcui))
+                    .Select(m => m.AiModelName)
+                    .ToListAsync();
+
+                var interactions = await drugDataService.CheckPatientDrugInteractionsAsync(patientId, aiModelNames);
+
+                // If dangerous interactions are found, block creation and return the list
+                if (interactions != null && interactions.Any())
+                {
+                    return new CreatePrescriptionResultDto
+                    {
+                        IsSuccess = false,
+                        Interactions = interactions
+                    };
+                }
+            }
+
+            // 3. Initialize Prescription (Safe to proceed)
             var prescription = new Prescription
             {
                 PatientId = patientId,
                 DoctorId = doctorId,
                 AppointmentId = dto.AppointmentId,
-                CreatedAt = DateTime.Now
+                CreatedAt = now,
+                QrToken = $"RX-{Guid.NewGuid().ToString("N").Substring(0, 7).ToUpper()}",
+                Items = new List<PrescriptionItem>(),
+                LabOrders = new List<LabOrder>()
             };
 
-            foreach (var itemDto in dto.Medications)
+            // 4. Map Medications
+            if (dto.Medications != null)
             {
-                prescription.Items.Add(new PrescriptionItem
+                foreach (var itemDto in dto.Medications)
                 {
-                    MedicationCatalogRxcui = itemDto.Rxcui, // Handles both DTO variations
-                    Dosage = itemDto.Dosage,
-                    Frequency = itemDto.Frequency,
-                    Duration = itemDto.Duration,
-                    Status = EnPrescriptionItemStatus.Active
-                });
+                    prescription.Items.Add(new PrescriptionItem
+                    {
+                        MedicationCatalogRxcui = itemDto.Rxcui,
+                        Dosage = itemDto.Dosage,
+                        Frequency = itemDto.Frequency,
+                        Duration = itemDto.Duration,
+                        Status = EnPrescriptionItemStatus.Active
+                    });
+                }
             }
 
-            prescription.QrToken = $"RX-{Guid.NewGuid().ToString("N").Substring(0, 7).ToUpper()}"; // Generate a unique 7-character token 
-            await unitOfWork.Repository<Prescription>().AddAsync(prescription);
-
+            // 5. Handle Lab Orders (FHIR Panel Expansion)
             if (dto.LabOrderCodes != null && dto.LabOrderCodes.Any())
             {
-                foreach (var test in dto.LabOrderCodes)
+                var distinctCodes = dto.LabOrderCodes.Distinct().ToList();
+
+                // Fetch all Medical Concepts at once (Avoids N+1)
+                var medicalConcepts =await (await unitOfWork.Repository<MedicalConcept>()
+                    .FindAsQueryable(m => distinctCodes.Contains(m.Code)))
+                    .ToListAsync();
+
+                if (medicalConcepts.Count != distinctCodes.Count)
+                    throw new KeyNotFoundException("One or more terminology codes not found.");
+
+                var conceptIds = medicalConcepts.Select(c => c.Id).ToList();
+
+                // Fetch all Panel Components at once (Avoids N+1)
+                var allPanelComponents =await (await unitOfWork.Repository<LoincPanelComponent>()
+                    .FindAsQueryable(p => conceptIds.Contains(p.ParentLoincConceptId)))
+                    .ToListAsync();
+
+                foreach (var concept in medicalConcepts)
                 {
-                    // Generate a unique 7-character order token for the barcode/QR
-                    string qrToken = $"ORD-{Guid.NewGuid().ToString("N").Substring(0, 7).ToUpper()}";
-
-                    var medicalConceptQuery = await unitOfWork.Repository<MedicalConcept>().FindAsQueryable(m => m.Code == test);
-                    var newMedicalConcept = await medicalConceptQuery.FirstOrDefaultAsync();
-
-                    if (newMedicalConcept == null) throw new KeyNotFoundException("Terminology code not found.");
-
                     var labOrder = new LabOrder
                     {
                         PatientId = patientId,
                         DoctorId = doctorId,
-                        MedicalConceptId = newMedicalConcept.Id,
-                        QrToken = qrToken,
+                        MedicalConceptId = concept.Id,
+                        QrToken = $"ORD-{Guid.NewGuid().ToString("N").Substring(0, 7).ToUpper()}",
                         Status = EnLabOrderStatus.Pending,
-                        CreatedAt = DateTime.UtcNow
+                        CreatedAt = now,
+                        Results = new List<LabTestResult>()
                     };
 
-                    // FHIR PANEL EXPANSION LOGIC
-                    var panelComponentsQuery = await unitOfWork.Repository<LoincPanelComponent>()
-                        .FindAsQueryable(p => p.ParentLoincConceptId == newMedicalConcept.Id);
-
-                    var childIds = await panelComponentsQuery.Select(p => p.ChildLoincConceptId).ToListAsync();
+                    // Filter the pre-fetched components in memory
+                    var childIds = allPanelComponents
+                        .Where(p => p.ParentLoincConceptId == concept.Id)
+                        .Select(p => p.ChildLoincConceptId)
+                        .ToList();
 
                     if (childIds.Any())
                     {
@@ -92,47 +136,28 @@ namespace Helix.Service.Services.PrescriptionService
                         // It is a Single Test: Create one empty slot
                         labOrder.Results.Add(new LabTestResult
                         {
-                            MedicalConceptId = newMedicalConcept.Id,
+                            MedicalConceptId = concept.Id,
                             PatientId = patientId,
                             Status = EnLabOrderStatus.Pending,
                             ResultDate = null
                         });
                     }
+
                     prescription.LabOrders.Add(labOrder);
                 }
             }
 
-            if (dto.RadiologyOrderCodes != null && dto.RadiologyOrderCodes.Any())
-            {
-                foreach (var scan in dto.RadiologyOrderCodes)
-                {
-                    string qrToken = $"ORD-{Guid.NewGuid().ToString("N").Substring(0, 7).ToUpper()}";
-
-                    var medicalConceptQuery = await unitOfWork.Repository<MedicalConcept>().FindAsQueryable(m => m.Code == scan);
-                    var newMedicalConcept = await medicalConceptQuery.FirstOrDefaultAsync();
-
-                    if (newMedicalConcept == null) throw new KeyNotFoundException("Terminology code not found.");
-
-                    var radioOrder = new RadiologyOrder
-                    {
-                        PatientId = patientId,
-                        DoctorId = doctorId,
-                        MedicalConceptId = newMedicalConcept.Id,
-                        QrToken = qrToken,
-                        Status = EnRadiologyOrderStatus.Pending,
-                        CreatedAt = DateTime.UtcNow
-                    };
-                    prescription.RadiologyOrders.Add(radioOrder);
-                }
-            }
-            appointment.Status = EnAppointmentStatus.Fulfilled;
-            await unitOfWork.Repository<Appointment>().UpdateAsync(appointment);
-
+            // 6. Save to Database
+            await unitOfWork.Repository<Prescription>().AddAsync(prescription);
             await unitOfWork.CompleteAsync();
 
-            return prescription.Id;
+            // 7. Return Success
+            return new CreatePrescriptionResultDto
+            {
+                IsSuccess = true,
+                PrescriptionId = prescription.Id
+            };
         }
-
         public async Task<PatientClinicalSummaryDto> GetPatientClinicalSummaryAsync(Guid patientId)
         {
             var patient = await unitOfWork.Repository<Patient>().GetByIdAsync(patientId);

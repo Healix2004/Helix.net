@@ -51,16 +51,50 @@ namespace Helix.API.Controllers
             {
                 return Unauthorized(new { Message = "Doctor context could not be verified." });
             }
-            // 2. Execute the unified creation service
-            var prescriptionId = await prescriptionService.CreatePrescriptionAsync(doctorId, dto);
-            // 3. Return success response to the frontend
-            return Ok(new
-            {
-                Message = "Prescription and diagnostic orders saved successfully.",
-                PrescriptionId = prescriptionId
-            });
-        }
 
+            try
+            {
+                // 2. Execute the unified creation service
+                var result = await prescriptionService.CreatePrescriptionAsync(doctorId, dto);
+
+                // 3. Handle Drug Interactions (DDI Failure)
+                if (!result.IsSuccess)
+                {
+                    // 409 Conflict: The server is fine, but the business rule (patient safety) failed
+                    return Conflict(new
+                    {
+                        Message = "Prescription blocked due to severe drug interactions.",
+                        Interactions = result.Interactions
+                    });
+                }
+
+                // 4. Return success response to the frontend
+                return Ok(new
+                {
+                    Message = "Prescription and diagnostic orders saved successfully.",
+                    PrescriptionId = result.PrescriptionId
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                // 5. Handle the AI Server being offline
+                // This catches the exact exception we threw in the CheckPatientDrugInteractionsAsync method
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+                {
+                    Message = ex.Message,
+                    ErrorDetails = "The clinical decision support engine is currently unreachable."
+                });
+            }
+            catch (Exception ex)
+            {
+                // 6. Generic fallback for any other unexpected database or system crashes
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    Message = "An unexpected error occurred while processing the prescription.",
+                    ErrorDetails = ex.Message
+                });
+            }
+        }
         [HttpPut("item/{itemId}/status")]
         [Authorize(Roles = $"{nameof(EnRoles.Doctor)},{nameof(EnRoles.Admin)}")]
         public async Task<IActionResult> UpdateMedicationStatus(Guid itemId, [FromQuery] EnPrescriptionItemStatus newStatus)

@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Helix.Service.DTOs.DrugDTOs;
+using System.ComponentModel.DataAnnotations;
 
 namespace Helix.Service.DTOs.PrescriptionDtos
 {
@@ -17,6 +18,7 @@ namespace Helix.Service.DTOs.PrescriptionDtos
     {
         [Required]
         public Guid AppointmentId { get; set; }
+        public bool DDIEnabled { get; set; } = false;
         public List<MedicationOrderItem> Medications { get; set; } = new();
         public List<string> LabOrderCodes { get; set; } = new();
         public List<string> RadiologyOrderCodes { get; set; } = new();
@@ -38,5 +40,12 @@ namespace Helix.Service.DTOs.PrescriptionDtos
 
         [Required]
         public string Duration { get; set; }
+    }
+
+    public class CreatePrescriptionResultDto
+    {
+        public bool IsSuccess { get; set; }
+        public Guid? PrescriptionId { get; set; } // Only populated if successful
+        public List<InteractionResponseDTO> Interactions { get; set; } = new(); // Only populated if DDI fails
     }
 }

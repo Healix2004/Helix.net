@@ -12,5 +12,7 @@ namespace Helix.Service.Interfaces
         Task<bool> IsValidDrug(int drugId);
         Task<string> GetDrugName(int drugId);
         Task<int?> GetIdAsync(string drugName);
+        Task<InteractionResponseDTO?> CheckDrugInteractionByNameAsync(string drug1, string drug2);
+        Task<List<InteractionResponseDTO>?> CheckPatientDrugInteractionsAsync(Guid patientId, List<string> newDrugs);
     }
 }

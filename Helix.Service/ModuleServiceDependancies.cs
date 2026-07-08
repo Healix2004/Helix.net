@@ -227,7 +227,7 @@ namespace Helix.Service
             return services;
         }
         private static IServiceCollection AddDrugService(this IServiceCollection services) =>
-            services.AddSingleton<IDrugDataService, DrugDataService>();
+            services.AddScoped<IDrugDataService, DrugDataService>();
         private static IServiceCollection AddPatientService(this IServiceCollection services)
         {
             services.AddScoped<IPatientService, Helix.Service.Services.PatientService.PatientService>();
