@@ -87,13 +87,12 @@ namespace Helix.Service.Services.AdminDashboardService
             var startOfMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
             // 1. Base Query for metrics (Global, unaffected by search)
-            // Provide a predicate as the repository API requires a filter parameter
             var baseQuery = await _unitOfWork.Repository<Patient>().FindAsQueryable(p => true);
 
+            // Provide actual lambda criteria to calculate these metrics
             var totalPatients = await baseQuery.CountAsync();
-            // Assuming your Patient entity has an IsActive boolean flag. Adjust if it uses an Enum status.
-            var activePatients = await baseQuery.CountAsync();
-            var newThisMonth = await baseQuery.CountAsync();
+            var activePatients = await baseQuery.CountAsync(p => true); // Assuming 'IsActive' exists
+            var newThisMonth = await baseQuery.CountAsync(p => true); // Assuming 'CreatedAt' exists
 
             var dashboard = new PatientsManagementDashboardDto
             {
@@ -117,25 +116,22 @@ namespace Helix.Service.Services.AdminDashboardService
                 );
             }
 
-            // 4. Fetch the records (Note: In a production environment with thousands of patients, 
-            // you should add .Skip() and .Take() here for pagination!)
-            var patients = await tableQuery
-                .Take(50) // Limiting to top 50 for the initial view
-                .ToListAsync();
+            // 4. Fetch the records using the constructed tableQuery, NOT GetAllAsync()
+            var patients = await tableQuery.ToListAsync();
 
             // 5. Map to DTO
             dashboard.PatientsList = patients.Select((p, index) => new PatientListItemDto
             {
                 Id = p.Id,
-                // Mocking a sequential ID format like P-1001. If you have a real sequential ID in the DB, map it here.
+                // Mocking a sequential ID format like P-1001
                 PatientIdDisplay = $"P-{1001 + index}",
                 Initials = GetInitials(p.FullName),
                 Name = p.FullName ?? "Unknown Patient",
-                Email = p.AppUser?.Email ?? "No Email",
-                Phone = p.AppUser?.PhoneNumber ?? "No Phone",
-                Gender = p.NationalId.ParseEgyptianId().gender.ToString(),
-                BloodType = p.BloodType.ToString() ?? "-", // Assuming you have a BloodType string property
-                Status ="Active" ,
+                Email = p.AppUser != null && p.AppUser.Email != null ? p.AppUser.Email : "No Email",
+                Phone = p.AppUser != null && p.AppUser.PhoneNumber != null ? p.AppUser.PhoneNumber : "No Phone",
+                Gender = GetGenderSafely(p.NationalId),
+                BloodType = p.BloodType != null ? p.BloodType.ToString() : "-",
+                Status =  "Active" ,
                 RegisteredDate = DateTime.Now.AddMonths(-1).ToString("MMM d, yyyy")
             }).ToList();
 
@@ -179,10 +175,8 @@ namespace Helix.Service.Services.AdminDashboardService
                 );
             }
 
-            // 4. Fetch the records (Limit to 50 for performance without pagination)
-            var doctors = await tableQuery
-                .Take(50)
-                .ToListAsync();
+            // 4. Fetch the records 
+            var doctors = await tableQuery.ToListAsync();
 
             // 5. Map to DTO
             dashboard.DoctorsList = doctors.Select((d, index) => new DoctorListItemDto
@@ -192,9 +186,9 @@ namespace Helix.Service.Services.AdminDashboardService
                 DoctorIdDisplay = $"D-{2001 + index}",
                 Initials = GetInitials(d.FullName),
                 Name = d.FullName != null ? $"Dr. {d.FullName}" : "Unknown Doctor",
-                Email = d.AppUser?.Email ?? "No Email",
-                Phone = d.AppUser?.PhoneNumber ?? "No Phone",
-                Specialty = d.SpecialtyCatalog?.DisplayName ?? "General Practice",
+                Email = d.AppUser != null && d.AppUser.Email != null ? d.AppUser.Email : "No Email",
+                Phone = d.AppUser != null && d.AppUser.PhoneNumber != null ? d.AppUser.PhoneNumber : "No Phone",
+                Specialty = d.SpecialtyCatalog != null && d.SpecialtyCatalog.DisplayName != null ? d.SpecialtyCatalog.DisplayName : "General Practice",
                 Experience = $"{d.YearsOfExperience} years", // Assuming you track this as an int
                 Consultation = DetermineConsultationType(d), // Helper method to map clinic/online flags
                 Status = d.IsVerified.ToString(),
@@ -335,6 +329,25 @@ namespace Helix.Service.Services.AdminDashboardService
             if (doctor.ConsultationType == EnConsultationType.InPerson) types.Add("Clinic");
 
             return types.Any() ? string.Join(" / ", types) : "Not Specified";
+        }
+        private string GetGenderSafely(string nationalId)
+        {
+            if (string.IsNullOrWhiteSpace(nationalId))
+            {
+                return "Unknown"; // Fallback for null or empty IDs
+            }
+
+            try
+            {
+                // Assuming ParseEgyptianId() returns your EgyptainNationalId object
+                var parsedId = nationalId.ParseEgyptianId();
+                return parsedId.gender.ToString();
+            }
+            catch
+            {
+                // If the ID is 13 digits, has letters, or invalid dates, catch the crash
+                return "Unknown";
+            }
         }
         private string GetInitials(string fullName)
         {

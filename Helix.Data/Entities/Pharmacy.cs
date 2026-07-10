@@ -2,7 +2,7 @@
 {
     public class Pharmacy: BaseEntity
     {
-        public Guid AppUserId { get; set; }
+        public string AppUserId { get; set; }
         public virtual AppUser AppUser { get; set; }
 
         // --- Shared Fields (Required by both) ---

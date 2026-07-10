@@ -1,9 +1,11 @@
 ﻿using Helix.Data.Entities;
 using Helix.Data.Enums;
+using Helix.Service.DTOs.PatientDTOs;
 using Helix.Service.DTOs.Pharmacy;
 using Helix.Service.Helper;
 using Helix.Service.Interfaces;
 using Helix.Service.Repositories;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using System;
@@ -12,54 +14,72 @@ using System.Text;
 
 namespace Helix.Service.Services.PharmacyService
 {
-    public class PharmacyService(IUnitOfWork unitOfWork, IFileService fileService) : IPharmacyService
+    public class PharmacyService(IUnitOfWork unitOfWork, IFileService fileService, UserManager<AppUser> userManager) : IPharmacyService
     {
         public async Task<Pharmacy> RegisterPharmacyAsync(RegisterPharmacyDto dto, Guid appUserId)
         {
-            // 1. Ensure the user hasn't already registered a pharmacy
-            var existingPharmacy = await (await unitOfWork.Repository<Pharmacy>()
-                .FindAsQueryable(p => p.AppUserId == appUserId))
-                .FirstOrDefaultAsync();
+            // 1. Guard Clauses & Existence Checks
+            var user = await userManager.FindByIdAsync(appUserId.ToString());
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException("User account not found.");
+            }
 
-            if (existingPharmacy != null)
+            var baseQuery = await unitOfWork.Repository<Pharmacy>().FindAsQueryable(p => p.AppUserId == appUserId.ToString());
+            bool pharmacyExists = await baseQuery.AnyAsync();
+
+            if (pharmacyExists)
             {
                 throw new InvalidOperationException("A pharmacy profile is already associated with this account.");
             }
 
-            // 2. Handle File Uploads
-            // These will upload the documents and return the string URLs to store in the database
-            string primaryLicenseUrl = await fileService.UploadFileAsync(dto.PrimaryLicenseFile, "pharmacy/licenses");
-            string nationalIdUrl = await fileService.UploadFileAsync(dto.NationalIdFile, "pharmacy/national-ids");
+            // 2. Parallel File Uploads (Massive performance boost)
+            var licenseTask = fileService.UploadFileAsync(dto.PrimaryLicenseFile, "pharmacy/licenses");
+            var nationalIdTask = fileService.UploadFileAsync(dto.NationalIdFile, "pharmacy/national-ids");
 
-            string profileImageUrl = null;
-            if (dto.ProfileImageFile != null)
-            {
-                profileImageUrl = await fileService.UploadFileAsync(dto.ProfileImageFile);
-            }
+            Task<string> profileImageTask = dto.ProfileImageFile != null
+                ? fileService.UploadFileAsync(dto.ProfileImageFile, "pharmacy/profiles")
+                : Task.FromResult<string>(null);
+
+            // Wait for all uploads to finish concurrently
+            await Task.WhenAll(licenseTask, nationalIdTask, profileImageTask);
 
             // 3. Map DTO to Entity
             var pharmacy = new Pharmacy
             {
                 FullName = dto.FullName,
-                AppUserId = appUserId,
+                AppUserId = appUserId.ToString(),
                 NationalId = dto.NationalId,
                 PharmacyName = dto.PharmacyName,
                 Address = dto.Address,
                 LicenseNumber = dto.LicenseNumber,
+                IsVerified = false, // Requires admin review
 
-                // Keep as false so Helix admins can review the uploaded documents
-                IsVerified = false,
-
-                PrimaryLicenseUrl = primaryLicenseUrl,
-                NationalIdUrl = nationalIdUrl,
-                ProfileImageUrl = profileImageUrl
+                // Extract results from the completed tasks
+                PrimaryLicenseUrl = licenseTask.Result,
+                NationalIdUrl = nationalIdTask.Result,
+                ProfileImageUrl = profileImageTask.Result
             };
 
-            // 4. Save to Database
+            // 4. Save to Database FIRST
             await unitOfWork.Repository<Pharmacy>().AddAsync(pharmacy);
 
-            // Assuming your UnitOfWork has a CompleteAsync or SaveChangesAsync method
+            // If this fails, the method exits and roles are never changed.
             await unitOfWork.CompleteAsync();
+
+            // 5. Update Identity Roles AFTER successful DB save
+            var pharmacistRole = EnRoles.Pharmaciest.ToString();
+            var registerRole = EnRoles.RegisterAsPharmaciest.ToString();
+
+            if (!await userManager.IsInRoleAsync(user, pharmacistRole))
+            {
+                await userManager.AddToRoleAsync(user, pharmacistRole);
+            }
+
+            if (await userManager.IsInRoleAsync(user, registerRole))
+            {
+                await userManager.RemoveFromRoleAsync(user, registerRole);
+            }
 
             return pharmacy;
         }
@@ -68,7 +88,7 @@ namespace Helix.Service.Services.PharmacyService
         {
             // 1. Find the Pharmacy belonging to the logged-in Pharmacist
             var pharmacy = await (await unitOfWork.Repository<Pharmacy>()
-                .FindAsQueryable(p => p.AppUserId == appUserId))
+                .FindAsQueryable(p => p.AppUserId == appUserId.ToString()))
                 .FirstOrDefaultAsync();
 
             if (pharmacy == null) return null; // Handled as 404 in controller
@@ -141,7 +161,7 @@ namespace Helix.Service.Services.PharmacyService
         {
             // 1. Verify the pharmacist's pharmacy
             var pharmacy =await (await unitOfWork.Repository<Pharmacy>()
-                .FindAsQueryable(p => p.AppUserId == appUserId))
+                .FindAsQueryable(p => p.AppUserId == appUserId.ToString()))
                 .FirstOrDefaultAsync();
 
             if (pharmacy == null) return null;
@@ -211,7 +231,7 @@ namespace Helix.Service.Services.PharmacyService
         }
         public async Task<bool> DispensePrescriptionAsync(Guid prescriptionId, Guid appUserId)
         {
-            var pharmacy = await (await unitOfWork.Repository<Pharmacy>().FindAsQueryable(p => p.AppUserId == appUserId)).FirstOrDefaultAsync();
+            var pharmacy = await (await unitOfWork.Repository<Pharmacy>().FindAsQueryable(p => p.AppUserId == appUserId.ToString())).FirstOrDefaultAsync();
             if (pharmacy == null) return false;
 
             var prescription = await( await unitOfWork.Repository<Prescription>()
@@ -232,7 +252,7 @@ namespace Helix.Service.Services.PharmacyService
 
         public async Task<bool> FlagPrescriptionAsync(Guid prescriptionId, FlagPrescriptionDto dto, Guid appUserId)
         {
-            var pharmacy = await (await unitOfWork.Repository<Pharmacy>().FindAsQueryable(p => p.AppUserId == appUserId)).FirstOrDefaultAsync();
+            var pharmacy = await (await unitOfWork.Repository<Pharmacy>().FindAsQueryable(p => p.AppUserId == appUserId.ToString())).FirstOrDefaultAsync();
             if (pharmacy == null) return false;
 
             var prescription = await (await unitOfWork.Repository<Prescription>()

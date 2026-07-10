@@ -3,6 +3,7 @@ using Helix.Service.DTOs.FileDto;
 using Helix.Service.Interfaces;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -12,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace Helix.Service.Services.FileServices
 {
-    public class FileService(IWebHostEnvironment environment, ILogger<FileService> logger) : IFileService
+    public class FileService(IWebHostEnvironment environment, ILogger<FileService> logger,IUnitOfWork unitOfWork) : IFileService
     {
         public async Task<FileUploadResult> UploadSingleFileAsync(FileUploadDto file)
         {
@@ -368,8 +369,46 @@ namespace Helix.Service.Services.FileServices
             }
         }
 
+
+        public async Task<DocumentDashboardDto> GetPatientDashboardAsync(Guid patientId, string category = null)
+        {
+            // 1. Fetch the base query for this specific patient
+            var baseQuery =await unitOfWork.Repository<Patient>().FindAsQueryable(p => p.Id == patientId);
+
+            // Fetch metadata into memory (this is fast as it doesn't load the actual file bytes)
+            var patientDocs = await baseQuery.ToListAsync();
+
+            if (!patientDocs.Any())
+            {
+                return null; // Return early if the patient has no records
+            }
+
+            // 2. Calculate the Summary Statistics
+            var sevenDaysAgo = DateTime.UtcNow.AddDays(-7);
+
+            return new DocumentDashboardDto();
+
+
+        }
+
         #region Private Methods
 
+        private double BytesToGb(long bytes)
+        {
+            // Convert bytes to GB and round to 2 decimal places
+            return Math.Round(bytes / 1024.0 / 1024.0 / 1024.0, 2);
+        }
+
+        private string CalculateTimeAgo(DateTime uploadDate)
+        {
+            var timeSpan = DateTime.UtcNow - uploadDate;
+
+            if (timeSpan.TotalHours < 1) return $"{Math.Max(1, (int)timeSpan.TotalMinutes)} mins ago";
+            if (timeSpan.TotalDays < 1) return $"{(int)timeSpan.TotalHours} hours ago";
+            if (timeSpan.TotalDays < 2) return "1 day ago";
+
+            return $"{(int)timeSpan.TotalDays} days ago";
+        }
         private (string folderPath, string savePath, string fullPath, string dbPath) GenerateFilePaths(string originalFileName)
         {
             // 1. Define the relative folder structure (e.g., "Uploads\2026\05")
@@ -494,5 +533,18 @@ namespace Helix.Service.Services.FileServices
         }
 
         #endregion
+    }
+
+    public class DocumentItemDto
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; }
+        // What other properties do you need?
+    }
+
+    public class StorageUsageDto
+    {
+        public long TotalBytes { get; set; }
+        // Any other properties?
     }
 }

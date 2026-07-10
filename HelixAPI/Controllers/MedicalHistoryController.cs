@@ -46,7 +46,7 @@ namespace Helix.API.Controllers
                 if (consentPrincipal != null)
                 {
                     // Security Best Practice: Ensure the token belongs to this specific doctor
-                    hasStandardConsent = consentPrincipal.HasValidConsent(patientId, "MedicalHistory", doctorId);
+                    hasStandardConsent = consentPrincipal.HasValidConsent(patientId, "MedicalHistory");
                 }
             }
 

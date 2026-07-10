@@ -130,6 +130,20 @@ namespace Helix.Infrastructure.Context
             // Configure the Foreign Key Relationship
             builder.Entity<Allergy>().HasOne(a => a.Patient).WithMany(p => p.Allergies).HasForeignKey(a => a.PatientId)
                    .OnDelete(DeleteBehavior.Cascade); // Deletes allergies if the patient is deleted
+
+            // Explicitly configure the Pharmacy -> AppUser relationship
+            builder.Entity<Pharmacy>()
+                .HasOne(p => p.AppUser)
+                .WithMany() // Or .WithOne(u => u.Pharmacy) if you mapped it on AppUser
+                .HasForeignKey(p => p.AppUserId)
+                .IsRequired(); // Prevents orphaned records
+
+            // Do the same for LabSpecialist
+            builder.Entity<LabSpecialist>()
+                .HasOne(l => l.AppUser)
+                .WithMany()
+                .HasForeignKey(l => l.AppUserId)
+                .IsRequired();
         }
 
         public DbSet<AppUser> AppUsers { get; set; }
@@ -160,5 +174,6 @@ namespace Helix.Infrastructure.Context
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<Prescription> Prescriptions{ get; set; }
         public DbSet<Pharmacy> Pharmacies { get; set; }
-    }
+        public DbSet<LabSpecialist> LabSpecialists { get; set; }
+        }
 }

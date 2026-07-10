@@ -35,7 +35,7 @@ namespace Helix.API.Controllers
 
         [HttpGet("patients")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetPatientsManagement([FromQuery] string searchTerm)
+        public async Task<IActionResult> GetPatientsManagement([FromQuery] string? searchTerm)
         {
             try
             {
@@ -61,7 +61,7 @@ namespace Helix.API.Controllers
 
         [HttpGet("doctors")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetDoctorsManagement([FromQuery] string searchTerm)
+        public async Task<IActionResult> GetDoctorsManagement([FromQuery] string? searchTerm)
         {
             try
             {
@@ -86,7 +86,7 @@ namespace Helix.API.Controllers
         }
         [HttpGet("facilities")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetFacilitiesManagement([FromQuery] string searchTerm)
+        public async Task<IActionResult> GetFacilitiesManagement([FromQuery] string? searchTerm)
         {
             try
             {
@@ -112,7 +112,7 @@ namespace Helix.API.Controllers
 
         [HttpGet("drugs")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetDrugsManagement([FromQuery] string searchTerm)
+        public async Task<IActionResult> GetDrugsManagement([FromQuery] string? searchTerm)
         {
             try
             {
