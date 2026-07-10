@@ -7,7 +7,7 @@ pipeline {
     environment {
         DOCKER_HUB_IMAGE = 'mostafasaad21/helix-backend'
         DOCKER_HUB_CREDS = 'docker-hub-creds' 
-        EC2_IP           = '34.224.93.59' 
+        EC2_IP           = '54.90.125.229' 
         EC2_USER         = 'ec2-user' 
         EC2_CREDS_ID     = 'aws-ec2-key' 
     }
