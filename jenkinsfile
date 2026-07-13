@@ -1,18 +1,22 @@
 pipeline {
     agent any
-/*
+
+    // ==========================================
+    // ACTIVE ENVIRONMENT: DOCKER HUB & EC2
+    // ==========================================
     environment {
-      
         DOCKER_HUB_IMAGE = 'mostafasaad21/helix-backend'
         DOCKER_HUB_CREDS = 'docker-hub-creds' 
-        
-        
-        EC2_IP = '100.53.238.193' 
-        EC2_USER = 'ec2-user' 
-        EC2_CREDS_ID = 'aws-ec2-key' 
+        EC2_IP           = '3.95.63.0' 
+        EC2_USER         = 'ec2-user' 
+        EC2_CREDS_ID     = 'aws-ec2-key' 
     }
-*/
-environment {
+
+    /*
+    // ==========================================
+    // DISABLED ENVIRONMENT: AWS ECR & EKS
+    // ==========================================
+    environment {
         AWS_REGISTRY_ID = '538784191153' 
         AWS_REGION      = 'us-east-1'     
         CLUSTER_NAME    = 'helix-eks-cluster'
@@ -20,9 +24,12 @@ environment {
         IMAGE_TAG       = "${BUILD_NUMBER}"
         ECR_URL         = "${AWS_REGISTRY_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
     }
-
+    */
 
     stages {
+        // ==========================================
+        // COMMON ACTIVE STAGES
+        // ==========================================
         stage('Initialize & Clean') {
             steps {
                 echo "Cleaning Workspace for HelixBackend..."
@@ -35,11 +42,14 @@ environment {
                 checkout scm
             }
         }
-/*
 
+        // ==========================================
+        // ACTIVE STAGES: DOCKER HUB & EC2 DEPLOYMENT
+        // ==========================================
         stage('Build Backend Image') {
             steps {
                 echo "Building Docker Image for Backend..."
+                // Using the correct nested Dockerfile path (-f HelixAPI/Dockerfile .)
                 sh "docker build -t ${DOCKER_HUB_IMAGE}:v${BUILD_NUMBER} -t ${DOCKER_HUB_IMAGE}:latest -f HelixAPI/Dockerfile ."
             }
         }
@@ -49,10 +59,8 @@ environment {
                 echo "Pushing Backend Image to Docker Hub..."
                 withCredentials([usernamePassword(credentialsId: "${DOCKER_HUB_CREDS}", passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
                     sh "echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin"
-                    
                     sh "docker push ${DOCKER_HUB_IMAGE}:v${BUILD_NUMBER}"
                     sh "docker push ${DOCKER_HUB_IMAGE}:latest"
-                    
                     sh "docker logout" 
                 }
             }
@@ -81,9 +89,12 @@ environment {
                 }
             }
         }
-    }
-*/
-stage('AWS ECR Login') {
+
+        /*
+        // ==========================================
+        // DISABLED STAGES: AWS ECR & EKS DEPLOYMENT
+        // ==========================================
+        stage('AWS ECR Login') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id']]) {
                     sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_URL}"
@@ -93,11 +104,13 @@ stage('AWS ECR Login') {
 
         stage('Docker Build & Scan') {
             steps {
-               script {
-         sh "docker build -t ${ECR_URL}/${REPO_NAME}:${IMAGE_TAG} -t ${ECR_URL}/${REPO_NAME}:latest -f HelixAPI/Dockerfile ."
-         sh "trivy image --exit-code 0 --severity CRITICAL ${ECR_URL}/${REPO_NAME}:${IMAGE_TAG}"            }
-                  }
-                      }
+                script {
+                    sh "docker build -t ${ECR_URL}/${REPO_NAME}:${IMAGE_TAG} -t ${ECR_URL}/${REPO_NAME}:latest -f HelixAPI/Dockerfile ."
+                    sh "trivy image --exit-code 0 --severity CRITICAL ${ECR_URL}/${REPO_NAME}:${IMAGE_TAG}" 
+                }
+            }
+        }
+
         stage('Docker Push to ECR') {
             steps {
                 sh "docker push ${ECR_URL}/${REPO_NAME}:${IMAGE_TAG}"
@@ -117,12 +130,15 @@ stage('AWS ECR Login') {
                 }
             }
         }
-    }
-    
+        */
+    } // Closes stages block safely
+
+    /*
+    // DISABLED POST BLOCK (Because ECR_URL variables are currently disabled)
     post {
         always {
             sh "docker rmi \$(docker images '${ECR_URL}/${REPO_NAME}' -q) --force || true"
         }
     }
-}
-    
+    */
+} // Closes global pipeline block safely
