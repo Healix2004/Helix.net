@@ -1,5 +1,6 @@
 ﻿using Helix.Service.DTOs.ChatDTOs;
 using Helix.Service.Interfaces;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Net.Http.Json;
@@ -7,14 +8,15 @@ using System.Text;
 
 namespace Helix.Service.Services.ChatbotService
 {
-    public class ChatbotService(IHttpClientFactory httpClientFactory) : IChatbotService
+    public class ChatbotService(IHttpClientFactory httpClientFactory, IConfiguration configuration) : IChatbotService
     {
         public async Task<ChatResponseDto> SendMessageAsync(ChatRequestDto request)
         {
             var client = httpClientFactory.CreateClient();
 
-            // NOTE: Replace this URL with your actual chatbot's API endpoint
-            var chatbotApiUrl = "http://helix.ai.chatbot:8000/api/chat";
+            // This will read the environment variable first. 
+            // If it's missing (like when running locally outside Docker), it falls back to localhost.
+            var chatbotApiUrl = configuration["ChatbotApiUrl"] ?? "http://helix.ai.chatbot:5432/api/chat";
 
             try
             {

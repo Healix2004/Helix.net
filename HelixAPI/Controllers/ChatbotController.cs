@@ -1,5 +1,6 @@
 using Helix.Api.Base;
 using Helix.Core.Bases; // ADDED: For manual Response<T> wrappers
+using Helix.Data.Enums;
 using Helix.Service.DTOs.ChatDTOs;
 using Helix.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -9,7 +10,7 @@ namespace Helix.API.Controllers
 {
     [Route("api/chatbot")]
     [ApiController]
-    [Authorize] 
+    [Authorize(Roles = $"{nameof(EnRoles.Doctor)},{nameof(EnRoles.Patient)}")]
     public class ChatbotController(IChatbotService chatbotService) : AppControllerBase
     {
         [HttpPost("ask")]
